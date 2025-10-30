@@ -1,6 +1,13 @@
 General:
-      Measurement    : higgs_tautau_signal_strength
-      POI            : mu_htautau
+      Measurement    : 
+              Name : higgs_tautau_signal_strength_noSys
+              ParametersToFit  : 
+                              - mu_htautau
+                              - mu_ztautau
+                              - mu_ttbar
+                              - TES
+                              - JES
+              POI  : mu_htautau
 
 Samples:
     - Name              : htautau

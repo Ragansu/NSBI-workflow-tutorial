@@ -229,7 +229,8 @@ class WorkspaceBuilder:
         
         measurements = []
         measurement = {}
-        measurement.update({"name": self.config_dict["General"]["Measurement"]})
+        measurement.update({"name": self.config_dict["General"]["Measurement"]['Name']})
+        ParametersToFit = self.config_dict["General"]["Measurement"].get("ParametersToFit", None)
         config_dict = {}
 
         # get the norm factor initial values / bounds / constant setting
@@ -258,10 +259,14 @@ class WorkspaceBuilder:
             if bounds is not None:
                 parameter.update({"bounds": [bounds]})
             parameters_list.append(parameter)
+        
+        if ParametersToFit:
+            parameters_list = [p for p in parameters_list if p["name"] in ParametersToFit]
 
+                
         parameters = {"parameters": parameters_list}
         config_dict.update(parameters)
-        config_dict.update({"poi": self.config_dict["General"].get("POI", "")})
+        config_dict.update({"poi": self.config_dict["General"]["Measurement"].get("POI", "")})
         measurement.update({"config": config_dict})
         measurements.append(measurement)
         return measurements
