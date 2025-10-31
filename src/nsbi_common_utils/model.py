@@ -371,7 +371,7 @@ class Model:
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
         for sample in self.all_samples:
-            if ('mu_'+sample in self.param_names):
+            if sample in self.norm_sample_map:
                 params_sample: list[str] = self.norm_sample_map[sample]
                 for param in params_sample:
                     index_param             = self.index_normparam_map[param]
