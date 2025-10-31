@@ -370,12 +370,11 @@ class Model:
     
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
-        for sample in self.all_samples:
-            if sample in self.norm_sample_map:
-                params_sample: list[str] = self.norm_sample_map[sample]
-                for param in params_sample:
-                    index_param             = self.index_normparam_map[param]
-                    norm_var[sample]        *= param_vec[index_param]
+        for sample, params_sample in self.norm_sample_map.items():  
+            # params_sample: list[str]
+            for param in params_sample:
+                index_param             = self.index_normparam_map[param]
+                norm_var[sample]        *= param_vec[index_param]
         return norm_var
     
     def _get_systematic_data(self, type_of_fit: str) -> Dict[str, jnp.ndarray]:
