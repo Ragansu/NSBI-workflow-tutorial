@@ -6,6 +6,16 @@ import pathlib
 from typing import Union, Dict, Any, List
 import nsbi_common_utils
 from nsbi_common_utils import configuration, datasets
+import logging
+logging.basicConfig(filename="workspace.log",
+                    encoding="utf-8",
+                    filemode="w",
+                    format="{asctime} - {levelname} - {message}",
+                    style="{",
+                    datefmt="%Y-%m-%d %H:%M",
+                    level=logging.WARNING,
+                    )
+
 
 class WorkspaceBuilder:
     """Collects functionality to build a workspace"""
@@ -15,6 +25,18 @@ class WorkspaceBuilder:
         self.config_path = config_path
         self.config = nsbi_common_utils.configuration.ConfigManager(file_path_string = config_path)
         self.config_dict = self.config.config
+        self.ParametersToFit = self.config_dict["General"]["Measurement"].get("ParametersToFit", None)
+        self._check_ParametersToFit()
+
+    def _check_ParametersToFit(self):
+        poi = self.config_dict["General"]["Measurement"].get("POI", "")
+        if (self.ParametersToFit) and (poi not in self.ParametersToFit):
+            logging.warning(f'The POI {poi} is not included in the ParametersToFit. Adding the POI {poi} to ParametersToFit list.')
+            self.ParametersToFit.append(poi)
+        elif self.ParametersToFit is None:
+            logging.warning('No ParametersToFit specified in config. All parameters will be included in the fitting.')
+        
+
 
     def normfactor_modifiers(self, 
                              region_name: str, 
@@ -230,7 +252,6 @@ class WorkspaceBuilder:
         measurements = []
         measurement = {}
         measurement.update({"name": self.config_dict["General"]["Measurement"]['Name']})
-        ParametersToFit = self.config_dict["General"]["Measurement"].get("ParametersToFit", None)
         config_dict = {}
 
         # get the norm factor initial values / bounds / constant setting
@@ -260,8 +281,8 @@ class WorkspaceBuilder:
                 parameter.update({"bounds": [bounds]})
             parameters_list.append(parameter)
         
-        if ParametersToFit:
-            parameters_list = [p for p in parameters_list if p["name"] in ParametersToFit]
+        if self.ParametersToFit:
+            parameters_list = [p for p in parameters_list if p["name"] in self.ParametersToFit]
 
                 
         parameters = {"parameters": parameters_list}
