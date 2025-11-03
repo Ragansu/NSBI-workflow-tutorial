@@ -187,6 +187,8 @@ class TrainEvaluatePreselNN:
             layers.Input(shape=(self.data_features_training.shape[1],)),  # Input layer
             layers.Dense(1000, activation='swish'),
             layers.Dense(1000, activation='swish'),
+            layers.Dense(1000, activation='swish'),
+            layers.Dense(1000, activation='swish'),
             layers.Dense(self.num_classes, activation='softmax')  # Output layer for num_class classes
         ])
 

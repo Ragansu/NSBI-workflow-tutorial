@@ -150,61 +150,26 @@ Regions:
     Variable: presel_score
     Type: binned
     Binning:
-        - 3.75000
+        - 3.75
         - 5.942246437072754
--   Name            : SR
-    Filter          : presel_score>=-1.0 & presel_score<=3.75
-    Type            : unbinned
-    Variable        : null
-    Binning         : null
-    AsimovWeights   : saved_datasets/asimov_weights.npy
-    TrainedModels:
-        - SampleName    : htautau
-          Nominal   : 
-               Models  : saved_datasets/output_training_nominal/output_model_params_htautau/
-               Ratios  : saved_datasets/output_training_nominal/output_ratios_htautau/ratio_htautau.npy
-          Systematics    :
-             - SystName: TES
-               ModelsUp: saved_datasets/output_training_systematics/output_model_params_htautau_TES_Up/
-               ModelsDn: saved_datasets/output_training_systematics/output_model_params_htautau_TES_Dn/
-               RatiosUp: saved_datasets/output_training_systematics/output_ratios_htautau_TES_Up/ratio_TES_Up.npy
-               RatiosDn: saved_datasets/output_training_systematics/output_ratios_htautau_TES_Dn/ratio_TES_Dn.npy
-             - SystName: JES
-               ModelsUp: saved_datasets/output_training_systematics/output_model_params_htautau_JES_Up/
-               ModelsDn: saved_datasets/output_training_systematics/output_model_params_htautau_JES_Dn/
-               RatiosUp: saved_datasets/output_training_systematics/output_ratios_htautau_JES_Up/ratio_JES_Up.npy
-               RatiosDn: saved_datasets/output_training_systematics/output_ratios_htautau_JES_Dn/ratio_JES_Dn.npy
-        - SampleName    : ttbar
-          Nominal       : 
-                Models  : saved_datasets/output_training_nominal/output_model_params_ttbar/
-                Ratios  : saved_datasets/output_training_nominal/output_ratios_ttbar/ratio_ttbar.npy
-          Systematics    :
-            - SystName: TES
-              ModelsUp: saved_datasets/output_training_systematics/output_model_params_ttbar_TES_Up/
-              ModelsDn: saved_datasets/output_training_systematics/output_model_params_ttbar_TES_Dn/
-              RatiosUp: saved_datasets/output_training_systematics/output_ratios_ttbar_TES_Up/ratio_TES_Up.npy
-              RatiosDn: saved_datasets/output_training_systematics/output_ratios_ttbar_TES_Dn/ratio_TES_Dn.npy
-            - SystName: JES
-              ModelsUp: saved_datasets/output_training_systematics/output_model_params_ttbar_JES_Up/
-              ModelsDn: saved_datasets/output_training_systematics/output_model_params_ttbar_JES_Dn/ 
-              RatiosUp: saved_datasets/output_training_systematics/output_ratios_ttbar_JES_Up/ratio_JES_Up.npy
-              RatiosDn: saved_datasets/output_training_systematics/output_ratios_ttbar_JES_Dn/ratio_JES_Dn.npy
-        - SampleName    : ztautau
-          Nominal       : 
-                Models  : saved_datasets/output_training_nominal/output_model_params_ztautau/
-                Ratios  : saved_datasets/output_training_nominal/output_ratios_ztautau/ratio_ztautau.npy
-          Systematics    :
-             - SystName: TES
-               ModelsUp: saved_datasets/output_training_systematics/output_model_params_ztautau_TES_Up/
-               ModelsDn: saved_datasets/output_training_systematics/output_model_params_ztautau_TES_Dn/
-               RatiosUp: saved_datasets/output_training_systematics/output_ratios_ztautau_TES_Up/ratio_TES_Up.npy
-               RatiosDn: saved_datasets/output_training_systematics/output_ratios_ztautau_TES_Dn/ratio_TES_Dn.npy
-             - SystName: JES
-               ModelsUp: saved_datasets/output_training_systematics/output_model_params_ztautau_JES_Up/
-               ModelsDn: saved_datasets/output_training_systematics/output_model_params_ztautau_JES_Dn/
-               RatiosUp: saved_datasets/output_training_systematics/output_ratios_ztautau_JES_Up/ratio_JES_Up.npy
-               RatiosDn: saved_datasets/output_training_systematics/output_ratios_ztautau_JES_Dn/ratio_JES_Dn.npy
-                           
-
-                 
-        
+-   Name: SR
+    Filter: presel_score>=-1.0 & presel_score<=3.75
+    Variable: presel_score
+    Type: binned
+    Binning:
+        - -1.0
+        - -0.5
+        - 0.0
+        - 0.5
+        - 1.0
+        - 1.25
+        - 1.5
+        - 1.75
+        - 2.0
+        - 2.25
+        - 2.5
+        - 2.75
+        - 3.0
+        - 3.25
+        - 3.5
+        - 3.75

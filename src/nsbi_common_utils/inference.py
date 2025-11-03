@@ -10,6 +10,39 @@ from tensorflow.keras.optimizers import Nadam
 import matplotlib.pyplot as plt
 from iminuit import Minuit
 
+def plot_NLL_scans(parameter_label: str, 
+                       list_scan_points: list[list[float]], 
+                       list_nll_values: list[list[float]], 
+                       list_labels: list[str], 
+                       list_linestyles: list[str], 
+                       list_colors: list[str],
+                      ax: plt.Axes | None = None):
+    """
+    Profile the NLL along `parameter_name` and plot the scan.
+
+    Parameters
+    ----------
+    parameter_label : str
+        Pretty label for the x-axis. Defaults to `parameter_name` if empty.
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    for count in range(len(list_labels)):
+
+        ax.plot(
+            list_scan_points[count],
+            list_nll_values[count],
+            linestyle=list_linestyles[count],
+            label=list_labels[count],
+            color=list_colors[count])
+        ax.legend()
+        
+    ax.set_ylim(bottom=0.0)
+    ax.set_xlabel(parameter_label or parameter_name)
+    ax.set_ylabel(r"$t_\mu$")
+
+    
 class inference:
     """
     Class for parameter fitting and related diagnostics
@@ -79,17 +112,14 @@ class inference:
         # Displays results of the global fit
         print(f'fit: \n {mg}')
     
-    
-    def plot_NLL_scan(self, 
+    def perform_profile_scan(self, 
                       parameter_name: str = '', 
-                      parameter_label: str = '', 
                       bound_range: tuple[float] = (0.0, 3.0), 
                       fit_strategy: int = 2, 
                       freeze_params: list[str] =[], 
                       doStatOnly: bool = False,
                       isConstrainedNP: bool = False,
-                      size: int = 100,
-                      ax: plt.Axes | None = None):
+                      size: int = 100) -> tuple[list[float]]:
         """
         Profile the NLL along `parameter_name` and plot the scan.
 
@@ -97,8 +127,6 @@ class inference:
         ----------
         parameter_name : str
             Name of the parameter to scan (must be in `list_parameters`).
-        parameter_label : str
-            Pretty label for the x-axis. Defaults to `parameter_name` if empty.
         bound_range : (float, float)
             Scan bounds for profile fit.
         fit_strategy : int
@@ -112,11 +140,7 @@ class inference:
             If True, change the y-axis label to t_alpha; else use t_mu.
         size : int
             Number of scan points
-        ax : matplotlib.axes.Axes | None
-            Optional axis to draw on. If None, a new figure/axis is created.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
 
         m = Minuit(self.model_nll, 
                    self.initial_values, 
@@ -165,25 +189,8 @@ class inference:
                                                                                subtract_min=True,
                                                                                 size = size)
             
-            ax.plot(
-                scan_points_StatOnly,
-                NLL_value_StatOnly,
-                linestyle="--",
-                label="Stat Only",
-                color='black'
-            )
-            ax.plot(
-                scan_points,
-                NLL_value,
-                label="Stat+Syst",
-                color='black'
-            )
-            ax.legend()
+            return scan_points, NLL_value, scan_points_StatOnly, NLL_value_StatOnly
 
         else:
-            ax.plot(scan_points, NLL_value, label="", color="black")
-            
-        ax.set_ylim(bottom=0.0)
-        ax.set_xlabel(parameter_label or parameter_name)
-        ax.set_ylabel(r"$t_\alpha$" if isConstrainedNP else r"$t_\mu$")
+            return scan_points, NLL_value
     
