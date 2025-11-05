@@ -41,6 +41,15 @@ def plot_NLL_scans(parameter_label: str,
     ax.set_ylim(bottom=0.0)
     ax.set_xlabel(parameter_label or parameter_name)
     ax.set_ylabel(r"$t_\mu$")
+    ax.axhline(y=1.0, color='gray', linestyle='dotted', alpha=0.5)
+    ax.text(1.0, 1.02, r"$1\sigma$          ", transform=ax.get_yaxis_transform(), ha='right', va='bottom', color='gray', fontsize=9)
+
+    ax.axhline(y=4.0, color='gray', linestyle='dotted', alpha=0.5)
+    ax.text(1.0, 4.02, r"$2\sigma$          ", transform=ax.get_yaxis_transform(), ha='right', va='bottom', color='gray', fontsize=9)
+
+    ax.axhline(y=9.0, color='gray', linestyle='dotted', alpha=0.5)
+    ax.text(1.0, 9.02, r"$3\sigma$          ", transform=ax.get_yaxis_transform(), ha='right', va='bottom', color='gray', fontsize=9)
+
 
     
 class inference:
