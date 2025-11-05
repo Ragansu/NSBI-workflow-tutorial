@@ -5,8 +5,8 @@ General:
                               - mu_htautau
                               - mu_ztautau
                               - mu_ttbar
-                              - TES
-                              - JES
+                              # - TES
+                              # - JES
               POI  : mu_htautau
 
 Samples:

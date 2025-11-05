@@ -30,7 +30,7 @@ from joblib import dump, load
 
 import pickle 
 
-from nsbi_common_utils.calibration import HistogramCalibrator
+from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
 
 importlib.reload(sys.modules['nsbi_common_utils.plotting'])
 from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_features, plot_reweighted, plot_calibration_curve, plot_calibration_curve_ratio
@@ -128,7 +128,7 @@ def convert_tf_to_onnx(model, opset=17):
 
     # return model_onnx
 
-class TrainEvaluatePreselNN:
+class preselection_network_trainer:
     '''
     A class for training the multi-class classification neural network for preselecting phase space for SBI
     '''
@@ -254,7 +254,7 @@ class TrainEvaluatePreselNN:
 
         
 
-class TrainEvaluate_NN:
+class density_ratio_trainer:
     '''
     A class for training the density ratio neural networks for SBI analysis
     '''
@@ -326,6 +326,7 @@ class TrainEvaluate_NN:
                             learning_rate, 
                             scalerType, 
                             calibration=False, 
+                            type_of_calibration="isotonic", 
                             num_bins_cal = 40, 
                             callback = True, 
                             callback_patience=30, 
@@ -377,6 +378,7 @@ class TrainEvaluate_NN:
                         learning_rate, 
                         scalerType, 
                         calibration, 
+                        type_of_calibration,
                         num_bins_cal, 
                         callback, 
                         callback_patience, 
@@ -397,7 +399,8 @@ class TrainEvaluate_NN:
                     batch_size,
                     learning_rate, 
                     scalerType, 
-                    calibration=False, 
+                    calibration=False,
+                    type_of_calibration="isotonic", 
                     num_bins_cal = 40, 
                     callback = True, 
                     callback_patience=30, 
@@ -573,23 +576,32 @@ class TrainEvaluate_NN:
         # If calibrating, use the train_data_prediction for building histogram
         if self.calibration:
 
+            importlib.reload(sys.modules['nsbi_common_utils.calibration'])
+            from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
+
             self.calibration_switch = True
             path_to_calibrated_object = f"{self.path_to_models}model_calibrated_hist{ensemble_index}.obj"
 
-            calibration_data_num = train_data_prediction[label_train==1]
-            calibration_data_den = train_data_prediction[label_train==0]
+            if type_of_calibration == "histogram":
+                calibration_data_num = train_data_prediction[label_train==1]
+                calibration_data_den = train_data_prediction[label_train==0]
 
-            w_num = weight_train[label_train==1]
-            w_den = weight_train[label_train==0]
-
-            importlib.reload(sys.modules['nsbi_common_utils.calibration'])
-            from nsbi_common_utils.calibration import HistogramCalibrator
+                w_num = weight_train[label_train==1]
+                w_den = weight_train[label_train==0]
 
             if not load_trained_models:
+
+                if type_of_calibration == "histogram":
             
-                self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
-                                                                 nbins=num_bins_cal, method=calibration_method, mode='dynamic')
-    
+                    self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
+                                                                    nbins=num_bins_cal, method=calibration_method, mode='dynamic')
+                
+                elif type_of_calibration == "isotonic":
+                    self.histogram_calibrator[ensemble_index] =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
+                
+                else:
+                    raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
+                
                 file_calib = open(path_to_calibrated_object, 'wb') 
     
                 pickle.dump(self.histogram_calibrator[ensemble_index], file_calib)
@@ -599,9 +611,15 @@ class TrainEvaluate_NN:
                     
                     print(f"Calibrating the saved model with {num_bins_cal} bins")
                     
-                    self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
-                                                                 nbins=num_bins_cal, method=calibration_method, mode='dynamic')
-    
+                    if type_of_calibration == "histogram":
+                        self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
+                                                                    nbins=num_bins_cal, method=calibration_method, mode='dynamic')
+                    elif type_of_calibration == "isotonic":
+                        self.histogram_calibrator[ensemble_index] =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
+
+                    else:
+                        raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
+                
                     file_calib = open(path_to_calibrated_object, 'wb') 
         
                     pickle.dump(self.histogram_calibrator[ensemble_index], file_calib)
@@ -609,7 +627,7 @@ class TrainEvaluate_NN:
                 
                     file_calib = open(path_to_calibrated_object, 'rb') 
                     self.histogram_calibrator[ensemble_index] = pickle.load(file_calib)
-                    print(f"L 509 calibrator object loaded = {self.histogram_calibrator}")
+                    print(f"calibrator object loaded = {self.histogram_calibrator}")
             
             self.full_data_prediction[ensemble_index] = self.predict_with_model(self.dataset, 
                                                                                 ensemble_index = ensemble_index, 
@@ -679,10 +697,10 @@ class TrainEvaluate_NN:
     
             pred = self.histogram_calibrator[ensemble_index].cali_pred(pred)
             pred = pred.reshape(pred.shape[0],)
-            pred = np.clip(pred, 1e-25, 0.9999999)
 
         K.clear_session()
-            
+        
+        pred = np.clip(pred, 1e-25, 0.9999)
         return pred
         
     def make_overfit_plots(self, ensemble_index=0):
@@ -804,7 +822,9 @@ class TrainEvaluate_NN:
         for ensemble_index in range(self.num_ensemble_members):
             
             # Calculate p_A/p_B for B hypothesis events
-            score_rwt = self.predict_with_model(self.dataset[self.features], ensemble_index=ensemble_index, use_log_loss=self.use_log_loss)[self.training_labels==0]
+            score_rwt = self.predict_with_model(self.dataset[self.features], 
+                                                ensemble_index=ensemble_index, 
+                                                use_log_loss=self.use_log_loss)[self.training_labels==0]
             ratio_rwt[ensemble_index] = score_rwt / ( 1.0 - score_rwt )
     
             # Calculate \sum p_A/p_B x p_B

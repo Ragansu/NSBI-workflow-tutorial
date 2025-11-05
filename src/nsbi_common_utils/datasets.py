@@ -293,6 +293,24 @@ class datasets:
             dataset.loc[mask_train_label, "weights_normed"]      = dataset.loc[mask_train_label, "weights_normed"] / total_train_weight
 
         return dataset
+    
+    def prepare_basis_training_dataset(self, dataset, processes_numerator, processes_denominator):
+
+        ref_train_label_sample_dict = {**{ref: 0 for ref in processes_denominator}}
+
+        dataset_ref     = self.merge_dataframe_dict_for_training(dataset, 
+                                                                  ref_train_label_sample_dict, 
+                                                                  samples_to_merge = processes_denominator)
+        
+        numerator_train_label_sample_dict = {**{numerator: 1 for numerator in processes_numerator}}
+        
+        dataset_num = self.merge_dataframe_dict_for_training(dataset, 
+                                                            numerator_train_label_sample_dict, 
+                                                            samples_to_merge = processes_numerator)
+        
+        dataset_mix_model = pd.concat([dataset_num, dataset_ref])
+
+        return dataset_mix_model
 
 
 def save_dataframe_as_root(dataset        : pd.DataFrame,
@@ -330,3 +348,4 @@ def load_dataframe_from_root(path_to_load      : str,
             dataframe = tree.arrays(branches_to_load, library="pd")
 
     return dataframe
+
