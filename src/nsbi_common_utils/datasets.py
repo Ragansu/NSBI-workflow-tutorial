@@ -294,17 +294,17 @@ class datasets:
 
         return dataset
     
-    def prepare_basis_training_dataset(self, dataset, processes_numerator, processes_denominator):
+    def prepare_basis_training_dataset(self, dataset_numerator, processes_numerator, dataset_denominator, processes_denominator):
 
         ref_train_label_sample_dict = {**{ref: 0 for ref in processes_denominator}}
 
-        dataset_ref     = self.merge_dataframe_dict_for_training(dataset, 
+        dataset_ref     = self.merge_dataframe_dict_for_training(dataset_denominator, 
                                                                   ref_train_label_sample_dict, 
                                                                   samples_to_merge = processes_denominator)
         
         numerator_train_label_sample_dict = {**{numerator: 1 for numerator in processes_numerator}}
         
-        dataset_num = self.merge_dataframe_dict_for_training(dataset, 
+        dataset_num = self.merge_dataframe_dict_for_training(dataset_numerator, 
                                                             numerator_train_label_sample_dict, 
                                                             samples_to_merge = processes_numerator)
         
