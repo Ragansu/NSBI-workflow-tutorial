@@ -7,6 +7,8 @@ pd.options.mode.chained_assignment = None
 
 import pickle 
 
+import nsbi_common_utils
+
 from pathlib import Path
 
 from typing import Union, Dict
@@ -32,7 +34,6 @@ import pickle
 
 from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
 
-importlib.reload(sys.modules['nsbi_common_utils.plotting'])
 from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_features, plot_reweighted, plot_calibration_curve, plot_calibration_curve_ratio
 
 from joblib import dump, load
