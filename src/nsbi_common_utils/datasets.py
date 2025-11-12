@@ -331,21 +331,28 @@ def save_dataframe_as_root(dataset        : pd.DataFrame,
         ntuple[tree_name] = arrays
         
 
-def load_dataframe_from_root(path_to_load      : str,
-                           tree_name         : str,
-                           branches_to_load  : list) -> pd.DataFrame:
+import uproot
+import pandas as pd
+
+def load_dataframe_from_root(path_to_load: str,
+                             tree_name: str,
+                             branches_to_load: list = None) -> pd.DataFrame:
     """
     Utility: read selected branches from a ROOT TTree into a DataFrame.
 
     Args:
         path_to_load: Source ROOT file path.
         tree_name: TTree name inside the file.
-        branches_to_load: Branch names to read.
+        branches_to_load: Branch names to read. If empty or None, load all branches.
     Returns:
         pd.DataFrame containing the requested branches.
     """
     with uproot.open(f"{path_to_load}:{tree_name}") as tree:
-            dataframe = tree.arrays(branches_to_load, library="pd")
+        # If no branches are specified, load all
+        if not branches_to_load:
+            branches_to_load = tree.keys()
+        dataframe = tree.arrays(branches_to_load, library="pd")
 
     return dataframe
+
 

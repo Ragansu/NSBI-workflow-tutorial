@@ -5,6 +5,10 @@ import pandas as pd
 import math
 pd.options.mode.chained_assignment = None 
 
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+
 import pickle 
 
 import nsbi_common_utils
@@ -38,10 +42,32 @@ from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_fe
 
 from joblib import dump, load
 
-from tensorflow.keras.models import model_from_json
+import logging
+_LOG_LEVELS = {
+    0: logging.WARNING,  # only warnings/errors
+    1: logging.INFO,     # info + warnings/errors
+    2: logging.DEBUG,    # debug + info + warnings/errors
+}
 
+logger = logging.getLogger("Training Logs")
+logger.propagate = True  # let the application decide handlers/formatters
 
+def configure_logging(verbose_level: int = 1):
+    """
+    Configure the logger
+    """
+    level = _LOG_LEVELS.get(verbose_level, logging.INFO)
+    logger.setLevel(level)
 
+    if not logger.handlers:
+        h = logging.StreamHandler()
+        h.setLevel(level)
+        fmt = logging.Formatter(
+            fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        h.setFormatter(fmt)
+        logger.addHandler(h)
 
 def save_model(onnx_model_instance, 
                     path_to_save_model: Union[str, Path], 
@@ -339,11 +365,12 @@ class density_ratio_trainer:
                             plot_scaled_features=False, 
                             load_trained_models = False,
                             recalibrate_output=False,
+                            summarize_model: bool = False,
                             num_ensemble_members=1):
         '''
         Train an ensemble of NNs
         '''
-        print(f"starting ensemble training")
+        logger.info(f"starting ensemble training")
         self.num_ensemble_members = num_ensemble_members
         
         # Define an array with random integers for boostrap training
@@ -363,7 +390,7 @@ class density_ratio_trainer:
 
             if load_trained_models:
                 if os.path.exists(f"{self.path_to_models}/model{ensemble_index}.onnx"):
-                    print(f"Loading existing model for ensemble member {ensemble_index}")
+                    logger.info(f"Loading existing model for ensemble member {ensemble_index}")
                     load_trained_models_ensemble_member = True
                 else:
                     load_trained_models_ensemble_member = False
@@ -392,7 +419,10 @@ class density_ratio_trainer:
                         holdout_split           = holdout_split, 
                         plot_scaled_features    = plot_scaled_features, 
                         load_trained_models     = load_trained_models_ensemble_member,
-                        recalibrate_output      = recalibrate_output)
+                        recalibrate_output      = recalibrate_output,
+                        summarize_model         = summarize_model)
+            
+            summarize_model = False
         
     def train(self, hidden_layers, 
                     neurons, 
@@ -414,7 +444,8 @@ class density_ratio_trainer:
                     holdout_split=0.3, 
                     plot_scaled_features=False, 
                     load_trained_models = False,
-                    recalibrate_output=False):
+                    recalibrate_output=False,
+                    summarize_model: bool = False):
         '''
         Method that trains the density ratio NNs
 
@@ -431,6 +462,7 @@ class density_ratio_trainer:
         self.calibration = calibration
         self.calibration_switch = False # Set the switch to false for first evaluation for calibration
 
+        configure_logging(verbose)
         self.verbose = verbose
 
         if ensemble_index=='':
@@ -487,7 +519,7 @@ class density_ratio_trainer:
             path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index}.bin"
             path_to_saved_model         = f"{self.path_to_models}model{ensemble_index}.onnx"
 
-            print(f"Reading saved models from {self.path_to_models}")
+            logger.info(f"Reading saved models from {self.path_to_models}")
             self.scaler[ensemble_index], self.model_NN[ensemble_index] = load_trained_model(path_to_saved_model, path_to_saved_scaler)
             
         # Else setup a new scaler
@@ -516,22 +548,20 @@ class density_ratio_trainer:
         if not load_trained_models:
 
             # Check if the datasets are normalized
-            print(f"Sum of weights of class 0: {np.sum(weight_train[label_train==0])}")
-            print(f"Sum of weights of class 1: {np.sum(weight_train[label_train==1])}")
+            logger.info(f"Sum of weights of class 0: {np.sum(weight_train[label_train==0])}")
+            logger.info(f"Sum of weights of class 1: {np.sum(weight_train[label_train==1])}")
     
-            print(f"Using {activation} activation function")
+            logger.info(f"Using {activation} activation function")
     
             self.model_NN[ensemble_index] = build_model(n_hidden=hidden_layers, n_neurons=neurons, 
                                         learning_rate=learning_rate, 
                                         input_shape=[len(self.features)], 
                                         use_log_loss=self.use_log_loss,
                                         activation=activation)
-            if self.verbose>0:
-                self.model_NN[ensemble_index].summary()
     
             if callback:
     
-                print("Using Callbacks")
+                logger.info("Using Callbacks")
     
                 self.history = self.model_NN[ensemble_index].fit(scaled_data_train, label_train, callbacks=[reduce_lr, es], 
                                                                 epochs=number_of_epochs, batch_size=batch_size, 
@@ -539,7 +569,7 @@ class density_ratio_trainer:
                                                                 verbose=self.verbose)
     
             else:
-                print("Not Using Callbacks")
+                logger.info("Not Using Callbacks")
     
                 self.history = self.model_NN[ensemble_index].fit(scaled_data_train, label_train, 
                                                                 epochs=number_of_epochs, batch_size=batch_size, 
@@ -548,8 +578,11 @@ class density_ratio_trainer:
             
             K.clear_session()
         
-            print("Finished Training")
+            logger.info("Finished Training")
 
+            if summarize_model:
+                logging.info(self.model_NN[ensemble_index].summary())
+                
             # Convert Keras model to ONNX
             self.model_NN[ensemble_index]                   = convert_tf_to_onnx(self.model_NN[ensemble_index])
 
@@ -610,7 +643,7 @@ class density_ratio_trainer:
             else:
                 if not os.path.exists(path_to_calibrated_object) or recalibrate_output:
                     
-                    print(f"Calibrating the saved model with {num_bins_cal} bins")
+                    logger.info(f"Calibrating the saved model with {num_bins_cal} bins")
                     
                     if type_of_calibration == "histogram":
                         self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
@@ -628,7 +661,7 @@ class density_ratio_trainer:
                 
                     file_calib = open(path_to_calibrated_object, 'rb') 
                     self.histogram_calibrator[ensemble_index] = pickle.load(file_calib)
-                    print(f"calibrator object loaded = {self.histogram_calibrator}")
+                    logger.info(f"calibrator object loaded = {self.histogram_calibrator}")
             
             self.full_data_prediction[ensemble_index] = self.predict_with_model(self.dataset, 
                                                                                 ensemble_index = ensemble_index, 
@@ -682,8 +715,6 @@ class density_ratio_trainer:
         data: the dataset to evaluate trained model on
         '''
 
-        print(f"model = {self.model_NN[ensemble_index]}")
-
         pred = predict_with_onnx(data[self.features], 
                                 self.scaler[ensemble_index],
                                 self.model_NN[ensemble_index])
@@ -698,12 +729,18 @@ class density_ratio_trainer:
     
             pred = self.histogram_calibrator[ensemble_index].cali_pred(pred)
             pred = pred.reshape(pred.shape[0],)
+            pred = np.clip(pred, 1e-25, 0.9999)
 
         K.clear_session()
-        
-        pred = np.clip(pred, 1e-25, 0.9999)
         return pred
-        
+    
+    def print_architecture(self, ensemble_index=0):
+        """
+        Print a concise architecture summary for the given ensemble member.
+        Works after reload because it reads the saved JSON summary.
+        """
+        logger.info(f"Model summary \n\n {onnx.helper.printable_graph(self.model_NN[ensemble_index].graph)}") 
+    
     def make_overfit_plots(self, ensemble_index=0):
         '''
         Plot predictions for training and holdout to test compatibility
@@ -829,11 +866,11 @@ class density_ratio_trainer:
             ratio_rwt[ensemble_index] = score_rwt / ( 1.0 - score_rwt )
     
             # Calculate \sum p_A/p_B x p_B
-            print(f"\n\n\nThe sum of PDFs in ensemble member {ensemble_index} is {np.sum(ratio_rwt[ensemble_index] * weight_ref)}\n\n")
+            logger.info(f"\n\n\nThe sum of PDFs in ensemble member {ensemble_index} is {np.sum(ratio_rwt[ensemble_index] * weight_ref)}\n\n")
 
         ratio_rwt_aggregate = np.mean(ratio_rwt, axis=0)
         
-        print(f"The sum of PDFs using the whole ensemble is {np.sum(ratio_rwt_aggregate * weight_ref)}\n\n\n")
+        logger.info(f"The sum of PDFs using the whole ensemble is {np.sum(ratio_rwt_aggregate * weight_ref)}\n\n\n")
         
 
     def evaluate_and_save_ratios(self, dataset, aggregation_type = 'mean_ratio'):
@@ -843,7 +880,7 @@ class density_ratio_trainer:
         aggregation_type: choose an option on how to aggregate the ensemble models - 'median_ratio', 'mean_ratio', 'median_score', 'mean_score'
         '''
 
-        print(f"Evaluating density ratios")
+        logger.info(f"Evaluating density ratios")
         score_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
         ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
         log_ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
@@ -877,6 +914,45 @@ class density_ratio_trainer:
         np.save(saved_ratio_path, ratio_ensemble)
 
         return saved_ratio_path
+    
+    def evaluate_ratios(self, dataset, aggregation_type = 'mean_ratio'):
+        '''
+        Evaluate with self.model on the input dataset, and save to self.path_to_ratios
+
+        aggregation_type: choose an option on how to aggregate the ensemble models - 'median_ratio', 'mean_ratio', 'median_score', 'mean_score'
+        '''
+
+        logger.info(f"Evaluating density ratios")
+        score_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+        ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+        log_ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+
+        for ensemble_index in range(self.num_ensemble_members):
+            score_pred[ensemble_index] = self.predict_with_model(dataset[self.features], 
+                                                                 use_log_loss=self.use_log_loss, 
+                                                                 ensemble_index=ensemble_index)
+            
+            ratio_pred[ensemble_index] = score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index])
+            log_ratio_pred[ensemble_index] = np.log(score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index]))
+
+        if aggregation_type == 'median_ratio':
+            ratio_ensemble = np.median(ratio_pred, axis=0)
+            
+        elif aggregation_type == 'mean_ratio':
+            ratio_ensemble = np.mean(ratio_pred, axis=0)
+            
+        elif aggregation_type == 'median_score':
+            score_aggregate = np.median(score_pred, axis=0)
+            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+            
+        elif aggregation_type == 'mean_score':
+            score_aggregate = np.mean(score_pred, axis=0)
+            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+
+        else:
+            raise Exception("aggregation_type not recognized, please choose between median_ratio, mean_ratio, median_score or mean_score")
+
+        return ratio_ensemble
         
 
 def build_model(n_hidden=4, 

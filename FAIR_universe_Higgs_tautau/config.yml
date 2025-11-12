@@ -140,20 +140,19 @@ Regions:
     Variable: presel_score
     Type: binned
     Binning:
-        - -8.747320175170898
-        - -6.810490310192108
-        - -4.873660445213318
-        - -2.9368305802345276
-        - -1.0000007152557373
+        - -8.75
+        - -4.
+        - -2.5
+        - -1.0
 -   Name: SR_binned
-    Filter: presel_score>3.75
+    Filter: presel_score>4.5
     Variable: presel_score
     Type: binned
     Binning:
-        - 3.75000
-        - 5.942246437072754
+        - 4.5
+        - 5.
 -   Name            : SR
-    Filter          : presel_score>=-1.0 & presel_score<=3.75
+    Filter          : presel_score>=-1.0 & presel_score<=4.5
     Type            : unbinned
     Variable        : null
     Binning         : null

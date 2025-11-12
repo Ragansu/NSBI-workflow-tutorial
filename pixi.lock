@@ -152,6 +152,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.4.0-pyh71513ae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py312h1e80e48_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-pandas-2023.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.7.31-he1a10d6_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-cal-0.7.4-hae4d56a_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-common-0.9.29-hb9d3cd8_0.conda
@@ -746,6 +747,20 @@ packages:
   - pkg:pypi/awkward-cpp?source=hash-mapping
   size: 617254
   timestamp: 1758397716580
+- conda: https://conda.anaconda.org/conda-forge/noarch/awkward-pandas-2023.8.0-pyhd8ed1ab_0.conda
+  sha256: c416d6e34720580a8618dc9f4df8f0b9923ea6a22ded2a95d14faac06653a506
+  md5: 9cd2ae77926cf8b8a9fb19ff8ec55d2c
+  depends:
+  - awkward >=2.0.0
+  - pandas >=1.2
+  - pyarrow >=7.0.0
+  - python >=3.8
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/awkward-pandas?source=hash-mapping
+  size: 15660
+  timestamp: 1692289358730
 - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.7.31-he1a10d6_2.conda
   sha256: 83fa4b24101cd85da825dcbb7611390c2a6e31a3fc17abb4d1ee5b8c40bdaa5a
   md5: 76550a294cc78aaccfca7824bb4814ce
