@@ -36,7 +36,6 @@ import pickle
 
 from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
 
-importlib.reload(sys.modules['nsbi_common_utils.plotting'])
 from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_features, plot_reweighted, plot_calibration_curve, plot_calibration_curve_ratio
 
 from joblib import dump, load
@@ -211,6 +210,8 @@ class preselection_network_trainer:
         # Define the neural network model
         self.model = tf.keras.Sequential([
             layers.Input(shape=(self.data_features_training.shape[1],)),  # Input layer
+            layers.Dense(1000, activation='swish'),
+            layers.Dense(1000, activation='swish'),
             layers.Dense(1000, activation='swish'),
             layers.Dense(1000, activation='swish'),
             layers.Dense(self.num_classes, activation='softmax')  # Output layer for num_class classes
@@ -726,10 +727,9 @@ class density_ratio_trainer:
     
             pred = self.histogram_calibrator[ensemble_index].cali_pred(pred)
             pred = pred.reshape(pred.shape[0],)
+            pred = np.clip(pred, 1e-25, 0.9999)
 
         K.clear_session()
-        
-        pred = np.clip(pred, 1e-25, 0.9999)
         return pred
     
     def print_architecture(self, ensemble_index=0):
@@ -912,6 +912,45 @@ class density_ratio_trainer:
         np.save(saved_ratio_path, ratio_ensemble)
 
         return saved_ratio_path
+    
+    def evaluate_ratios(self, dataset, aggregation_type = 'mean_ratio'):
+        '''
+        Evaluate with self.model on the input dataset, and save to self.path_to_ratios
+
+        aggregation_type: choose an option on how to aggregate the ensemble models - 'median_ratio', 'mean_ratio', 'median_score', 'mean_score'
+        '''
+
+        logger.info(f"Evaluating density ratios")
+        score_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+        ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+        log_ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
+
+        for ensemble_index in range(self.num_ensemble_members):
+            score_pred[ensemble_index] = self.predict_with_model(dataset[self.features], 
+                                                                 use_log_loss=self.use_log_loss, 
+                                                                 ensemble_index=ensemble_index)
+            
+            ratio_pred[ensemble_index] = score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index])
+            log_ratio_pred[ensemble_index] = np.log(score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index]))
+
+        if aggregation_type == 'median_ratio':
+            ratio_ensemble = np.median(ratio_pred, axis=0)
+            
+        elif aggregation_type == 'mean_ratio':
+            ratio_ensemble = np.mean(ratio_pred, axis=0)
+            
+        elif aggregation_type == 'median_score':
+            score_aggregate = np.median(score_pred, axis=0)
+            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+            
+        elif aggregation_type == 'mean_score':
+            score_aggregate = np.mean(score_pred, axis=0)
+            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+
+        else:
+            raise Exception("aggregation_type not recognized, please choose between median_ratio, mean_ratio, median_score or mean_score")
+
+        return ratio_ensemble
         
 
 def build_model(n_hidden=4, 
