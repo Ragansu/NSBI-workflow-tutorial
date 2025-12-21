@@ -23,6 +23,7 @@ class Model:
                 self.poi                                = measurement["config"]["poi"]
                 self.measurement_param_dict             = measurement["config"]["parameters"]
                 break
+        self.param_names = [p['name'] for p in self.workspace['measurements'][0]['config']['parameters']]
         
         self.parameters_in_measurement, \
             self.initial_values_dict                    = self._get_parameters_to_fit()
@@ -129,7 +130,12 @@ class Model:
                         modifier_name = modifier["name"]
                         if modifier_name not in list_all_norm_factors               : list_all_norm_factors.append(modifier_name)
                         if modifier_name not in dict_sample_normfactors[sample]     : dict_sample_normfactors[sample].append(modifier_name)
-                    
+
+        list_all_norm_factors = [p for p in list_all_norm_factors if p in self.param_names]
+        dict_sample_normfactors = {key: val for key, val in dict_sample_normfactors.items()
+                                    if any(p in self.param_names for p in val)
+                                }
+
         return list_all_norm_factors, dict_sample_normfactors
 
     def _get_parameters_to_fit(self) -> tuple[list[str], dict[str, float]]:
@@ -364,8 +370,8 @@ class Model:
     
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
-        for sample in self.all_samples:
-            params_sample: list[str] = self.norm_sample_map[sample]
+        for sample, params_sample in self.norm_sample_map.items():  
+            # params_sample: list[str]
             for param in params_sample:
                 index_param             = self.index_normparam_map[param]
                 norm_var[sample]        *= param_vec[index_param]

@@ -5,6 +5,19 @@
 #################################################
 
 import numpy as np
+from sklearn.isotonic import IsotonicRegression
+
+class IsotonicCalibrator:
+    def __init__(self, score_predicted, truth_labels, weights):
+
+        self.regressor = IsotonicRegression(out_of_bounds='clip')
+        self.regressor.fit(score_predicted, truth_labels, sample_weight=weights)
+
+    def cali_pred(self, score_uncalibrated):
+
+        calib_score = self.regressor.predict(score_uncalibrated)
+        return calib_score
+        
 
 class HistogramCalibrator:
     

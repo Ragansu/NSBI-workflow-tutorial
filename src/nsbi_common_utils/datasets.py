@@ -293,6 +293,24 @@ class datasets:
             dataset.loc[mask_train_label, "weights_normed"]      = dataset.loc[mask_train_label, "weights_normed"] / total_train_weight
 
         return dataset
+    
+    def prepare_basis_training_dataset(self, dataset_numerator, processes_numerator, dataset_denominator, processes_denominator):
+
+        ref_train_label_sample_dict = {**{ref: 0 for ref in processes_denominator}}
+
+        dataset_ref     = self.merge_dataframe_dict_for_training(dataset_denominator, 
+                                                                  ref_train_label_sample_dict, 
+                                                                  samples_to_merge = processes_denominator)
+        
+        numerator_train_label_sample_dict = {**{numerator: 1 for numerator in processes_numerator}}
+        
+        dataset_num = self.merge_dataframe_dict_for_training(dataset_numerator, 
+                                                            numerator_train_label_sample_dict, 
+                                                            samples_to_merge = processes_numerator)
+        
+        dataset_mix_model = pd.concat([dataset_num, dataset_ref])
+
+        return dataset_mix_model
 
 
 def save_dataframe_as_root(dataset        : pd.DataFrame,
@@ -313,20 +331,28 @@ def save_dataframe_as_root(dataset        : pd.DataFrame,
         ntuple[tree_name] = arrays
         
 
-def load_dataframe_from_root(path_to_load      : str,
-                           tree_name         : str,
-                           branches_to_load  : list) -> pd.DataFrame:
+import uproot
+import pandas as pd
+
+def load_dataframe_from_root(path_to_load: str,
+                             tree_name: str,
+                             branches_to_load: list = None) -> pd.DataFrame:
     """
     Utility: read selected branches from a ROOT TTree into a DataFrame.
 
     Args:
         path_to_load: Source ROOT file path.
         tree_name: TTree name inside the file.
-        branches_to_load: Branch names to read.
+        branches_to_load: Branch names to read. If empty or None, load all branches.
     Returns:
         pd.DataFrame containing the requested branches.
     """
     with uproot.open(f"{path_to_load}:{tree_name}") as tree:
-            dataframe = tree.arrays(branches_to_load, library="pd")
+        # If no branches are specified, load all
+        if not branches_to_load:
+            branches_to_load = tree.keys()
+        dataframe = tree.arrays(branches_to_load, library="pd")
 
     return dataframe
+
+
