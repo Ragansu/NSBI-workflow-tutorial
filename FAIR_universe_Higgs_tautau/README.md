@@ -28,12 +28,4 @@ This notebook is used to train the density ratios associated with the systematic
 
 6. [`Parameter_Fitting_with_Systematics.ipynb`](./Parameter_Fitting_with_Systematics.ipynb)
 
-This notebook is used to create a workspace object and perform parameter fitting with the NSBI model
-
-
-Measurements at the LHC
---
-
-Example published ATLAS distribution of the $H\to \tau\tau$ process among other backgrounds. The FAIR Universe dataset uses a $\tau_{had} \tau_{lep}$ final state, like in the distribution below:
-
-![Screenshot 2025-06-06 at 11 22 19 AM](https://github.com/user-attachments/assets/3107e69c-7071-4dcd-bb3d-01777ba93746)
+This notebook is used to create a workspace object and perform parameter fitting with the NSBI model.
