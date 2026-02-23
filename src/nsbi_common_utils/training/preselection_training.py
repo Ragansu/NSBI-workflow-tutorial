@@ -1,7 +1,5 @@
 #import libraries
 import os, importlib, sys, shutil
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None 
