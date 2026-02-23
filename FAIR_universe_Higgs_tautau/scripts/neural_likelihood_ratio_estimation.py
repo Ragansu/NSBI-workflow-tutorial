@@ -110,7 +110,7 @@ def main():
             [process_type], 
             dataset_SR_nominal, 
             ref_processes, 
-            denominatorisreferencehypothesis=True
+            denominatorisreferencehypothesis=False
         )
 
         output_name = f'{process_type}'
@@ -163,6 +163,17 @@ def main():
         
         logger.info(f"Testing normalization for {process_type}...")
         NN_training_mix_model[process_type].test_normalization()
+
+        NN_training_mix_model[process_type].make_overfit_plots()
+
+        num_bins_cal = 50
+        NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='score')
+        # NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='llr')
+
+        variables_to_plot=['log_DER_pt_h'] # The 1D variable for reweighting closure
+        yscale_type='log'
+        num_bins_plotting=21
+        NN_training_mix_model[process_type].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting)
 
     logger.info("Training/Loading complete.")
 

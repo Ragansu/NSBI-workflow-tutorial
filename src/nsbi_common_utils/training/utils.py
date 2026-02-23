@@ -11,7 +11,7 @@ from sklearn.exceptions import InconsistentVersionWarning
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 import torch
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
@@ -21,21 +21,9 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 from torch.utils.data import Subset
 
-from nsbi_common_utils.lightning_tools import MultiClassLightning, DensityRatioLightning, PrintEpochMetrics, LossHistory, WeightedTensorDataset
-
 from pathlib import Path
 from typing import Union, Dict
 from joblib import dump, load
-
-import onnx
-import onnxruntime as rt
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
-from sklearn.compose import ColumnTransformer
-
-from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
-from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_features, plot_reweighted, plot_calibration_curve, plot_calibration_curve_ratio, plot_overfit_side_by_side
  
 def save_model(lightning_model, 
                input_sample,
@@ -79,6 +67,9 @@ def save_model(lightning_model,
     )
     
     dump(scaler_instance, str(path_to_save_scaler), compress=True)
+
+import onnxruntime as rt
+from joblib import load
 
 def load_trained_model(path_to_saved_model: Union[Path, str], 
                         path_to_saved_scaler: Union[Path, str]):

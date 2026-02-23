@@ -1,5 +1,5 @@
 import torch
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F

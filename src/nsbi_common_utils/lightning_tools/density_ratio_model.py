@@ -1,5 +1,5 @@
 import torch
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
@@ -75,7 +75,7 @@ class DensityRatioLightning(pl.LightningModule):
 
         weighted_loss = (loss * w).sum() / w.sum()
     
-        self.log("train_loss", weighted_loss, prog_bar=True)
+        self.log("train_loss", weighted_loss, prog_bar=True, on_step=False, on_epoch=True)
         return weighted_loss
     
     
@@ -93,16 +93,21 @@ class DensityRatioLightning(pl.LightningModule):
 
         loss = (loss * w).sum() / w.sum()
 
-        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
 
         optimizer = torch.optim.NAdam(self.parameters(), lr=self.lr)
 
-        scheduler = torch.optim.lr_scheduler.StepLR(
+        # scheduler = torch.optim.lr_scheduler.StepLR(
+        #     optimizer,
+        #     step_size=self.hparams.callback_patience,   
+        #     gamma=self.hparams.callback_factor        
+        # )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer,
-            step_size=self.hparams.callback_patience,   
-            gamma=self.hparams.callback_factor        
+            T_max=100,
+            eta_min=1e-11
         )
 
         return {

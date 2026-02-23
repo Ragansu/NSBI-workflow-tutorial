@@ -1,5 +1,7 @@
 #import libraries
 import os, importlib, sys, shutil
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None 
@@ -11,7 +13,7 @@ from sklearn.exceptions import InconsistentVersionWarning
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 import torch
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F

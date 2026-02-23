@@ -122,8 +122,8 @@ def plot_calibration_curve(data_den, weight_den, data_num, weight_num,
 
     # ---------- Finalize ----------
     plt.tight_layout()
-    plt.show()
     plt.savefig(f"{path_to_figures}/calib_plot_{score_range}.png", bbox_inches='tight')
+    plt.show()
     plt.clf()
 
 def plot_calibration_curve_ratio(
@@ -210,10 +210,9 @@ def plot_calibration_curve_ratio(
     plt.ylabel("Residue", size=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-4.0, ymax=4.0)
 
-    # --- finalize ---
     plt.tight_layout()
-    plt.show()
     plt.savefig(f"{path_to_figures}/calib_plot_llr_{score_range}.png", bbox_inches='tight')
+    plt.show()
     plt.clf()
 
 
@@ -325,8 +324,8 @@ def plot_reweighted(
         abline(0.0,1.0)
 
         plt.tight_layout()
-        plt.show()
         plt.savefig(f'{path_to_figures}/reweighted_{str(variable)}.png', bbox_inches='tight')
+        plt.show()
         plt.clf()
 
 def plot_overfit(score_1, score_2, w_train, w_test, nbins=50, 
@@ -445,8 +444,8 @@ def plot_overfit_side_by_side(
     abline(0.0, 0.0)
 
     plt.tight_layout()
-    plt.show()
     plt.savefig(f'{path_to_figures}/overfit_side_by_side_{holdout_index}.png', bbox_inches='tight')
+    plt.show()
     plt.clf()
 
 

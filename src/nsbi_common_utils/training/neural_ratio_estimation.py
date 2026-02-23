@@ -1,5 +1,5 @@
 #import libraries
-import os, importlib, sys, shutil
+import os, importlib, sys, shutil, gc
 import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None 
@@ -11,7 +11,7 @@ from sklearn.exceptions import InconsistentVersionWarning
 warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 import torch
-torch.set_float32_matmul_precision("high")
+torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
@@ -21,15 +21,11 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 from torch.utils.data import Subset
 
-from nsbi_common_utils.lightning_tools import MultiClassLightning, DensityRatioLightning, PrintEpochMetrics, LossHistory, WeightedTensorDataset
-from nsbi_common_utils.training.utils import save_model, predict_with_onnx, convert_torch_to_onnx, convert_logLR_to_score, load_trained_model
+import nsbi_common_utils
 
 from pathlib import Path
 from typing import Union, Dict
 from joblib import dump, load
-
-import onnx
-import onnxruntime as rt
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
@@ -207,6 +203,9 @@ class density_ratio_trainer:
                         recalibrate_output      = recalibrate_output,
                         num_workers             = num_workers)
             
+            gc.collect()
+            torch.cuda.empty_cache()
+            
         
     def train(self, hidden_layers, 
                     neurons, 
@@ -299,7 +298,7 @@ class density_ratio_trainer:
             path_to_saved_model         = f"{self.path_to_models}model{ensemble_index}.onnx"
 
             logger.info(f"Reading saved models from {self.path_to_models}")
-            self.scaler[ensemble_index], self.model_NN[ensemble_index] = load_trained_model(path_to_saved_model, path_to_saved_scaler)
+            self.scaler[ensemble_index], self.model_NN[ensemble_index] = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, path_to_saved_scaler)
             
         # Else setup a new scaler
         else:
@@ -332,7 +331,7 @@ class density_ratio_trainer:
     
             logger.info(f"Using {activation} activation function")
 
-            train_ds = WeightedTensorDataset(
+            train_ds = nsbi_common_utils.lightning_tools.WeightedTensorDataset(
                 scaled_data_train.values,
                 label_train,
                 weight_train
@@ -357,7 +356,8 @@ class density_ratio_trainer:
                                         pin_memory=False,  
                                         persistent_workers=False)
 
-            model = DensityRatioLightning(
+            # Example use of training API
+            model = nsbi_common_utils.lightning_tools.DensityRatioLightning(
                 n_hidden=hidden_layers,
                 n_neurons=neurons,
                 input_dim=len(self.features),
@@ -368,7 +368,18 @@ class density_ratio_trainer:
                 callback_patience=callback_patience
             )
 
-            loss_history = LossHistory()
+            loss_history = nsbi_common_utils.lightning_tools.LossHistory()
+
+            print("torch:", torch.__version__, "cuda:", torch.version.cuda, flush=True)
+            print("is_available:", torch.cuda.is_available(), flush=True)
+            if torch.cuda.is_available():
+                print("name:", torch.cuda.get_device_name(0), flush=True)
+                print("arch list:", torch.cuda.get_arch_list(), flush=True)
+            print("CUDA_VISIBLE_DEVICES =", os.environ.get("CUDA_VISIBLE_DEVICES"))
+            print("torch.cuda.is_available =", torch.cuda.is_available())
+            print("torch.cuda.device_count =", torch.cuda.device_count())
+            if torch.cuda.is_available():
+                print("device 0 =", torch.cuda.get_device_name(0))
 
             if callback:
                 trainer = Trainer(
@@ -379,7 +390,7 @@ class density_ratio_trainer:
                         EarlyStopping(monitor="val_loss", patience=callback_patience),
                         LearningRateMonitor(),
                         loss_history,
-                        PrintEpochMetrics()
+                        nsbi_common_utils.lightning_tools.PrintEpochMetrics()
                     ],
                     logger=True,
                     enable_checkpointing=False,
@@ -397,6 +408,13 @@ class density_ratio_trainer:
 
             trainer.fit(model, train_loader, val_loader)
 
+            # Memory cleaning
+            trainer = None
+            train_loader = None
+            val_loader = None
+            gc.collect()
+            torch.cuda.empty_cache()
+
             self.model_NN[ensemble_index] = model
         
             logger.info("Finished Training")
@@ -404,7 +422,7 @@ class density_ratio_trainer:
             path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index}.bin"
             path_to_saved_model         = f"{self.path_to_models}model{ensemble_index}.onnx"
 
-            save_model(self.model_NN[ensemble_index], 
+            nsbi_common_utils.training.utils.save_model(self.model_NN[ensemble_index], 
                         torch.randn((1, len(self.features))), 
                         path_to_saved_model,
                         self.scaler[ensemble_index], 
@@ -412,7 +430,7 @@ class density_ratio_trainer:
                         softmax_output = False)
             
             # Reassign the model to be in ONNX format
-            self.scaler[ensemble_index], self.model_NN[ensemble_index] = load_trained_model(path_to_saved_model, 
+            self.scaler[ensemble_index], self.model_NN[ensemble_index] = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, 
                                                                                             path_to_saved_scaler)
 
             # Save metadata
@@ -426,6 +444,9 @@ class density_ratio_trainer:
         train_data_prediction = self.predict_with_model(data_train_full, 
                                                         ensemble_index = ensemble_index, 
                                                         use_log_loss = self.use_log_loss)
+        
+        gc.collect()
+        torch.cuda.empty_cache()
 
         calibration_method = 'direct'
         
@@ -534,13 +555,13 @@ class density_ratio_trainer:
         data: the dataset to evaluate trained model on
         '''
 
-        pred = predict_with_onnx(data[self.features], 
+        pred = nsbi_common_utils.training.utils.predict_with_onnx(data[self.features], 
                                 self.scaler[ensemble_index],
                                 self.model_NN[ensemble_index])
 
         if use_log_loss:
 
-            pred = convert_logLR_to_score(pred)
+            pred = nsbi_common_utils.training.utils.convert_logLR_to_score(pred)
 
         if (self.calibration) & (self.calibration_switch):
     
@@ -614,8 +635,6 @@ class density_ratio_trainer:
         scale: linear or log y-axis scales
         num_bins: number of bins in the reweighting diagnostic plot
         '''
-        importlib.reload(sys.modules['nsbi_common_utils.plotting'])
-        from nsbi_common_utils.plotting import plot_reweighted
 
         plot_reweighted(
             self.dataset_training, self.score_den_training, self.weight_den_training, self.score_num_training, self.weight_num_training,
@@ -633,8 +652,6 @@ class density_ratio_trainer:
         scale: linear or log y-axis scales
         num_bins: number of bins in the reweighting diagnostic plot
         '''
-        importlib.reload(sys.modules['nsbi_common_utils.plotting'])
-        from nsbi_common_utils.plotting import plot_reweighted
 
         plot_reweighted(self.dataset_training, 
                         self.score_den_training, 

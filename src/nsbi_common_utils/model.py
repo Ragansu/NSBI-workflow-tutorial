@@ -1,4 +1,7 @@
 import numpy as np
+import os
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
 import jax
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
