@@ -50,24 +50,6 @@ logger = logging.getLogger("Training Logs")
 logger.propagate = True  
 
 
-def configure_logging(verbose_level: int = 1):
-    """
-    Configure the logger
-    """
-    level = _LOG_LEVELS.get(verbose_level, logging.INFO)
-    logger.setLevel(level)
-
-    if not logger.handlers:
-        h = logging.StreamHandler()
-        h.setLevel(level)
-        fmt = logging.Formatter(
-            fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        h.setFormatter(fmt)
-        logger.addHandler(h)
-
-
 class preselection_network_trainer:
     '''
     A class for training the multi-class classification neural network 
@@ -103,7 +85,7 @@ class preselection_network_trainer:
                     learning_rate=0.1,
                     validation_split=0.1,
                     activation='swish',
-                    num_workers=4):
+                    num_workers=0):
 
         '''
         The function will train the preselection NN, assign it to self.model variable, and save the model to user-provided path_to_save directory.
@@ -143,16 +125,16 @@ class preselection_network_trainer:
                                   batch_size=batch_size, 
                                   shuffle=True,
                                   num_workers=num_workers,  
-                                pin_memory=True,  
-                                persistent_workers=False  
+                                  pin_memory=False,  
+                                  persistent_workers=False  
                                 )
         
         val_loader   = DataLoader(val_ds, 
                                   batch_size=batch_size, 
                                   shuffle=False, 
                                   num_workers=num_workers,  
-                                pin_memory=True,  
-                                persistent_workers=False  
+                                  pin_memory=False,  
+                                  persistent_workers=False  
                                 )
         
         self.model = MultiClassLightning(
@@ -227,7 +209,8 @@ class preselection_network_trainer:
         '''
         pred                        = predict_with_onnx(dataset[self.features], 
                                                         self.scaler, 
-                                                        self.model)
+                                                        self.model,
+                                                        softmax_output = True)
         
         return pred
 

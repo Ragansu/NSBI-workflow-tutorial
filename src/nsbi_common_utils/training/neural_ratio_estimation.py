@@ -18,7 +18,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
+from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from torch.utils.data import Subset
 
 import nsbi_common_utils
@@ -80,14 +80,83 @@ class density_ratio_trainer:
                       use_log_loss=False, 
                       split_using_fold=False,
                       delete_existing_models=False):
-        '''
-        dataset: the main dataframe containing two classes p_A, p_B for density ratio p_A/p_B estimation
-        weights: the weight vector, normalized independently for each class A & B
-        training_labels: array of 1s for p_A hypothesis and 0s for p_B hypothesis
-        features: training features x in p_A(x)/p_B(x)
-        features_scaling: training features to standardize before training
-        sample_name: set with strings containing names of A and B
-        '''
+        """
+        Initialise the density ratio trainer.
+
+        This class trains one or more neural networks to estimate the density ratio
+        :math:`p_A(x) / p_B(x)` between two fixed hypothesis A and B using a
+        binary-classification approach. The classifier output score is then
+        converted to a likelihood ratio via :math:`r = s / (1 - s)`.
+
+        Parameters
+        ----------
+        dataset : pandas.DataFrame
+            The full dataset containing events from both hypotheses A and B.
+            Rows must be aligned with ``weights`` and ``training_labels``.
+
+        weights : numpy.ndarray, shape (n_events,)
+            Per-event weights. Weights should be normalised **independently**
+            within each class so that each class sums to the same total weight
+            before being passed in. Mis-normalised weights will bias the ratio.
+
+        training_labels : numpy.ndarray of int, shape (n_events,)
+            Binary class labels: ``1`` for hypothesis A (numerator) and ``0``
+            for hypothesis B (denominator).
+
+        features : list of str
+            Column names in ``dataset`` to use as input features to the
+            neural network.
+
+        features_scaling : list of str
+            Subset of ``features`` that will be passed through the chosen
+            scaler. Features not listed here are passed through unchanged
+            (``remainder='passthrough'`` in the ``ColumnTransformer``).
+
+        sample_name : list of str, length 2
+            Human-readable labels for the two hypotheses,
+            e.g. ``['signal', 'background']``. Index 0 is A (numerator),
+            index 1 is B (denominator). Used in plot titles and saved file names.
+
+        output_name : str
+            A tag used to identify outputs produced by this trainer instance.
+
+        path_to_figures : str, optional
+            Directory where diagnostic plots are written. Created automatically
+            if it does not exist. Defaults to the current working directory.
+
+        path_to_models : str, optional
+            Directory where trained ONNX model files and scalers are saved.
+            Created automatically if it does not exist.
+
+        path_to_ratios : str, optional
+            Directory where evaluated density ratio arrays are saved.
+            Created automatically if it does not exist.
+
+        use_log_loss : bool, optional
+            If ``True``, the network is trained with a log-likelihood-ratio
+            loss instead of binary cross-entropy, and the raw output is
+            treated as :math:`\\log(p_A / p_B)` before conversion to a
+            probability score. Default ``False``.
+
+        split_using_fold : bool, optional
+            Reserved for future k-fold splitting support. Not yet implemented.
+            Default ``False``.
+
+        delete_existing_models : bool, optional
+            If ``True``, the directories ``path_to_figures``, ``path_to_models``
+            and ``path_to_ratios`` are deleted and recreated before training,
+            ensuring a clean run. Use with caution — this is irreversible.
+            Default ``False``.
+
+        Notes
+        -----
+        * Weight normalisation is the caller's responsibility. A common
+        convention is to normalise each class so that
+        :math:`\\sum_{i \\in A} w_i = \\sum_{j \\in B} w_j = 1`.
+        * ``features_scaling`` is typically identical to ``features``, but can
+        be a strict subset if some features are already on a suitable scale
+        (e.g. boolean flags).
+        """
         self.dataset = dataset
         self.weights = weights
         self.training_labels = training_labels
@@ -148,9 +217,146 @@ class density_ratio_trainer:
                             summarize_model: bool = False,
                             num_ensemble_members=1,
                             num_workers = 0):
-        '''
-        Train an ensemble of NNs
-        '''
+        """
+        Train an ensemble of density-ratio neural networks.
+
+        Each ensemble member is trained independently on a different random
+        train/holdout split (bootstrapping without replacement). The ensemble
+        average is later used when calling :meth:`evaluate_and_save_ratios`
+        to reduce variance in the estimated ratio.
+
+        This method is the **recommended entry point** for most users.
+        For single-model training without ensemble wrapping, use :meth:`train`
+        directly.
+
+        Parameters
+        ----------
+        hidden_layers : int
+            Number of hidden layers in each neural network.
+
+        neurons : int
+            Number of neurons per hidden layer. All hidden layers share the
+            same width.
+
+        number_of_epochs : int
+            Maximum number of training epochs. Early stopping (if enabled via
+            ``callback``) may terminate training before this limit is reached.
+
+        batch_size : int
+            Mini-batch size used during stochastic gradient optimisation.
+            Larger batches give smoother gradient estimates but use more memory.
+
+        learning_rate : float
+            Initial learning rate passed to the Adam optimiser.
+
+        scalerType : str
+            Feature pre-processing strategy. One of:
+
+            * ``'StandardScaler'`` — zero mean, unit variance.
+            * ``'MinMax'`` — scales features to the range ``[-1.5, 1.5]``.
+            * ``'PowerTransform_Yeo'`` — Yeo-Johnson power transform with
+            standardisation; recommended for strongly skewed features.
+
+        calibration : bool, optional
+            If ``True``, apply a post-hoc calibration step to map the raw
+            network score to a well-calibrated probability. Default ``False``.
+
+        type_of_calibration : str, optional
+            Calibration method to apply when ``calibration=True``. One of:
+
+            * ``'isotonic'`` — isotonic regression (recommended for most cases).
+            * ``'histogram'`` — histogram-based calibration.
+
+            Default ``'isotonic'``.
+
+        num_bins_cal : int, optional
+            Number of bins used when ``type_of_calibration='histogram'``.
+            Ignored for isotonic calibration. Default ``40``.
+
+        callback : bool, optional
+            If ``True``, attach a ``pytorch_lightning`` ``EarlyStopping``
+            callback that monitors ``val_loss`` and stops training when
+            improvement stalls. Default ``True``.
+
+        callback_patience : int, optional
+            Number of epochs with no improvement in ``val_loss`` before early
+            stopping is triggered. Also used as the patience parameter of the
+            internal learning-rate scheduler. Default ``30``.
+
+        callback_factor : float, optional
+            Factor by which the learning rate is reduced when the scheduler
+            detects a plateau. Default ``0.01``.
+
+        activation : str, optional
+            Activation function applied after each hidden layer.
+            Common choices include ``'swish'``, ``'relu'``, ``'tanh'``.
+            Default ``'swish'``.
+
+        verbose : int, optional
+            Logging verbosity level:
+
+            * ``0`` — warnings only.
+            * ``1`` — informational messages.
+            * ``2`` — debug output.
+
+            Default ``2``.
+
+        validation_split : float, optional
+            Fraction of the *training* data (after holdout removal) reserved
+            for computing the validation loss used by the early-stopping
+            callback. Default ``0.1``.
+
+        holdout_split : float, optional
+            Fraction of the full dataset set aside as a holdout (test) set.
+            This data is never seen during training or validation and is used
+            exclusively for post-training diagnostic plots. Default ``0.3``.
+
+        plot_scaled_features : bool, optional
+            If ``True``, plot the distribution of each feature after scaling
+            for visual inspection. Default ``False``.
+
+        load_trained_models : bool, optional
+            If ``True`` and a saved ONNX model is found in ``path_to_models``
+            for a given ensemble member, that model is loaded rather than
+            retrained. Members with no saved model are trained from scratch.
+            Default ``False``.
+
+        recalibrate_output : bool, optional
+            If ``True`` and ``load_trained_models=True``, forces recalibration
+            even if a saved calibrator object already exists. Default ``False``.
+
+        summarize_model : bool, optional
+            Reserved for future model-summary printing. Not yet implemented.
+            Default ``False``.
+
+        num_ensemble_members : int, optional
+            Number of neural networks to train in the ensemble. Setting this
+            to ``1`` is equivalent to training a single model. Default ``1``.
+
+        num_workers : int, optional
+            Number of worker processes used by the ``DataLoader`` for
+            parallel data loading. Set to ``0`` to load data in the main
+            process (safest choice on most systems). Default ``0``.
+
+        Notes
+        -----
+        * Random seeds for each ensemble member's train/holdout split are
+        drawn automatically from a uniform integer distribution; there is
+        no need to set seeds manually.
+        * GPU memory is explicitly cleared between ensemble members via
+        ``torch.cuda.empty_cache()`` to prevent out-of-memory errors on
+        large ensembles.
+        * Trained models and scalers are persisted to ``path_to_models`` in
+        ONNX format after each member finishes, so a crash mid-ensemble
+        does not lose previously trained members (recoverable via
+        ``load_trained_models=True``).
+
+        See Also
+        --------
+        train : Single-model training without the ensemble loop.
+        evaluate_and_save_ratios : Aggregate ensemble predictions into a
+            final density ratio array.
+        """
         logger.info(f"starting ensemble training")
         self.num_ensemble_members = num_ensemble_members
         
@@ -229,19 +435,118 @@ class density_ratio_trainer:
                     load_trained_models = False,
                     recalibrate_output=False,
                     num_workers=0):
-        '''
-        Method that trains the density ratio NNs
+        """
+        Train a single density-ratio neural network.
 
-        batch_size: the size of each batch used during gradient optimization
-        learning_rate: the initial learning rate to pass to the optimizer
-        scalerType: option to one of three standardizing options: ['MinMax', 'StandardScaler', 'PowerTransform_Yeo'] 
-        holdout_split: the fraction of dataset to set aside for diagnostics, not used in training and validation of the loss vs epoch curves
-        epochs: the number of epochs to train the NNs
+        This is the core training routine called internally by
+        :meth:`train_ensemble`. It can also be called directly when no
+        ensemble averaging is required. After training, the model is
+        exported to ONNX format and reloaded for inference so that
+        subsequent calls to :meth:`predict_with_model` are backend-agnostic.
 
-        calibration: boolean to do Histogram-based calibration of the NN ourput
-        num_bins_cal: number of bins used for calibration histogram
-        '''
+        Parameters
+        ----------
+        hidden_layers : int
+            Number of hidden layers in the neural network.
 
+        neurons : int
+            Number of neurons per hidden layer.
+
+        number_of_epochs : int
+            Maximum number of training epochs.
+
+        batch_size : int
+            Mini-batch size for gradient optimisation.
+
+        learning_rate : float
+            Initial learning rate for the Adam optimiser.
+
+        scalerType : str
+            Feature scaling method. See :meth:`train_ensemble` for accepted
+            values.
+
+        calibration : bool, optional
+            Apply post-hoc probability calibration. Default ``False``.
+
+        type_of_calibration : str, optional
+            Calibration algorithm. One of ``'isotonic'`` or ``'histogram'``.
+            Default ``'isotonic'``.
+
+        num_bins_cal : int, optional
+            Bins for histogram calibration. Default ``40``.
+
+        callback : bool, optional
+            Enable early stopping and learning-rate monitoring callbacks.
+            Default ``True``.
+
+        callback_patience : int, optional
+            Early stopping patience in epochs. Default ``30``.
+
+        callback_factor : float, optional
+            Learning-rate reduction factor at plateau. Default ``0.01``.
+
+        activation : str, optional
+            Hidden-layer activation function. Default ``'swish'``.
+
+        verbose : int, optional
+            Logging verbosity (0=warnings, 1=info, 2=debug). Default ``2``.
+
+        rnd_seed : int, optional
+            Random seed passed to ``train_test_split`` for reproducible
+            train/holdout splitting. Default ``2``.
+
+        ensemble_index : int or str, optional
+            Index of the ensemble slot to populate. When called directly
+            (not via :meth:`train_ensemble`), leave as the default ``''``
+            to auto-initialise a single-member ensemble.
+
+        validation_split : float, optional
+            Fraction of training data used for validation loss. Default ``0.1``.
+
+        holdout_split : float, optional
+            Fraction of total data reserved for holdout diagnostics. Default ``0.3``.
+
+        plot_scaled_features : bool, optional
+            Plot feature distributions after scaling. Default ``False``.
+
+        load_trained_models : bool, optional
+            Load a previously saved model instead of training. Default ``False``.
+
+        recalibrate_output : bool, optional
+            Force recalibration even when a saved calibrator exists.
+            Default ``False``.
+
+        num_workers : int, optional
+            DataLoader worker processes. Default ``0``.
+
+        Raises
+        ------
+        Exception
+            If ``type_of_calibration`` is not ``'isotonic'`` or ``'histogram'``.
+
+        Warns
+        -----
+        UserWarning
+            Logs a warning if the minimum predicted score for any class equals
+            ``0`` or the maximum equals ``1``, which may indicate numerical
+            saturation and unreliable ratio estimates.
+
+        Notes
+        -----
+        * The holdout set is stratified by ``training_labels`` to ensure
+        class balance is preserved.
+        * When ``load_trained_models=True``, the ``holdout_num`` and
+        ``rnd_seed`` are recovered from a saved ``.npy`` file so that the
+        same holdout split is used, guaranteeing consistency between the
+        saved model and any subsequent diagnostic plots.
+        * A loss-vs-epoch plot is automatically saved to ``path_to_figures``
+        after each successful training run.
+
+        See Also
+        --------
+        train_ensemble : Recommended high-level interface that wraps this method.
+        predict_with_model : Run inference with the trained model.
+        """
         self.calibration = calibration
         self.calibration_switch = False # Set the switch to false for first evaluation for calibration
 
@@ -381,6 +686,15 @@ class density_ratio_trainer:
             if torch.cuda.is_available():
                 print("device 0 =", torch.cuda.get_device_name(0))
 
+            checkpoint_callback = ModelCheckpoint(
+                                                    monitor="val_loss",          
+                                                    dirpath="checkpoints/",      
+                                                    filename="best-{epoch:03d}-{val_loss:.6f}"+f"_{self.sample_name[0]}vs{self.sample_name[1]}",
+                                                    save_top_k=1,                
+                                                    mode="min",                  
+                                                    save_last=False,             
+                                                )
+
             if callback:
                 trainer = Trainer(
                     accelerator="auto",
@@ -389,24 +703,28 @@ class density_ratio_trainer:
                     callbacks=[
                         EarlyStopping(monitor="val_loss", patience=callback_patience),
                         LearningRateMonitor(),
+                        checkpoint_callback,
                         loss_history,
                         nsbi_common_utils.lightning_tools.PrintEpochMetrics()
                     ],
                     logger=True,
-                    enable_checkpointing=False,
-                    enable_progress_bar=True,
+                    enable_checkpointing=True,
+                    enable_progress_bar=False,
                 )
             else:
                 trainer = Trainer(
                     accelerator="auto",
                     devices="auto",
                     max_epochs=number_of_epochs,
-                    callbacks=[loss_history],
+                    callbacks=[loss_history, checkpoint_callback],
                     logger=True,
-                    enable_checkpointing=False
+                    enable_checkpointing=False,
+                    enable_progress_bar=False
                 )
 
             trainer.fit(model, train_loader, val_loader)
+
+            device = next(model.parameters()).device
 
             # Memory cleaning
             trainer = None
@@ -415,7 +733,12 @@ class density_ratio_trainer:
             gc.collect()
             torch.cuda.empty_cache()
 
-            self.model_NN[ensemble_index] = model
+            best_model = nsbi_common_utils.lightning_tools.DensityRatioLightning.load_from_checkpoint(
+                checkpoint_callback.best_model_path,
+                map_location=device
+                )
+
+            self.model_NN[ensemble_index] = best_model
         
             logger.info("Finished Training")
                 
@@ -549,11 +872,53 @@ class density_ratio_trainer:
 
     
     def predict_with_model(self, data, ensemble_index = 0, use_log_loss=False):
-        '''
-        Method that evaluates density ratios on provided dataset, using self.model
+        """
+        Evaluate the trained density-ratio model on an input dataset.
 
-        data: the dataset to evaluate trained model on
-        '''
+        Applies feature scaling, runs ONNX inference, optionally converts
+        from log-likelihood-ratio space to a probability score, and
+        optionally applies the calibration layer.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Dataset to evaluate. Must contain all columns listed in
+            ``self.features``. The dataframe may contain additional columns
+            which are silently ignored.
+
+        ensemble_index : int, optional
+            Index of the ensemble member to use for prediction. Must be in
+            the range ``[0, num_ensemble_members)``. Default ``0``.
+
+        use_log_loss : bool, optional
+            If ``True``, the raw model output is interpreted as
+            :math:`\\log(p_A / p_B)` and converted to a probability score
+            via :math:`s = \\sigma(\\log r) = 1 / (1 + r^{-1})` before
+            returning. Must match the ``use_log_loss`` setting used during
+            training. Default ``False``.
+
+        Returns
+        -------
+        numpy.ndarray, shape (n_events,)
+            Predicted scores in the range ``(0, 1)``, where values close to
+            ``1`` indicate high probability of belonging to hypothesis A
+            (numerator) and values close to ``0`` indicate hypothesis B
+            (denominator). If calibration is enabled, the output is
+            additionally clipped to ``[1e-8, 1 - 1e-8]`` for numerical safety.
+
+        Notes
+        -----
+        * To obtain the density ratio :math:`r = p_A / p_B` from the returned
+        score :math:`s`, use :math:`r = s / (1 - s)`.
+        * This method is used internally by :meth:`evaluate_and_save_ratios`
+        and the diagnostic plot methods, but can also be called directly
+        for custom downstream analyses.
+
+        See Also
+        --------
+        evaluate_and_save_ratios : Ensemble-aggregated ratio evaluation with
+            automatic saving.
+        """
 
         pred = nsbi_common_utils.training.utils.predict_with_onnx(data[self.features], 
                                 self.scaler[ensemble_index],

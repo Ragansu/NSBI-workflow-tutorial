@@ -24,6 +24,9 @@ from torch.utils.data import Subset
 from pathlib import Path
 from typing import Union, Dict
 from joblib import dump, load
+
+import onnx
+from joblib import load
  
 def save_model(lightning_model, 
                input_sample,
@@ -68,9 +71,6 @@ def save_model(lightning_model,
     
     dump(scaler_instance, str(path_to_save_scaler), compress=True)
 
-import onnxruntime as rt
-from joblib import load
-
 def load_trained_model(path_to_saved_model: Union[Path, str], 
                         path_to_saved_scaler: Union[Path, str]):
 
@@ -83,7 +83,11 @@ def load_trained_model(path_to_saved_model: Union[Path, str],
     return scaler, model
 
 
-def predict_with_onnx(dataset, scaler, model, calibration_model = None, batch_size = 10_000):
+def predict_with_onnx(dataset, scaler, model, calibration_model = None, 
+                      batch_size = 10_000,
+                    softmax_output: bool = False):
+
+    import onnxruntime as rt
 
     sess_opts = rt.SessionOptions()
     sess_opts.intra_op_num_threads = 1
@@ -122,7 +126,8 @@ def predict_with_onnx(dataset, scaler, model, calibration_model = None, batch_si
         batch = scaled_dataset[i:end_idx]
         preds[i:end_idx] = model.run([output_name], {input_name: batch})[0]
 
-    preds = preds.reshape(preds.shape[0],)
+    if not softmax_output:
+        preds = preds.reshape(preds.shape[0],)
 
     if calibration_model is not None:
         preds = calibration_model.cali_pred(preds)

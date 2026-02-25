@@ -22,7 +22,6 @@ hep.style.use(hep.style.ATLAS)
 
 sys.path.append('../src')
 import nsbi_common_utils
-from nsbi_common_utils.training import preselection_network_trainer
 
 def load_config(path):
     with open(path, "r") as f:
@@ -127,7 +126,7 @@ def main():
         samples_to_merge=dataset_incl_nominal.keys()
     )
 
-    preselectionTraining = preselection_network_trainer(
+    preselectionTraining = nsbi_common_utils.training.preselection_network_trainer(
         dataset_incl_nominal_training, 
         features, 
         features_scaling

@@ -5,11 +5,6 @@ import warnings
 import logging
 import numpy as np
 import yaml
-import mplhep as hep
-
-import nsbi_common_utils
-
-hep.style.use(hep.style.ATLAS)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -180,4 +175,10 @@ def main():
     logger.info("Workflow completed successfully.")
 
 if __name__ == "__main__":
+
+    import mplhep as hep
+    import nsbi_common_utils
+
+    hep.style.use(hep.style.ATLAS)
+    
     main()

@@ -10,11 +10,11 @@ General:
               POI  : mu_htautau
 
 Samples:
-    - Name              : htautau
-      Tree              : tree_htautau
+    - Name              : ztautau
+      Tree              : tree_ztautau
       SamplePath        : saved_datasets/dataset_nominal.root
       Weight            : weights
-      UseAsReference    : True
+      UseAsReference    : False
       UseAsBasis        : True
 
     - Name              : ttbar
@@ -23,12 +23,12 @@ Samples:
       Weight            : weights
       UseAsReference    : True
       UseAsBasis        : True
-        
-    - Name              : ztautau
-      Tree              : tree_ztautau
+
+    - Name              : htautau
+      Tree              : tree_htautau
       SamplePath        : saved_datasets/dataset_nominal.root
       Weight            : weights
-      UseAsReference    : False
+      UseAsReference    : True
       UseAsBasis        : True
 
 NormFactors:
@@ -145,14 +145,14 @@ Regions:
         - -2.5
         - -1.0
 -   Name: SR_binned
-    Filter: presel_score>3.75
+    Filter: presel_score>4.5
     Variable: presel_score
     Type: binned
     Binning:
-        - 3.75
+        - 4.5
         - 5.
 -   Name            : SR
-    Filter          : presel_score>=-1.0 & presel_score<=3.75
+    Filter          : presel_score>=-1.0 & presel_score<=4.5
     Type            : unbinned
     Variable        : null
     Binning         : null

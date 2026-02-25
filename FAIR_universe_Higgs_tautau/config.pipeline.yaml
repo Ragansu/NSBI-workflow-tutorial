@@ -70,14 +70,14 @@ preselection_network:
   
   model_path: "./saved_datasets/preselection_model/"
   force_train: false
-  load_trained_models: true
+  load_trained_models: false
   
   training:
     test_size: 0.2
     random_state: 42
-    batch_size: 1024
+    batch_size: 4096
     epochs: 50
-    learning_rate: 0.000001
+    learning_rate: 0.00001
     
     labels:
       htautau: 0
@@ -113,7 +113,7 @@ neural_likelihood_ratio_estimation:
     neurons: 1000
     number_of_epochs: 100
     batch_size: 512
-    learning_rate: 0.001
+    learning_rate: 0.0001
     scalerType: "MinMax"
     
     calibration: false
@@ -135,7 +135,7 @@ neural_likelihood_ratio_estimation:
     plot_scaled_features: false
     summarize_model: true
 
-    num_workers: 2
+    num_workers: 0
 
   # Process-specific settings - can be different from the default
   training_settings:
@@ -184,7 +184,7 @@ systematic_uncertainty:
     num_ensemble_members: 1
     summarize_model: false
 
-    num_workers: 1
+    num_workers: 0
 
 
 # Parameter fit settings
