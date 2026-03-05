@@ -675,17 +675,6 @@ class density_ratio_trainer:
 
             loss_history = nsbi_common_utils.lightning_tools.LossHistory()
 
-            print("torch:", torch.__version__, "cuda:", torch.version.cuda, flush=True)
-            print("is_available:", torch.cuda.is_available(), flush=True)
-            if torch.cuda.is_available():
-                print("name:", torch.cuda.get_device_name(0), flush=True)
-                print("arch list:", torch.cuda.get_arch_list(), flush=True)
-            print("CUDA_VISIBLE_DEVICES =", os.environ.get("CUDA_VISIBLE_DEVICES"))
-            print("torch.cuda.is_available =", torch.cuda.is_available())
-            print("torch.cuda.device_count =", torch.cuda.device_count())
-            if torch.cuda.is_available():
-                print("device 0 =", torch.cuda.get_device_name(0))
-
             checkpoint_callback = ModelCheckpoint(
                                                     monitor="val_loss",          
                                                     dirpath="checkpoints/",      
