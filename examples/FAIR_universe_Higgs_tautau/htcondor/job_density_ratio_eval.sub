@@ -1,7 +1,8 @@
 universe = container
 container_image = file:///staging/jsandesara/nsbi-env-gpu.sif
 
-WORK_DIR = examples/FAIR_universe_Higgs_tautau
+EXAMPLE_DIR = FAIR_universe_Higgs_tautau
+WORK_DIR = examples/$(EXAMPLE_DIR)
 
 executable = $(WORK_DIR)/htcondor/run_step.sh
 arguments  = data_nn_eval $(CONFIG) $(SKIP)
@@ -30,7 +31,7 @@ gpus_minimum_capability = 7.0
 +GPUJobLength = "short"
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-transfer_output_files = $(WORK_DIR)/saved_datasets, $(WORK_DIR)/output
+transfer_output_files = $(EXAMPLE_DIR)/saved_datasets, $(EXAMPLE_DIR)/output
 transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets; output = ./$(WORK_DIR)/output"
 
 queue

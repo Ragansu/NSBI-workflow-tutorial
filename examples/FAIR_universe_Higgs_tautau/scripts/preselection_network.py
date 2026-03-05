@@ -144,7 +144,8 @@ def main():
             path_to_save=model_path,
             batch_size=config_train["batch_size"],
             epochs=config_train["epochs"], 
-            learning_rate=config_train["learning_rate"]
+            learning_rate=config_train["learning_rate"],
+            num_workers=4
         )
         logger.info(f"Training complete. Model saved to {model_path}")
     else:

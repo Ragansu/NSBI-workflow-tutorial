@@ -24,7 +24,7 @@ when_to_transfer_output = ON_EXIT
 
 requirements = (GPUs_DriverVersion >= 12.0)
 
-gpus_minimum_capability = 8.9
+gpus_minimum_capability = 7.0
 
 +WantGPULab = true
 
