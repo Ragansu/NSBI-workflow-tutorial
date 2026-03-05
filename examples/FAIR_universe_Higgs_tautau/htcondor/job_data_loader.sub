@@ -1,7 +1,8 @@
 universe = container
 container_image = file:///staging/jsandesara/nsbi-env-gpu.sif
 
-WORK_DIR = .
+EXAMPLE_DIR = FAIR_universe_Higgs_tautau
+WORK_DIR = examples/$(EXAMPLE_DIR)
 
 executable = $(WORK_DIR)/htcondor/run_step.sh
 arguments  = data_loader $(CONFIG)
@@ -24,7 +25,7 @@ when_to_transfer_output = ON_EXIT
 requirements = (Target.HasCHTCStaging == true)
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-transfer_output_files = $(WORK_DIR)/data, $(WORK_DIR)/saved_datasets
+transfer_output_files = $(EXAMPLE_DIR)/data, $(EXAMPLE_DIR)/saved_datasets
 transfer_output_remaps = "data = ./$(WORK_DIR)/data; saved_datasets = ./$(WORK_DIR)/saved_datasets"
 
 queue

@@ -3,7 +3,7 @@ set -e
 
 STEP=$1
 CONFIG=$2
-WORK_DIR=.
+WORK_DIR=FAIR_universe_Higgs_tautau
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
 python -m pip install --no-deps --user -e .

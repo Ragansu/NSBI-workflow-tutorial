@@ -183,14 +183,14 @@ def plot_calibration_curve_ratio(
     abline(1.0, 0.0)
     plt.title(label + " (Training)", fontsize=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-10, ymax=10)
-    plt.ylabel("Probability ratio", size=16)
+    plt.ylabel("Log Density Ratio MC", size=16)
 
     plt.sca(axes[1, 0])
     residue = np.empty_like(hist_ratio); residue[:] = np.nan
     residue[err_ok] = (hist_ratio[err_ok] - slopeOne[err_ok]) / hist_ratio_err[err_ok]
     plt.errorbar(slopeOne[err_ok], residue[err_ok], yerr=1.0, drawstyle='steps-mid')
     abline(0.0, 0.0)
-    plt.xlabel("Predicted Score", size=16)
+    plt.xlabel("Predicted Log Density Ratio", size=16)
     plt.ylabel("Residue", size=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-4.0, ymax=4.0)
 
@@ -200,13 +200,14 @@ def plot_calibration_curve_ratio(
     abline(1.0, 0.0)
     plt.title(label + " (Holdout)", fontsize=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-10, ymax=10)
+    plt.ylabel("Log Density Ratio MC", size=16)
 
     plt.sca(axes[1, 1])
     residue_h = np.empty_like(hist_ratio_h); residue_h[:] = np.nan
     residue_h[err_ok_holdout] = (hist_ratio_h[err_ok_holdout] - slopeOne[err_ok_holdout]) / hist_ratio_err_h[err_ok_holdout]
     plt.errorbar(slopeOne[err_ok_holdout], residue_h[err_ok_holdout], yerr=1.0, drawstyle='steps-mid', color="blue")
     abline(0.0, 0.0)
-    plt.xlabel("Predicted Score", size=16)
+    plt.xlabel("Predicted Log Density Ratio", size=16)
     plt.ylabel("Residue", size=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-4.0, ymax=4.0)
 
