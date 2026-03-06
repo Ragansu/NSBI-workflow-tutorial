@@ -104,10 +104,11 @@ neural_likelihood_ratio_estimation:
   output_training_dir: "output_training_nominal"
   
   use_log_loss: false
-  delete_existing_models: true
+  delete_existing_models: false
   force_train: true
 
-  num_ensemble_members_evaluation: 1
+  basis_processes_to_train: ["ttbar", "ztautau", "htautau"] 
+  num_ensemble_members_evaluation: 1 
 
   # Some default hyper-parameters -- Quality tested for SBI
   common_training_params: &common_params

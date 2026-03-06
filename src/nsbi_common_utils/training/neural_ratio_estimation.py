@@ -216,7 +216,8 @@ class density_ratio_trainer:
                             recalibrate_output=False,
                             summarize_model: bool = False,
                             num_ensemble_members=1,
-                            num_workers = 0):
+                            num_workers = 0,
+                            ensemble_index=None):
         """
         Train an ensemble of density-ratio neural networks.
 
@@ -372,9 +373,7 @@ class density_ratio_trainer:
         self.train_idx          = [None for i in range(num_ensemble_members)]
         self.holdout_idx        = [None for i in range(num_ensemble_members)]
 
-        # Train ensemble of NNs in series
-        for ensemble_index in range(num_ensemble_members):
-
+        if ensemble_index is not None:
             if load_trained_models:
                 if os.path.exists(f"{self.path_to_models}/model{ensemble_index}.onnx"):
                     logger.info(f"Loading existing model for ensemble member {ensemble_index}")
@@ -384,33 +383,71 @@ class density_ratio_trainer:
 
             else:
                 load_trained_models_ensemble_member = False
-            
-            # Train ensemble NNs with different train/test split each time (bootstrapping without replacement)
-            self.train(hidden_layers, 
-                        neurons, 
-                        number_of_epochs, 
-                        batch_size,
-                        learning_rate, 
-                        scalerType, 
-                        calibration, 
-                        type_of_calibration,
-                        num_bins_cal, 
-                        callback, 
-                        callback_patience, 
-                        callback_factor,
-                        activation, 
-                        verbose                 = verbose,
-                        rnd_seed                = random_state_arr[ensemble_index], 
-                        ensemble_index          = ensemble_index, 
-                        validation_split        = validation_split, 
-                        holdout_split           = holdout_split, 
-                        plot_scaled_features    = plot_scaled_features, 
-                        load_trained_models     = load_trained_models_ensemble_member,
-                        recalibrate_output      = recalibrate_output,
-                        num_workers             = num_workers)
-            
-            gc.collect()
-            torch.cuda.empty_cache()
+
+            random_state = np.random.randint(0, 2**32 -1, size=None)
+            self.train(hidden_layers,
+                            neurons,
+                            number_of_epochs,
+                            batch_size,
+                            learning_rate,
+                            scalerType,
+                            calibration,
+                            type_of_calibration,
+                            num_bins_cal,
+                            callback,
+                            callback_patience,
+                            callback_factor,
+                            activation,
+                            verbose                 = verbose,
+                            rnd_seed                = random_state,
+                            ensemble_index          = ensemble_index,
+                            validation_split        = validation_split,
+                            holdout_split           = holdout_split,
+                            plot_scaled_features    = plot_scaled_features,
+                            load_trained_models     = load_trained_models_ensemble_member,
+                            recalibrate_output      = recalibrate_output,
+                            num_workers             = num_workers)
+
+        else:
+            # Train ensemble of NNs in series
+            for ensemble_index in range(num_ensemble_members):
+
+                if load_trained_models:
+                    if os.path.exists(f"{self.path_to_models}/model{ensemble_index}.onnx"):
+                        logger.info(f"Loading existing model for ensemble member {ensemble_index}")
+                        load_trained_models_ensemble_member = True
+                    else:
+                        load_trained_models_ensemble_member = False
+
+                else:
+                    load_trained_models_ensemble_member = False
+                
+                # Train ensemble NNs with different train/test split each time (bootstrapping without replacement)
+                self.train(hidden_layers, 
+                            neurons, 
+                            number_of_epochs, 
+                            batch_size,
+                            learning_rate, 
+                            scalerType, 
+                            calibration, 
+                            type_of_calibration,
+                            num_bins_cal, 
+                            callback, 
+                            callback_patience, 
+                            callback_factor,
+                            activation, 
+                            verbose                 = verbose,
+                            rnd_seed                = random_state_arr[ensemble_index], 
+                            ensemble_index          = ensemble_index, 
+                            validation_split        = validation_split, 
+                            holdout_split           = holdout_split, 
+                            plot_scaled_features    = plot_scaled_features, 
+                            load_trained_models     = load_trained_models_ensemble_member,
+                            recalibrate_output      = recalibrate_output,
+                            num_workers             = num_workers)
+                
+                gc.collect()
+                torch.cuda.empty_cache()
             
         
     def train(self, hidden_layers, 

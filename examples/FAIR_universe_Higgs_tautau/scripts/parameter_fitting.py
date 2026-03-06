@@ -119,8 +119,8 @@ def main():
 
         logger.info("\nPerforming Fits (Tables logged to file)")
 
-        # freeze_params = ["JES"]
-        freeze_params = []
+        freeze_params = ["JES", "TES"]
+        # freeze_params = []
         
         print("\n" + "="*40)
         print(" NSBI FIT RESULTS ")

@@ -33,7 +33,7 @@ def main():
     logger.info(f"Loading configuration from {args.config}")
     # Load the workflow parameters
     config_workflow = load_config(args.config)["neural_likelihood_ratio_estimation"]
-    
+   
     # Load the fit configuration
     nsbi_fit_config_path = config_workflow["nsbi_fit_config"]
     logger.info(f"Initializing NSBI ConfigManager from: {nsbi_fit_config_path}")
@@ -96,9 +96,16 @@ def main():
     path_to_figures = {}
     path_to_models = {}
 
+    process_type_input = args.process
+    if process_type_input is not None:
+        logger.info(f"Only training process type {process_type_input}")
+    else:
+        logger.info(f"Train all processes")
     logger.info("Preparing datasets and initializing trainers...")
     for process_type in basis_processes:
-
+        if process_type_input is not None:
+            if process_type_input != process_type:
+                continue
         # Prepare dataset to be passed to training
         dataset_mix_model = datasets_helper.prepare_basis_training_dataset(
             dataset_SR_nominal, 
@@ -139,6 +146,9 @@ def main():
     training_settings = config_workflow["training_settings"]
 
     for process_type in basis_processes:
+        if process_type_input is not None:
+            if process_type_input != process_type:
+                continue
         logger.info(f"Processing {process_type}...")
         
         if process_type not in training_settings:
@@ -154,6 +164,10 @@ def main():
             logger.info(f"Using load_trained_models={settings['load_trained_models']} from config for {process_type}.")
         
         logger.info(f"Starting training/loading for {process_type}")
+        
+        ensemble_index = args.ensemble_index
+        if ensemble_index is not None:
+            settings["ensemble_index"] = int(ensemble_index)
         NN_training_mix_model[process_type].train_ensemble(**settings)
         
         logger.info(f"Testing normalization for {process_type}...")
