@@ -651,14 +651,14 @@ class density_ratio_trainer:
                                         batch_size=batch_size, 
                                         shuffle=True,
                                         num_workers=num_workers,  
-                                        pin_memory=False,  
+                                        pin_memory=True,  
                                         persistent_workers=False)
             
             val_loader   = DataLoader(val_ds, 
                                       batch_size=batch_size, 
                                       shuffle=False,
                                         num_workers=num_workers,  
-                                        pin_memory=False,  
+                                        pin_memory=True,  
                                         persistent_workers=False)
 
             # Example use of training API

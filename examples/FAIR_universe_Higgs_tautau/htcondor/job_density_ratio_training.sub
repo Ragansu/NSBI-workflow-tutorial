@@ -27,6 +27,11 @@ requirements = (GPUs_DriverVersion >= 12.0)
 gpus_minimum_capability = 7.0
 
 +WantGPULab = true
++WantFlocking           = true
++is_resumable           = true
++want_campus_pools      = true
++want_ospool            = true
++WantGlidein            = true
 
 +GPUJobLength = "short"
 
