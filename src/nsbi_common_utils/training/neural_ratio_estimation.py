@@ -975,7 +975,7 @@ class density_ratio_trainer:
             self.weight_num_training, self.weight_num_holdout,
             nbins=30, plotRange=[0.0, 1.0], holdout_index=0,
             labels=(f'{self.sample_name[1]}', f'{self.sample_name[0]}'),
-            path_to_figures=self.path_to_figures
+            path_to_figures=self.path_to_figures, ensemble_index = ensemble_index
         )
 
     def make_calib_plots(self, observable='score', nbins=10, ensemble_index=0):
@@ -999,7 +999,7 @@ class density_ratio_trainer:
                                    self.weight_num_holdout, 
                                    self.path_to_figures, 
                                    nbins=nbins, 
-                                   label="Calibration Curve - "+str(self.sample_name[0]))
+                                   label="Calibration Curve - "+str(self.sample_name[0]), ensemble_index = ensemble_index)
 
         elif observable=='llr':
             # Plot Calibration curves - nll function
@@ -1013,7 +1013,7 @@ class density_ratio_trainer:
                                         self.weight_num_holdout, 
                                         self.path_to_figures, 
                                         nbins=nbins, 
-                                        label="Calibration Curve - "+str(self.sample_name[0]))
+                                        label="Calibration Curve - "+str(self.sample_name[0]), ensemble_index=ensemble_index)
 
         else:
             raise Exception("observable not recognized - choose between score and llr options")
@@ -1032,37 +1032,9 @@ class density_ratio_trainer:
             self.dataset_holdout, self.score_den_holdout, self.weight_den_holdout, self.score_num_holdout, self.weight_num_holdout,
             variables=variables, num=num_bins, sample_name=self.sample_name,
             scale=scale, path_to_figures=self.path_to_figures,
-            label_left='Training Data Diagnostic', label_right='Holdout Data Diagnostic'
+            label_left='Training Data Diagnostic', label_right='Holdout Data Diagnostic', ensemble_index = ensemble_index
         )
 
-    def make_reweighted_plots_old(self, variables, scale, num_bins, ensemble_index = 0):
-        '''
-        Test the quality of the NN predicted density ratios using a reweighting check p_A/p_B * p_B ~ p_A
-
-        variables: list of variables to plot
-        scale: linear or log y-axis scales
-        num_bins: number of bins in the reweighting diagnostic plot
-        '''
-
-        plot_reweighted(self.dataset_training, 
-                        self.score_den_training, 
-                        self.weight_den_training, 
-                        self.score_num_training, 
-                        self.weight_num_training,
-                        variables=variables, 
-                        num=num_bins,
-                        sample_name=self.sample_name, scale=scale,  
-                        path_to_figures=self.path_to_figures, label='Training Data Diagnostic')
-
-        plot_reweighted(self.dataset_holdout, 
-                        self.score_den_holdout, 
-                        self.weight_den_holdout,
-                        self.score_num_holdout, 
-                        self.weight_num_holdout,
-                        variables=variables, 
-                        num=num_bins,
-                        sample_name=self.sample_name, scale=scale, 
-                        path_to_figures=self.path_to_figures, label='Holdout Data Diagnostic')
 
     def test_normalization(self):
         '''

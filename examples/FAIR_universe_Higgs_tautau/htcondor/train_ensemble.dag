@@ -28,6 +28,9 @@ VARS train_ttbar_8 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="8" CONFIG="config.pipeli
 JOB train_ttbar_9 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ttbar_9 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="9" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
+JOB train_ttbar_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_10 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
 JOB train_ztautau_0 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ztautau_0 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="0" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
@@ -58,6 +61,9 @@ VARS train_ztautau_8 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="8" CONFIG="config.pi
 JOB train_ztautau_9 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ztautau_9 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="9" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
+JOB train_ztautau_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_10 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
 JOB train_htautau_0 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_htautau_0 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="0" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
@@ -87,3 +93,6 @@ VARS train_htautau_8 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="8" CONFIG="config.pi
 
 JOB train_htautau_9 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_htautau_9 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="9" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_10 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"

@@ -168,21 +168,23 @@ def main():
         ensemble_index = args.ensemble_index
         if ensemble_index is not None:
             settings["ensemble_index"] = int(ensemble_index)
+        else:
+            ensemble_index = 0
         NN_training_mix_model[process_type].train_ensemble(**settings)
         
         logger.info(f"Testing normalization for {process_type}...")
         NN_training_mix_model[process_type].test_normalization()
 
-        NN_training_mix_model[process_type].make_overfit_plots()
+        NN_training_mix_model[process_type].make_overfit_plots(ensemble_index = ensemble_index)
 
         num_bins_cal = 50
-        NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='score')
+        NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='score', ensemble_index = ensemble_index)
         # NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='llr')
 
         variables_to_plot=['log_DER_pt_h'] # The 1D variable for reweighting closure
         yscale_type='log'
         num_bins_plotting=21
-        NN_training_mix_model[process_type].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting)
+        NN_training_mix_model[process_type].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting, ensemble_index = ensemble_index)
 
     logger.info("Training/Loading complete.")
 
