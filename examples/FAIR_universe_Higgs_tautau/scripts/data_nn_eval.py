@@ -16,6 +16,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+if not logger.handlers:
+    h = logging.StreamHandler(sys.stdout) 
+    h.setLevel(logging.INFO)
+    h.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(h)
+    logger.propagate = False 
 
 hep.style.use(hep.style.ATLAS)
 
@@ -150,6 +158,7 @@ def main():
             raise Exception("aggregation_type not recognized, please choose between median_ratio, mean_ratio, median_score or mean_score")
 
         saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"
+        os.makedirs(path_to_saving_evaluated_ratios, exist_ok=True)
         np.save(saved_ratio_path, ratio_ensemble)
         if process_type == "htautau": print(f"final ensemble - {ratio_ensemble}")
 
@@ -214,6 +223,8 @@ def main():
 
                 saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"
 
+                os.makedirs(path_to_saving_evaluated_ratios, exist_ok=True)
+                
                 np.save(saved_ratio_path, ratio_pred)
 
                 logger.info(f"Systematic density ratios for {syst}_{direction} affecting the {process_type} basis point saved to: {saved_ratio_path}")
