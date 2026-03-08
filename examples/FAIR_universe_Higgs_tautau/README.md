@@ -26,19 +26,19 @@ flowchart TD
     DRT["Density Ratio Training"]
     J3 -->|"Extract Signal Region"| DRT
 
-    PRE_NOM["PRE Script — generate_training_dag.py"]
-    PRE_SYS["PRE Script — systematic_uncertainty_training"]
+    PRE_NOM["Generate Parallel Training DAG"]
+    PRE_SYS["Generate Parallel Training DAG"]
 
-    DRT -->|"Submit nominal training jobs"| PRE_NOM
-    DRT -->|"Submit systematics training jobs"| PRE_SYS
+    DRT -->|"Submit parallel training jobs"| PRE_NOM
+    DRT -->|"Submit parallel training jobs"| PRE_SYS
 
     subgraph NOMINAL["Nominal Density Ratios"]
         direction LR
-        subgraph P1["Process 1"]
-            T1["Ensemble member 0"]
-            T2["Ensemble member 1"]
-            TD["···"]
-            TN["Ensemble member N"]
+        subgraph P3["Process M"]
+            N1["Ensemble member 0"]
+            N2["Ensemble member 1"]
+            ND["···"]
+            NN2["Ensemble member N"]
         end
         subgraph P2["Process 2"]
             Z1["Ensemble member 0"]
@@ -46,20 +46,21 @@ flowchart TD
             ZD["···"]
             ZN["Ensemble member N"]
         end
-        subgraph P3["Process M"]
-            N1["Ensemble member 0"]
-            ND["···"]
-            NN2["Ensemble member N"]
+        subgraph P1["Process 1"]
+            T1["Ensemble member 0"]
+            T2["Ensemble member 1"]
+            TD["···"]
+            TN["Ensemble member N"]
         end
     end
 
     subgraph SYSTEMATICS["Systematic Variation Ratios"]
         direction LR
-        subgraph SP1["Process 1"]
-            S1["NP 1 Up"]
-            S2["NP 1 Down"]
-            SD["···"]
-            SN["NP K Up / Down"]
+        subgraph SP3["Process M"]
+            SN1["NP 1 Up"]
+            SN2["NP 1 Down"]
+            SND["···"]
+            SNN["NP K Up / Down"]
         end
         subgraph SP2["Process 2"]
             SZ1["NP 1 Up"]
@@ -67,10 +68,11 @@ flowchart TD
             SZD["···"]
             SZN["NP K Up / Down"]
         end
-        subgraph SP3["Process M"]
-            SN1["NP 1 Up"]
-            SND["···"]
-            SNN["NP K Up / Down"]
+        subgraph SP1["Process 1"]
+            S1["NP 1 Up"]
+            S2["NP 1 Down"]
+            SD["···"]
+            SN["NP K Up / Down"]
         end
     end
 
@@ -89,8 +91,8 @@ flowchart TD
 
     class J1,J2,J3 job
     class DRT stageLabel
-    class T1,T2,TD,TN,Z1,Z2,ZD,ZN,N1,ND,NN2 parallel
-    class S1,S2,SD,SN,SZ1,SZ2,SZD,SZN,SN1,SND,SNN parallel
+    class T1,T2,TD,TN,Z1,Z2,ZD,ZN,N1,N2,ND,NN2 parallel
+    class S1,S2,SD,SN,SZ1,SZ2,SZD,SZN,SN1,SN2,SND,SNN parallel
     class PRE_NOM,PRE_SYS pre
     class EVAL eval
     class FIT,STAT fit
