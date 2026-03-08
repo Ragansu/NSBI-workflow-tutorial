@@ -5,7 +5,7 @@ EXAMPLE_DIR = FAIR_universe_Higgs_tautau
 WORK_DIR = examples/$(EXAMPLE_DIR)
 
 executable = $(WORK_DIR)/htcondor/run_step.sh
-arguments  = neural_likelihood_ratio_estimation $(CONFIG) $(ENSEMBLE_INDEX)
+arguments  = neural_likelihood_ratio_estimation $(CONFIG) $(ENSEMBLE_INDEX) $(PROCESS_TYPE)
 
 log    = logs/density_ratio_training.$(Cluster).log
 output = logs/density_ratio_training.$(Cluster).out
@@ -35,8 +35,13 @@ gpus_minimum_capability = 7.0
 
 +GPUJobLength = "short"
 
+# Hold if running for more than 2.5 hours
+periodic_hold = (JobStatus == 2) && ((CurrentTime - JobStartDate) > 9000)
+periodic_hold_reason = "Job exceeded maximum runtime"
+periodic_release = (JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 60)
+
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-transfer_output_files = $(EXAMPLE_DIR)/saved_datasets, $(EXAMPLE_DIR)/output
-transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets; output = ./$(WORK_DIR)/output"
+transfer_output_files = $(EXAMPLE_DIR)/output
+transfer_output_remaps = output = ./$(WORK_DIR)/output"
 
 queue

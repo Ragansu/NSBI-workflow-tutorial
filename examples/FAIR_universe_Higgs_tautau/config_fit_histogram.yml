@@ -12,21 +12,21 @@ General:
 Samples:
     - Name              : htautau
       Tree              : tree_htautau
-      SamplePath        : saved_datasets/dataset_nominal.root
+      SamplePath        : /staging/jsandesara/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : True
       UseAsBasis        : True
 
     - Name              : ttbar
       Tree              : tree_ttbar
-      SamplePath        : saved_datasets/dataset_nominal.root
+      SamplePath        : /staging/jsandesara/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : True
       UseAsBasis        : True
         
     - Name : ztautau
       Tree              : tree_ztautau
-      SamplePath        : saved_datasets/dataset_nominal.root
+      SamplePath        : /staging/jsandesara/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : False
       UseAsBasis        : True
@@ -55,28 +55,28 @@ Systematics:
               - ttbar
         Up                  : 
             -   SampleName        : htautau
-                Path              : saved_datasets/dataset_JES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_up.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : saved_datasets/dataset_JES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_up.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : saved_datasets/dataset_JES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_up.root
                 Tree              : tree_ttbar
                 Weight            : weights
         Dn                  :
             -   SampleName        : htautau
-                Path              : saved_datasets/dataset_JES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : saved_datasets/dataset_JES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : saved_datasets/dataset_JES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_ttbar
                 Weight            : weights
     -   Name                : TES
@@ -88,51 +88,31 @@ Systematics:
               - ttbar
         Up                  :
             -   SampleName        : htautau
-                Path              : saved_datasets/dataset_TES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_up.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : saved_datasets/dataset_TES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_up.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : saved_datasets/dataset_TES_up.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_up.root
                 Tree              : tree_ttbar
                 Weight            : weights
         Dn                  :
             -   SampleName        : htautau
-                Path              : saved_datasets/dataset_TES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : saved_datasets/dataset_TES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : saved_datasets/dataset_TES_dn.root
+                Path              : /staging/jsandesara/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_ttbar
                 Weight            : weights
 
-
-TrainingFeatures:
-    - DER_mass_transverse_met_lep
-    - log_DER_mass_vis
-    - log_DER_pt_h
-    - DER_deltar_had_lep
-    - log_DER_pt_tot
-    - log_DER_sum_pt
-    - DER_pt_ratio_lep_had
-    - DER_met_phi_centrality
-    
-TrainingFeaturesToStandardize:
-    - DER_mass_transverse_met_lep
-    - log_DER_mass_vis
-    - log_DER_pt_h
-    - DER_deltar_had_lep
-    - log_DER_pt_tot
-    - log_DER_sum_pt
-    - DER_pt_ratio_lep_had
-    - DER_met_phi_centrality
 
 Regions:
 -   Name: CR

@@ -25,7 +25,8 @@ when_to_transfer_output = ON_EXIT
 requirements = (Target.HasCHTCStaging == true)
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-transfer_output_files = $(EXAMPLE_DIR)/data, $(EXAMPLE_DIR)/saved_datasets
-transfer_output_remaps = "data = ./$(WORK_DIR)/data; saved_datasets = ./$(WORK_DIR)/saved_datasets"
+transfer_output_files = $(EXAMPLE_DIR)/data
+# transfer_output_files = $(EXAMPLE_DIR)/data, $(EXAMPLE_DIR)/saved_datasets
+# transfer_output_remaps = "data = ./$(WORK_DIR)/data; saved_datasets = ./$(WORK_DIR)/saved_datasets"
 
 queue

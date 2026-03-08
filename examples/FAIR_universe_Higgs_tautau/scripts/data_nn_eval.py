@@ -1,5 +1,6 @@
 import os
-import sys
+import sys, pathlib
+from pathlib import Path
 import argparse
 import warnings
 import logging
@@ -117,8 +118,11 @@ def main():
             path_to_saved_scaler        = f"{path_to_trained_models}model_scaler{ensemble_index}.bin"
             path_to_saved_model         = f"{path_to_trained_models}model{ensemble_index}.onnx"
 
+            model_file = Path(path_to_saved_model)
+            if not model_file.is_file():
+                print(f"No model exists for ensemble index {ensemble_index} for process {process_type}")
+                continue
             logger.info(f"Reading saved models from {path_to_saved_model}")
-            print(f"Reading saved models from {path_to_saved_model}")
 
             scaler, model_NN                = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
             score_pred[ensemble_index]      = nsbi_common_utils.training.predict_with_onnx(dataset_Asimov_SR[features], scaler, model_NN, batch_size = 10_000)

@@ -30,7 +30,7 @@ data_loader:
       jes: 0.998
 
   output:
-    dir: "./saved_datasets"
+    dir: "/staging/jsandesara/saved_datasets/"
 
 # Data processing settings - these are specific to the example
 data_preprocessing:
@@ -68,7 +68,7 @@ data_preprocessing:
 preselection_network:
   fit_config_path: "./config_fit_nsbi.yml"
   
-  model_path: "./saved_datasets/preselection_model/"
+  model_path: "/staging/jsandesara/saved_datasets/preselection_model/"
   force_train: false
   load_trained_models: false
   
@@ -100,15 +100,15 @@ preselection_network:
 neural_likelihood_ratio_estimation:
   nsbi_fit_config: "./config_fit_nsbi.yml"
   filter_region: "SR"
-  saved_data_path: "./saved_datasets/"
+  saved_data_path: "/staging/jsandesara/saved_datasets/"
   output_training_dir: "output_training_nominal"
   
   use_log_loss: false
   delete_existing_models: false
-  force_train: true
+  force_train: false
 
   basis_processes_to_train: ["ttbar", "ztautau", "htautau"] 
-  num_ensemble_members_evaluation: 1 
+  num_ensemble_members_evaluation: 10 
 
   # Some default hyper-parameters -- Quality tested for SBI
   common_training_params: &common_params
@@ -131,7 +131,7 @@ neural_likelihood_ratio_estimation:
     validation_split: 0.1
     holdout_split: 0.25
 
-    num_ensemble_members: 1
+    num_ensemble_members: 10
     load_trained_models: true  # 'force_train' flag in script overrides this
     
     verbose: 1
@@ -156,7 +156,7 @@ neural_likelihood_ratio_estimation:
 # Section for Systematic Uncertainty Estimation
 systematic_uncertainty:
   nsbi_fit_config: "./config_fit_nsbi.yml"
-  saved_data_path: "./saved_datasets/"
+  saved_data_path: "/staging/jsandesara/saved_datasets/"
   output_training_dir: "output_training_systematics"
   filter_region: "SR"
   force_train: true
@@ -187,7 +187,7 @@ systematic_uncertainty:
     num_ensemble_members: 1
     summarize_model: false
 
-    num_workers: 0
+    num_workers: 4
 
 
 # Parameter fit settings
