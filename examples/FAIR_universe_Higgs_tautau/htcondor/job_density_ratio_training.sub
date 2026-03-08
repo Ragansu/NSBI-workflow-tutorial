@@ -42,6 +42,6 @@ periodic_release = (JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 6
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
 transfer_output_files = $(EXAMPLE_DIR)/output
-transfer_output_remaps = output = ./$(WORK_DIR)/output"
+transfer_output_remaps = "output = ./$(WORK_DIR)/output"
 
 queue

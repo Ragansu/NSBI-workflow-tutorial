@@ -40,5 +40,5 @@ transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
 # transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets; output = ./$(WORK_DIR)/output"
 
 transfer_output_files = $(EXAMPLE_DIR)/output
-transfer_output_remaps = output = ./$(WORK_DIR)/output"
+transfer_output_remaps = "output = ./$(WORK_DIR)/output"
 queue
