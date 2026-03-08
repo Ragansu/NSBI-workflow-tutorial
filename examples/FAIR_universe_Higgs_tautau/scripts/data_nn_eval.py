@@ -108,12 +108,14 @@ def main():
     for process_type in basis_processes:
 
         path_to_saving_evaluated_ratios         = os.path.join(trained_models_path, f'output_ratios_{process_type}/')
-        path_to_trained_models                  = os.path.join(trained_models_path, f'output_model_params_{process_type}/')
 
         score_pred = np.ones((ensemble_members, dataset_Asimov_SR.shape[0]))
         ratio_pred = np.ones((ensemble_members, dataset_Asimov_SR.shape[0]))
+        loaded_indices = []
 
         for ensemble_index in range(ensemble_members):
+
+            path_to_trained_models                  = os.path.join(trained_models_path, f'output_model_params_{process_type}{ensemble_index}/')
 
             path_to_saved_scaler        = f"{path_to_trained_models}model_scaler{ensemble_index}.bin"
             path_to_saved_model         = f"{path_to_trained_models}model{ensemble_index}.onnx"
@@ -128,19 +130,20 @@ def main():
             score_pred[ensemble_index]      = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], scaler, model_NN)
             ratio_pred[ensemble_index]      = nsbi_common_utils.training.convert_score_to_ratio(score_pred[ensemble_index])    
             if process_type == "htautau": print(score_pred[ensemble_index])
+            loaded_indices.append(ensemble_index)
 
         if aggregation_type == 'median_ratio':
-            ratio_ensemble = np.median(ratio_pred, axis=0)
+            ratio_ensemble = np.median(ratio_pred[loaded_indices], axis=0)
             
         elif aggregation_type == 'mean_ratio':
-            ratio_ensemble = np.mean(ratio_pred, axis=0)
+            ratio_ensemble = np.mean(ratio_pred[loaded_indices], axis=0)
             
         elif aggregation_type == 'median_score':
-            score_aggregate = np.median(score_pred, axis=0)
+            score_aggregate = np.median(score_pred[loaded_indices], axis=0)
             ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
             
         elif aggregation_type == 'mean_score':
-            score_aggregate = np.mean(score_pred, axis=0)
+            score_aggregate = np.mean(score_pred[loaded_indices], axis=0)
             ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
     
         else:
@@ -201,6 +204,8 @@ def main():
                     else:
                         file_calibration = open(path_to_calibrator_model, 'rb') 
                         calibration_model = pickle.load(file_calibration)
+                else:
+                    calibration_model = None
 
                 score_pred      = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], 
                                                                                                scaler, model_NN, 

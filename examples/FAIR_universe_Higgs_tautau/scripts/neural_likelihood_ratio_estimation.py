@@ -107,11 +107,14 @@ def main():
             if process_type_input != process_type:
                 continue
 
+        # Get training hyperparameters
+        training_settings = config_workflow["training_settings"]
+
         if process_type not in training_settings:
             raise KeyError(f"Missing config for {process_type}")
 
-        # Get training hyperparameters
-        training_settings = config_workflow["training_settings"]
+        settings = training_settings[process_type].copy()
+
         # Flag that forces the retraining of density ratios
         force_train = config_workflow["force_train"]
 
@@ -121,7 +124,6 @@ def main():
         else:
             logger.info(f"Using load_trained_models={settings['load_trained_models']} from config for {process_type}.")
 
-        settings = training_settings[process_type].copy()
         ensemble_index = args.ensemble_index
         if ensemble_index is not None:
             settings["ensemble_index"] = int(ensemble_index)
@@ -129,6 +131,8 @@ def main():
         else:
             settings["ensemble_index"] = ensemble_index 
             ensemble_index_label = ''
+
+        print(f"ensemble index is {ensemble_index_label}")
 
         # Prepare dataset to be passed to training
         dataset_mix_model = datasets_helper.prepare_basis_training_dataset(

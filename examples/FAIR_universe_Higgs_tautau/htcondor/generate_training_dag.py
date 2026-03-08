@@ -19,7 +19,7 @@ print(basis_processes)
 
 lines = []
 for process in basis_processes:
-    n_ensemble = config["training_settings"][process]["num_ensemble_members"]
+    n_ensemble = config["num_ensemble_members_training"]
     for idx in range(n_ensemble):
         node = f"train_{process}_{idx}"
         lines.append(f"JOB {node} examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub")
