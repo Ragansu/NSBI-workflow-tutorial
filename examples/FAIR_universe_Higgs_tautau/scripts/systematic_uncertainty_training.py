@@ -83,27 +83,28 @@ def main():
         sys_training_params = config_workflow["training_settings"].copy()
         
         # Force training override
-        if should_train:
-            logger.info("Force training enabled. Setting load_trained_models=False.")
-            sys_training_params['load_trained_models'] = False
+        logger.info("Force training enabled. Setting load_trained_models=False.")
+        sys_training_params['load_trained_models'] = False
+
+        sys_training_params['ensemble_index'] = None
 
         NN_training_syst_process  = {}
-        path_to_ratios            = {}
         path_to_figures           = {}
         path_to_models            = {}
 
         for process in config_nsbi.get_basis_samples():
-            
+                    
             NN_training_syst_process[process] = {}
-            path_to_ratios[process]           = {}
             path_to_figures[process]          = {}
             path_to_models[process]           = {}
             
             # Iterate through systematics defined in NSBI config
             for dict_syst in config_nsbi.config["Systematics"]:
+
+                if (process not in dict_syst["Samples"]) or (dict_syst["Type"] != "NormPlusShape"): continue
+
                 syst = dict_syst["Name"]
                 NN_training_syst_process[process][syst] = {}
-                path_to_ratios[process][syst]           = {}
                 path_to_figures[process][syst]          = {}
                 path_to_models[process][syst]           = {}
 
@@ -114,7 +115,6 @@ def main():
                         # Clean up if process not affected by this systematic
                         if not NN_training_syst_process[process][syst]:
                              del NN_training_syst_process[process][syst]
-                             del path_to_ratios[process][syst]
                              del path_to_figures[process][syst]
                              del path_to_models[process][syst]
                         continue
@@ -142,7 +142,6 @@ def main():
                     
                     output_name = f'{process}_{syst}_{direction}'
                     
-                    path_to_ratios[process][syst][direction]    = os.path.join(training_output_path, f'output_ratios_{output_name}/')
                     path_to_figures[process][syst][direction]   = os.path.join(training_output_path, f'output_figures_{output_name}/')
                     path_to_models[process][syst][direction]    = os.path.join(training_output_path, f'output_model_params_{output_name}/')
                     
@@ -155,20 +154,25 @@ def main():
                         [syst+'_'+direction, process], 
                         output_name, 
                         path_to_figures=path_to_figures[process][syst][direction],
-                        path_to_ratios=path_to_ratios[process][syst][direction], 
                         path_to_models=path_to_models[process][syst][direction],
                         delete_existing_models=False
                     )
 
-        logger.info("Executing Training Loop...")
-
-        for process, process_dict in NN_training_syst_process.items():
-            for syst, syst_dict in process_dict.items():
-                for direction in syst_dict.keys():
-                    
                     logger.info(f"Training: {process} | {syst} | {direction}")
-                    NN_training_syst_process[process][syst][direction].train_ensemble(**sys_training_params)
+                    NN_training_syst_process[process][syst][direction].train(**sys_training_params)
     
+                    NN_training_syst_process[process][syst][direction].test_normalization()
+                    NN_training_syst_process[process][syst][direction].make_overfit_plots()
+            
+                    num_bins_cal = 50
+                    NN_training_syst_process[process][syst][direction].make_calib_plots(nbins=num_bins_cal, observable='score')
+                    # NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='llr')
+            
+                    variables_to_plot=['log_DER_pt_h'] # The 1D variable for reweighting closure
+                    yscale_type='log'
+                    num_bins_plotting=21
+                    NN_training_syst_process[process][syst][direction].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting)
+
     logger.info("Systematic workflow completed.")
 
 if __name__ == "__main__":

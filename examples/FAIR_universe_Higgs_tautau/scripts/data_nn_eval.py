@@ -109,7 +109,7 @@ def main():
     ensemble_members    = config_workflow_nominal.get("num_ensemble_members_evaluation", 1)
     print(f"ensemble_members = {ensemble_members}")
 
-    aggregation_type    = config_workflow_nominal.get("ensemble_aggregation_type", "median_score")
+    aggregation_type    = config_workflow_nominal.get("ensemble_aggregation_type", "mean_ratio")
     print(f"aggregation_type = {aggregation_type}")
 
     logger.info("Evaluating and saving nominal density ratios on Asimov dataset")
@@ -180,7 +180,7 @@ def main():
 
     for process_type in basis_processes:
 
-        ensemble_index = 0 #TODO: support ensemble evaluations for systematics too
+        ensemble_index = '' #TODO: support ensemble evaluations for systematics too
 
         for dict_syst in fit_config_nsbi.config["Systematics"]:
 

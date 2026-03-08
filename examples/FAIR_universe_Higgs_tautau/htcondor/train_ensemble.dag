@@ -31,6 +31,48 @@ VARS train_ttbar_9 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="9" CONFIG="config.pipeli
 JOB train_ttbar_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ttbar_10 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
+JOB train_ttbar_11 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_11 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="11" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_12 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_12 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="12" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_13 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_13 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="13" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_14 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_14 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="14" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_15 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_15 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="15" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_16 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_16 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="16" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_17 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_17 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="17" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_18 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_18 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="18" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_19 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_19 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="19" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_20 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_20 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="20" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_21 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_21 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="21" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_22 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_22 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="22" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_23 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_23 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="23" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ttbar_24 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ttbar_24 PROCESS_TYPE="ttbar" ENSEMBLE_INDEX="24" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
 JOB train_ztautau_0 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ztautau_0 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="0" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
@@ -64,6 +106,48 @@ VARS train_ztautau_9 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="9" CONFIG="config.pi
 JOB train_ztautau_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_ztautau_10 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
+JOB train_ztautau_11 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_11 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="11" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_12 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_12 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="12" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_13 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_13 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="13" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_14 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_14 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="14" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_15 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_15 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="15" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_16 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_16 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="16" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_17 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_17 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="17" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_18 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_18 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="18" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_19 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_19 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="19" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_20 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_20 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="20" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_21 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_21 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="21" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_22 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_22 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="22" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_23 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_23 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="23" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_ztautau_24 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_ztautau_24 PROCESS_TYPE="ztautau" ENSEMBLE_INDEX="24" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
 JOB train_htautau_0 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_htautau_0 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="0" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
 
@@ -96,3 +180,45 @@ VARS train_htautau_9 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="9" CONFIG="config.pi
 
 JOB train_htautau_10 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
 VARS train_htautau_10 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="10" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_11 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_11 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="11" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_12 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_12 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="12" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_13 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_13 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="13" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_14 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_14 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="14" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_15 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_15 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="15" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_16 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_16 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="16" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_17 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_17 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="17" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_18 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_18 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="18" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_19 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_19 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="19" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_20 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_20 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="20" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_21 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_21 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="21" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_22 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_22 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="22" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_23 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_23 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="23" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"
+
+JOB train_htautau_24 examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub
+VARS train_htautau_24 PROCESS_TYPE="htautau" ENSEMBLE_INDEX="24" CONFIG="config.pipeline.yaml" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"

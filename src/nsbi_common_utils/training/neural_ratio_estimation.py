@@ -330,8 +330,18 @@ class density_ratio_trainer:
             ensemble_index_label=str(ensemble_index)
 
         if load_trained_models:
+            path_to_saved_scaler = f"{self.path_to_models}model_scaler{ensemble_index_label}.bin"
+            path_to_saved_model  = f"{self.path_to_models}model{ensemble_index_label}.onnx"
+            path_to_saved_state  = f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index_label}.npy"
+
+            missing = [p for p in [path_to_saved_scaler, path_to_saved_model, path_to_saved_state] if not os.path.exists(p)]
+            if missing:
+                logger.warning(f"load_trained_models=True but the following files were not found, retraining:\n" + "\n".join(missing))
+                load_trained_models = False
+
+        if load_trained_models:
             # Load the number of holdout events and random state used for train/test split when using saved models
-            holdout_num, rnd_seed = np.load(f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index_label}.npy")
+            holdout_num, rnd_seed = np.load(path_to_saved_state)
         else:
             # Get the number of holdout events from the holdout_split fraction
             holdout_num = math.floor(self.dataset.shape[0] * holdout_split)
@@ -361,9 +371,6 @@ class density_ratio_trainer:
 
         # Load pre-trained models and scaling
         if load_trained_models:
-
-            path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index_label}.bin"
-            path_to_saved_model         = f"{self.path_to_models}model{ensemble_index_label}.onnx"
 
             logger.info(f"Reading saved models from {self.path_to_models}")
             self.scaler, self.model_NN = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, path_to_saved_scaler)
