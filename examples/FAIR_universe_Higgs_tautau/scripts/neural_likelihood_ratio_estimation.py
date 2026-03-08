@@ -92,7 +92,6 @@ def main():
     if delete_existing:
         logger.warning("delete_existing_models is True. Old models will be removed.")
 
-    path_to_ratios = {}
     path_to_figures = {}
     path_to_models = {}
 
@@ -102,10 +101,35 @@ def main():
     else:
         logger.info(f"Train all processes")
     logger.info("Preparing datasets and initializing trainers...")
+
     for process_type in basis_processes:
         if process_type_input is not None:
             if process_type_input != process_type:
                 continue
+
+        if process_type not in training_settings:
+            raise KeyError(f"Missing config for {process_type}")
+
+        # Get training hyperparameters
+        training_settings = config_workflow["training_settings"]
+        # Flag that forces the retraining of density ratios
+        force_train = config_workflow["force_train"]
+
+        if force_train:
+            logger.info(f"Force training enabled. Setting load_trained_models=False for {process_type}.")
+            settings['load_trained_models'] = False
+        else:
+            logger.info(f"Using load_trained_models={settings['load_trained_models']} from config for {process_type}.")
+
+        settings = training_settings[process_type].copy()
+        ensemble_index = args.ensemble_index
+        if ensemble_index is not None:
+            settings["ensemble_index"] = int(ensemble_index)
+            ensemble_index_label = str(ensemble_index)
+        else:
+            settings["ensemble_index"] = ensemble_index 
+            ensemble_index_label = ''
+
         # Prepare dataset to be passed to training
         dataset_mix_model = datasets_helper.prepare_basis_training_dataset(
             dataset_SR_nominal, 
@@ -117,9 +141,8 @@ def main():
 
         output_name = f'{process_type}'
 
-        path_to_ratios[process_type] = os.path.join(training_output_path, f'output_ratios_{process_type}/')
-        path_to_figures[process_type] = os.path.join(training_output_path, f'output_figures_{process_type}/')
-        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}/')
+        path_to_figures[process_type] = os.path.join(training_output_path, f'output_figures_{process_type}{ensemble_index_label}/')
+        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}{ensemble_index_label}/')
         
         # setup the training of density ratios using density_ratio_trainer API
         NN_training_mix_model[process_type] = nsbi_common_utils.training.density_ratio_trainer(
@@ -131,7 +154,6 @@ def main():
                                                                                                 sample_name             = [process_type, 'ref'],
                                                                                                 output_name             = output_name,
                                                                                                 path_to_figures         = path_to_figures[process_type],
-                                                                                                path_to_ratios          = path_to_ratios[process_type],
                                                                                                 path_to_models          = path_to_models[process_type],
                                                                                                 use_log_loss            = use_log_loss,
                                                                                                 delete_existing_models  = delete_existing
@@ -139,52 +161,24 @@ def main():
         
         del dataset_mix_model
 
-    # Flag that forces the retraining of density ratios
-    force_train = config_workflow["force_train"]
-    
-    # Get training hyperparameters
-    training_settings = config_workflow["training_settings"]
-
-    for process_type in basis_processes:
-        if process_type_input is not None:
-            if process_type_input != process_type:
-                continue
         logger.info(f"Processing {process_type}...")
         
-        if process_type not in training_settings:
-            logger.error(f"Settings for process '{process_type}' not found in 'density_ratio_estimation.training_settings'.")
-            raise KeyError(f"Missing config for {process_type}")
-
-        settings = training_settings[process_type].copy()
-        
-        if force_train:
-            logger.info(f"Force training enabled. Setting load_trained_models=False for {process_type}.")
-            settings['load_trained_models'] = False
-        else:
-            logger.info(f"Using load_trained_models={settings['load_trained_models']} from config for {process_type}.")
-        
         logger.info(f"Starting training/loading for {process_type}")
-        
-        ensemble_index = args.ensemble_index
-        if ensemble_index is not None:
-            settings["ensemble_index"] = int(ensemble_index)
-        else:
-            ensemble_index = 0
-        NN_training_mix_model[process_type].train_ensemble(**settings)
-        
+
+        NN_training_mix_model[process_type].train(**settings)
+
         logger.info(f"Testing normalization for {process_type}...")
         NN_training_mix_model[process_type].test_normalization()
-
-        NN_training_mix_model[process_type].make_overfit_plots(ensemble_index = ensemble_index)
+        NN_training_mix_model[process_type].make_overfit_plots(ensemble_index = ensemble_index_label)
 
         num_bins_cal = 50
-        NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='score', ensemble_index = ensemble_index)
+        NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='score', ensemble_index = ensemble_index_label)
         # NN_training_mix_model[process_type].make_calib_plots(nbins=num_bins_cal, observable='llr')
 
         variables_to_plot=['log_DER_pt_h'] # The 1D variable for reweighting closure
         yscale_type='log'
         num_bins_plotting=21
-        NN_training_mix_model[process_type].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting, ensemble_index = ensemble_index)
+        NN_training_mix_model[process_type].make_reweighted_plots(variables_to_plot, yscale_type, num_bins_plotting, ensemble_index = ensemble_index_label)
 
     logger.info("Training/Loading complete.")
 

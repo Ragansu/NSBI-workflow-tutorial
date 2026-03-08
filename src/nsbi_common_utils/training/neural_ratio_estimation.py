@@ -76,7 +76,6 @@ class density_ratio_trainer:
                       output_name, 
                       path_to_figures='',
                       path_to_models='', 
-                      path_to_ratios='',
                       use_log_loss=False, 
                       split_using_fold=False,
                       delete_existing_models=False):
@@ -86,7 +85,7 @@ class density_ratio_trainer:
         This class trains one or more neural networks to estimate the density ratio
         :math:`p_A(x) / p_B(x)` between two fixed hypothesis A and B using a
         binary-classification approach. The classifier output score is then
-        converted to a likelihood ratio via :math:`r = s / (1 - s)`.
+        converted to a density ratio via :math:`r = s / (1 - s)`.
 
         Parameters
         ----------
@@ -128,10 +127,6 @@ class density_ratio_trainer:
             Directory where trained ONNX model files and scalers are saved.
             Created automatically if it does not exist.
 
-        path_to_ratios : str, optional
-            Directory where evaluated density ratio arrays are saved.
-            Created automatically if it does not exist.
-
         use_log_loss : bool, optional
             If ``True``, the network is trained with a log-likelihood-ratio
             loss instead of binary cross-entropy, and the raw output is
@@ -143,13 +138,17 @@ class density_ratio_trainer:
             Default ``False``.
 
         delete_existing_models : bool, optional
-            If ``True``, the directories ``path_to_figures``, ``path_to_models``
-            and ``path_to_ratios`` are deleted and recreated before training,
+            If ``True``, the directories ``path_to_figures`` and ``path_to_models``
+            are deleted and recreated before training,
             ensuring a clean run. Use with caution — this is irreversible.
             Default ``False``.
 
         Notes
         -----
+        * This class trains a single density-ratio network per instance.
+        Ensemble training is handled externally by submitting multiple
+        independent jobs and passing ``ensemble_index`` to distinguish
+        saved outputs.
         * Weight normalisation is the caller's responsibility. A common
         convention is to normalise each class so that
         :math:`\\sum_{i \\in A} w_i = \\sum_{j \\in B} w_j = 1`.
@@ -167,10 +166,6 @@ class density_ratio_trainer:
         self.use_log_loss = use_log_loss
         self.split_using_fold = split_using_fold
 
-        # Initialize a list of models to train - if no ensemble, this is a 1 member list
-        self.model_NN = [None]
-        self.scaler = [None]
-        
         self.path_to_figures = path_to_figures
 
         if delete_existing_models:
@@ -179,10 +174,6 @@ class density_ratio_trainer:
             
             if os.path.exists(path_to_models):
                 shutil.rmtree(path_to_models)
-                
-            if os.path.exists(path_to_ratios):
-                shutil.rmtree(path_to_ratios)
-
 
         if not os.path.exists(path_to_figures):
                 os.makedirs(path_to_figures)
@@ -191,265 +182,6 @@ class density_ratio_trainer:
         if not os.path.exists(path_to_models):
                 os.makedirs(path_to_models)
 
-        self.path_to_ratios=path_to_ratios
-        if not os.path.exists(path_to_ratios):
-                os.makedirs(path_to_ratios)
-        
-    def train_ensemble(self, hidden_layers, 
-                            neurons, 
-                            number_of_epochs, 
-                            batch_size,
-                            learning_rate, 
-                            scalerType, 
-                            calibration=False, 
-                            type_of_calibration="isotonic", 
-                            num_bins_cal = 40, 
-                            callback = True, 
-                            callback_patience=30, 
-                            callback_factor=0.01,
-                            activation='swish', 
-                            verbose=2, 
-                            validation_split=0.1, 
-                            holdout_split=0.3, 
-                            plot_scaled_features=False, 
-                            load_trained_models = False,
-                            recalibrate_output=False,
-                            summarize_model: bool = False,
-                            num_ensemble_members=1,
-                            num_workers = 0,
-                            ensemble_index=None):
-        """
-        Train an ensemble of density-ratio neural networks.
-
-        Each ensemble member is trained independently on a different random
-        train/holdout split (bootstrapping without replacement). The ensemble
-        average is later used when calling :meth:`evaluate_and_save_ratios`
-        to reduce variance in the estimated ratio.
-
-        This method is the **recommended entry point** for most users.
-        For single-model training without ensemble wrapping, use :meth:`train`
-        directly.
-
-        Parameters
-        ----------
-        hidden_layers : int
-            Number of hidden layers in each neural network.
-
-        neurons : int
-            Number of neurons per hidden layer. All hidden layers share the
-            same width.
-
-        number_of_epochs : int
-            Maximum number of training epochs. Early stopping (if enabled via
-            ``callback``) may terminate training before this limit is reached.
-
-        batch_size : int
-            Mini-batch size used during stochastic gradient optimisation.
-            Larger batches give smoother gradient estimates but use more memory.
-
-        learning_rate : float
-            Initial learning rate passed to the Adam optimiser.
-
-        scalerType : str
-            Feature pre-processing strategy. One of:
-
-            * ``'StandardScaler'`` — zero mean, unit variance.
-            * ``'MinMax'`` — scales features to the range ``[-1.5, 1.5]``.
-            * ``'PowerTransform_Yeo'`` — Yeo-Johnson power transform with
-            standardisation; recommended for strongly skewed features.
-
-        calibration : bool, optional
-            If ``True``, apply a post-hoc calibration step to map the raw
-            network score to a well-calibrated probability. Default ``False``.
-
-        type_of_calibration : str, optional
-            Calibration method to apply when ``calibration=True``. One of:
-
-            * ``'isotonic'`` — isotonic regression (recommended for most cases).
-            * ``'histogram'`` — histogram-based calibration.
-
-            Default ``'isotonic'``.
-
-        num_bins_cal : int, optional
-            Number of bins used when ``type_of_calibration='histogram'``.
-            Ignored for isotonic calibration. Default ``40``.
-
-        callback : bool, optional
-            If ``True``, attach a ``pytorch_lightning`` ``EarlyStopping``
-            callback that monitors ``val_loss`` and stops training when
-            improvement stalls. Default ``True``.
-
-        callback_patience : int, optional
-            Number of epochs with no improvement in ``val_loss`` before early
-            stopping is triggered. Also used as the patience parameter of the
-            internal learning-rate scheduler. Default ``30``.
-
-        callback_factor : float, optional
-            Factor by which the learning rate is reduced when the scheduler
-            detects a plateau. Default ``0.01``.
-
-        activation : str, optional
-            Activation function applied after each hidden layer.
-            Common choices include ``'swish'``, ``'relu'``, ``'tanh'``.
-            Default ``'swish'``.
-
-        verbose : int, optional
-            Logging verbosity level:
-
-            * ``0`` — warnings only.
-            * ``1`` — informational messages.
-            * ``2`` — debug output.
-
-            Default ``2``.
-
-        validation_split : float, optional
-            Fraction of the *training* data (after holdout removal) reserved
-            for computing the validation loss used by the early-stopping
-            callback. Default ``0.1``.
-
-        holdout_split : float, optional
-            Fraction of the full dataset set aside as a holdout (test) set.
-            This data is never seen during training or validation and is used
-            exclusively for post-training diagnostic plots. Default ``0.3``.
-
-        plot_scaled_features : bool, optional
-            If ``True``, plot the distribution of each feature after scaling
-            for visual inspection. Default ``False``.
-
-        load_trained_models : bool, optional
-            If ``True`` and a saved ONNX model is found in ``path_to_models``
-            for a given ensemble member, that model is loaded rather than
-            retrained. Members with no saved model are trained from scratch.
-            Default ``False``.
-
-        recalibrate_output : bool, optional
-            If ``True`` and ``load_trained_models=True``, forces recalibration
-            even if a saved calibrator object already exists. Default ``False``.
-
-        summarize_model : bool, optional
-            Reserved for future model-summary printing. Not yet implemented.
-            Default ``False``.
-
-        num_ensemble_members : int, optional
-            Number of neural networks to train in the ensemble. Setting this
-            to ``1`` is equivalent to training a single model. Default ``1``.
-
-        num_workers : int, optional
-            Number of worker processes used by the ``DataLoader`` for
-            parallel data loading. Set to ``0`` to load data in the main
-            process (safest choice on most systems). Default ``0``.
-
-        Notes
-        -----
-        * Random seeds for each ensemble member's train/holdout split are
-        drawn automatically from a uniform integer distribution; there is
-        no need to set seeds manually.
-        * GPU memory is explicitly cleared between ensemble members via
-        ``torch.cuda.empty_cache()`` to prevent out-of-memory errors on
-        large ensembles.
-        * Trained models and scalers are persisted to ``path_to_models`` in
-        ONNX format after each member finishes, so a crash mid-ensemble
-        does not lose previously trained members (recoverable via
-        ``load_trained_models=True``).
-
-        See Also
-        --------
-        train : Single-model training without the ensemble loop.
-        evaluate_and_save_ratios : Aggregate ensemble predictions into a
-            final density ratio array.
-        """
-        logger.info(f"starting ensemble training")
-        self.num_ensemble_members = num_ensemble_members
-        
-        # Define an array with random integers for boostrap training
-        random_state_arr = np.random.randint(0, 2**32 -1, size=num_ensemble_members)
-
-        self.model_NN           = [None for i in range(num_ensemble_members)]
-        self.histogram_calibrator = [None for i in range(num_ensemble_members)]
-        self.scaler             = [None for i in range(num_ensemble_members)]
-        self.full_data_prediction     = [None for i in range(num_ensemble_members)]
-
-        self.full_data_prediction = np.zeros((num_ensemble_members, len(self.weights)))
-        self.train_idx          = [None for i in range(num_ensemble_members)]
-        self.holdout_idx        = [None for i in range(num_ensemble_members)]
-
-        if ensemble_index is not None:
-            if load_trained_models:
-                if os.path.exists(f"{self.path_to_models}/model{ensemble_index}.onnx"):
-                    logger.info(f"Loading existing model for ensemble member {ensemble_index}")
-                    load_trained_models_ensemble_member = True
-                else:
-                    load_trained_models_ensemble_member = False
-
-            else:
-                load_trained_models_ensemble_member = False
-
-            random_state = np.random.randint(0, 2**32 -1, size=None)
-            self.train(hidden_layers,
-                            neurons,
-                            number_of_epochs,
-                            batch_size,
-                            learning_rate,
-                            scalerType,
-                            calibration,
-                            type_of_calibration,
-                            num_bins_cal,
-                            callback,
-                            callback_patience,
-                            callback_factor,
-                            activation,
-                            verbose                 = verbose,
-                            rnd_seed                = random_state,
-                            ensemble_index          = ensemble_index,
-                            validation_split        = validation_split,
-                            holdout_split           = holdout_split,
-                            plot_scaled_features    = plot_scaled_features,
-                            load_trained_models     = load_trained_models_ensemble_member,
-                            recalibrate_output      = recalibrate_output,
-                            num_workers             = num_workers)
-
-        else:
-            # Train ensemble of NNs in series
-            for ensemble_index in range(num_ensemble_members):
-
-                if load_trained_models:
-                    if os.path.exists(f"{self.path_to_models}/model{ensemble_index}.onnx"):
-                        logger.info(f"Loading existing model for ensemble member {ensemble_index}")
-                        load_trained_models_ensemble_member = True
-                    else:
-                        load_trained_models_ensemble_member = False
-
-                else:
-                    load_trained_models_ensemble_member = False
-                
-                # Train ensemble NNs with different train/test split each time (bootstrapping without replacement)
-                self.train(hidden_layers, 
-                            neurons, 
-                            number_of_epochs, 
-                            batch_size,
-                            learning_rate, 
-                            scalerType, 
-                            calibration, 
-                            type_of_calibration,
-                            num_bins_cal, 
-                            callback, 
-                            callback_patience, 
-                            callback_factor,
-                            activation, 
-                            verbose                 = verbose,
-                            rnd_seed                = random_state_arr[ensemble_index], 
-                            ensemble_index          = ensemble_index, 
-                            validation_split        = validation_split, 
-                            holdout_split           = holdout_split, 
-                            plot_scaled_features    = plot_scaled_features, 
-                            load_trained_models     = load_trained_models_ensemble_member,
-                            recalibrate_output      = recalibrate_output,
-                            num_workers             = num_workers)
-                
-                gc.collect()
-                torch.cuda.empty_cache()
-            
-        
     def train(self, hidden_layers, 
                     neurons, 
                     number_of_epochs, 
@@ -464,8 +196,8 @@ class density_ratio_trainer:
                     callback_factor=0.01,
                     activation='swish', 
                     verbose=2, 
-                    rnd_seed=2,
-                    ensemble_index='', 
+                    rnd_seed=None,
+                    ensemble_index=None, 
                     validation_split=0.1, 
                     holdout_split=0.3, 
                     plot_scaled_features=False, 
@@ -473,7 +205,7 @@ class density_ratio_trainer:
                     recalibrate_output=False,
                     num_workers=0):
         """
-        Train a single density-ratio neural network.
+        Train a density-ratio neural network.
 
         This is the core training routine called internally by
         :meth:`train_ensemble`. It can also be called directly when no
@@ -528,14 +260,18 @@ class density_ratio_trainer:
         verbose : int, optional
             Logging verbosity (0=warnings, 1=info, 2=debug). Default ``2``.
 
-        rnd_seed : int, optional
-            Random seed passed to ``train_test_split`` for reproducible
-            train/holdout splitting. Default ``2``.
+        rnd_seed : int or None, optional
+            Random seed for the train/holdout split. If ``None`` (default), a
+            random seed is drawn from a uniform integer distribution and saved
+            to disk alongside the model so the same split can be recovered when
+            ``load_trained_models=True``.
 
-        ensemble_index : int or str, optional
-            Index of the ensemble slot to populate. When called directly
-            (not via :meth:`train_ensemble`), leave as the default ``''``
-            to auto-initialise a single-member ensemble.
+        ensemble_index : int or None, optional
+            Integer suffix appended to saved model, scaler, calibrator and metadata
+            filenames (e.g. ``model0.onnx``, ``model_scaler0.bin``). Pass the
+            ensemble index here to avoid filename collisions when
+            multiple members are trained in parallel. When ``None``, no suffix is
+            appended (files saved as ``model.onnx`` etc.).
 
         validation_split : float, optional
             Fraction of training data used for validation loss. Default ``0.1``.
@@ -578,33 +314,24 @@ class density_ratio_trainer:
         saved model and any subsequent diagnostic plots.
         * A loss-vs-epoch plot is automatically saved to ``path_to_figures``
         after each successful training run.
-
-        See Also
-        --------
-        train_ensemble : Recommended high-level interface that wraps this method.
-        predict_with_model : Run inference with the trained model.
         """
         self.calibration = calibration
         self.calibration_switch = False # Set the switch to false for first evaluation for calibration
 
+        if rnd_seed is None:
+            rnd_seed = np.random.randint(0, 2**32 -1, size=None)
+
         configure_logging(verbose)
         self.verbose = verbose
 
-        if ensemble_index=='':
-            self.model_NN              = [None]
-            self.scaler                = [None]
-            self.histogram_calibrator  = [None]
+        if ensemble_index is None:
+            ensemble_index_label = ''
+        else:
+            ensemble_index_label=str(ensemble_index)
 
-            self.full_data_prediction  = np.zeros((1, len(self.weights)))
-            self.train_idx             = [None]
-            self.holdout_idx           = [None]
-            self.num_ensemble_members  = 1
-            ensemble_index             = 0
-
-        
         if load_trained_models:
             # Load the number of holdout events and random state used for train/test split when using saved models
-            holdout_num, rnd_seed = np.load(f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index}.npy")
+            holdout_num, rnd_seed = np.load(f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index_label}.npy")
         else:
             # Get the number of holdout events from the holdout_split fraction
             holdout_num = math.floor(self.dataset.shape[0] * holdout_split)
@@ -617,52 +344,51 @@ class density_ratio_trainer:
         idx_incl = np.arange(len(self.weights))
 
         # Get the indicies
-        self.train_idx[ensemble_index], self.holdout_idx[ensemble_index] = train_test_split(idx_incl, 
-                                                                                            test_size=holdout_num, 
-                                                                                            random_state=rnd_seed,                                                        
-                                                                                            stratify=self.training_labels)
+        self.train_idx, self.holdout_idx = train_test_split(idx_incl, 
+                                                                test_size=holdout_num, 
+                                                                random_state=rnd_seed,                                                        
+                                                                stratify=self.training_labels)
 
-        self.dataset_training   = self.dataset.iloc[self.train_idx[ensemble_index]].copy()
-        self.dataset_holdout   = self.dataset.iloc[self.holdout_idx[ensemble_index]].copy()
+        self.dataset_training   = self.dataset.iloc[self.train_idx].copy()
+        self.dataset_holdout   = self.dataset.iloc[self.holdout_idx].copy()
 
         # split the original dataset into training and holdout
-        data_train_full, data_holdout_full = self.dataset_training.copy(), self.dataset_holdout.copy()
-        label_train, label_holdout = self.training_labels[self.train_idx[ensemble_index]].copy(), self.training_labels[self.holdout_idx[ensemble_index]].copy()
-        weight_train, weight_holdout = self.weights[self.train_idx[ensemble_index]].copy(), self.weights[self.holdout_idx[ensemble_index]].copy()
+        label_train, label_holdout = self.training_labels[self.train_idx].copy(), self.training_labels[self.holdout_idx].copy()
+        weight_train, weight_holdout = self.weights[self.train_idx].copy(), self.weights[self.holdout_idx].copy()
 
         # dataset to be used for training
-        data_train, data_holdout = data_train_full[self.features], data_holdout_full[self.features]
+        data_train, data_holdout = self.dataset_training[self.features].copy(), self.dataset_holdout[self.features].copy()
 
         # Load pre-trained models and scaling
         if load_trained_models:
 
-            path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index}.bin"
-            path_to_saved_model         = f"{self.path_to_models}model{ensemble_index}.onnx"
+            path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index_label}.bin"
+            path_to_saved_model         = f"{self.path_to_models}model{ensemble_index_label}.onnx"
 
             logger.info(f"Reading saved models from {self.path_to_models}")
-            self.scaler[ensemble_index], self.model_NN[ensemble_index] = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, path_to_saved_scaler)
+            self.scaler, self.model_NN = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, path_to_saved_scaler)
             
+            scaled_data_train = self.scaler.transform(data_train)    
+            scaled_data_train = pd.DataFrame(scaled_data_train, columns=self.features)
+
         # Else setup a new scaler
         else:
 
             if (scalerType == 'MinMax'):
-                self.scaler[ensemble_index] = ColumnTransformer([("scaler",MinMaxScaler(feature_range=(-1.5,1.5)), self.features_scaling)],remainder='passthrough')
+                self.scaler = ColumnTransformer([("scaler",MinMaxScaler(feature_range=(-1.5,1.5)), self.features_scaling)],remainder='passthrough')
                 
             if (scalerType == 'StandardScaler'):
-                self.scaler[ensemble_index] = ColumnTransformer([("scaler",StandardScaler(), self.features_scaling)],remainder='passthrough')
+                self.scaler = ColumnTransformer([("scaler",StandardScaler(), self.features_scaling)],remainder='passthrough')
                 
             if (scalerType == 'PowerTransform_Yeo'):
-                self.scaler[ensemble_index] = ColumnTransformer([("scaler",PowerTransformer(method='yeo-johnson', standardize=True), self.features_scaling)],remainder='passthrough')
+                self.scaler = ColumnTransformer([("scaler",PowerTransformer(method='yeo-johnson', standardize=True), self.features_scaling)],remainder='passthrough')
 
 
-        scaled_data_train = self.scaler[ensemble_index].fit_transform(data_train)
-        scaled_data_train = pd.DataFrame(scaled_data_train, columns=self.features)
+            scaled_data_train = self.scaler.fit_transform(data_train)    
+            scaled_data_train = pd.DataFrame(scaled_data_train, columns=self.features)
 
         if plot_scaled_features:
             plot_all_features(scaled_data_train, weight_train, label_train)
-
-        scaled_data_holdout = self.scaler[ensemble_index].transform(data_holdout)
-        scaled_data_holdout = pd.DataFrame(scaled_data_holdout, columns=self.features)
 
         # Train the model if not loaded
         if not load_trained_models:
@@ -764,35 +490,37 @@ class density_ratio_trainer:
                 map_location=device
                 )
 
-            self.model_NN[ensemble_index] = best_model
+            self.model_NN = best_model
         
             logger.info("Finished Training")
                 
-            path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index}.bin"
-            path_to_saved_model         = f"{self.path_to_models}model{ensemble_index}.onnx"
+            path_to_saved_scaler        = f"{self.path_to_models}model_scaler{ensemble_index_label}.bin"
+            path_to_saved_model         = f"{self.path_to_models}model{ensemble_index_label}.onnx"
 
-            nsbi_common_utils.training.utils.save_model(self.model_NN[ensemble_index], 
+            nsbi_common_utils.training.utils.save_model(self.model_NN, 
                         torch.randn((1, len(self.features))), 
                         path_to_saved_model,
-                        self.scaler[ensemble_index], 
+                        self.scaler, 
                         path_to_saved_scaler,
                         softmax_output = False)
             
             # Reassign the model to be in ONNX format
-            self.scaler[ensemble_index], self.model_NN[ensemble_index] = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, 
+            self.scaler, self.model_NN = nsbi_common_utils.training.utils.load_trained_model(path_to_saved_model, 
                                                                                             path_to_saved_scaler)
 
             # Save metadata
-            np.save(f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index}.npy", 
+            np.save(f"{self.path_to_models}num_events_random_state_train_holdout_split{ensemble_index_label}.npy", 
                     np.array([holdout_num, rnd_seed]))
     
             plot_loss(loss_history, path_to_figures=self.path_to_figures)
 
         
         # Do a first prediction without calibration layers
-        train_data_prediction = self.predict_with_model(data_train_full, 
-                                                        ensemble_index = ensemble_index, 
-                                                        use_log_loss = self.use_log_loss)
+        train_data_prediction = nsbi_common_utils.training.utils.predict_with_model(self.dataset_training[self.features], 
+                                                                        scaler = self.scaler, 
+                                                                        model = self.model_NN,
+                                                                        calibration_model = None,
+                                                                        use_log_loss = self.use_log_loss)
         
         gc.collect()
         torch.cuda.empty_cache()
@@ -803,7 +531,7 @@ class density_ratio_trainer:
         if self.calibration:
 
             self.calibration_switch = True
-            path_to_calibrated_object = f"{self.path_to_models}model_calibrated_hist{ensemble_index}.obj"
+            path_to_calibrated_object = f"{self.path_to_models}model_calibrated_hist{ensemble_index_label}.obj"
 
             if type_of_calibration == "histogram":
                 calibration_data_num = train_data_prediction[label_train==1]
@@ -816,18 +544,18 @@ class density_ratio_trainer:
 
                 if type_of_calibration == "histogram":
             
-                    self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
+                    self.histogram_calibrator =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
                                                                     nbins=num_bins_cal, method=calibration_method, mode='dynamic')
                 
                 elif type_of_calibration == "isotonic":
-                    self.histogram_calibrator[ensemble_index] =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
+                    self.histogram_calibrator =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
                 
                 else:
                     raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
                 
                 file_calib = open(path_to_calibrated_object, 'wb') 
     
-                pickle.dump(self.histogram_calibrator[ensemble_index], file_calib)
+                pickle.dump(self.histogram_calibrator, file_calib)
     
             else:
                 if not os.path.exists(path_to_calibrated_object) or recalibrate_output:
@@ -835,45 +563,50 @@ class density_ratio_trainer:
                     logger.info(f"Calibrating the saved model with {num_bins_cal} bins")
                     
                     if type_of_calibration == "histogram":
-                        self.histogram_calibrator[ensemble_index] =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
+                        self.histogram_calibrator =  HistogramCalibrator(calibration_data_num, calibration_data_den, w_num, w_den, 
                                                                     nbins=num_bins_cal, method=calibration_method, mode='dynamic')
                     elif type_of_calibration == "isotonic":
-                        self.histogram_calibrator[ensemble_index] =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
+                        self.histogram_calibrator =  IsotonicCalibrator(train_data_prediction, label_train, weight_train)
 
                     else:
                         raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
                 
                     file_calib = open(path_to_calibrated_object, 'wb') 
         
-                    pickle.dump(self.histogram_calibrator[ensemble_index], file_calib)
+                    pickle.dump(self.histogram_calibrator, file_calib)
                 else:
                 
                     file_calib = open(path_to_calibrated_object, 'rb') 
-                    self.histogram_calibrator[ensemble_index] = pickle.load(file_calib)
+                    self.histogram_calibrator = pickle.load(file_calib)
                     logger.info(f"calibrator object loaded = {self.histogram_calibrator}")
             
-            self.full_data_prediction[ensemble_index] = self.predict_with_model(self.dataset, 
-                                                                                ensemble_index = ensemble_index, 
-                                                                                use_log_loss=self.use_log_loss)
+            self.full_data_prediction = nsbi_common_utils.training.utils.predict_with_model(self.dataset[self.features], 
+                                                                                scaler = self.scaler, 
+                                                                                model = self.model_NN,
+                                                                                calibration_model = self.histogram_calibrator,
+                                                                                use_log_loss = self.use_log_loss)
 
         # Else, continue evaluating using the base model
         else:
-            self.full_data_prediction[ensemble_index] = self.predict_with_model(self.dataset, 
-                                                                                ensemble_index = ensemble_index, 
-                                                                                use_log_loss=self.use_log_loss)
+            self.histogram_calibrator = None
+            self.full_data_prediction = nsbi_common_utils.training.utils.predict_with_model(self.dataset[self.features], 
+                                                                                    scaler = self.scaler, 
+                                                                                    model = self.model_NN,
+                                                                                    calibration_model = None,
+                                                                                    use_log_loss = self.use_log_loss)
 
         
         # TRAINING inputs
-        self.score_den_training = self.full_data_prediction[ensemble_index][self.train_idx[ensemble_index]][self.training_labels[self.train_idx[ensemble_index]]==0]
-        self.weight_den_training   = self.weights[self.train_idx[ensemble_index]][self.training_labels[self.train_idx[ensemble_index]]==0]
-        self.score_num_training = self.full_data_prediction[ensemble_index][self.train_idx[ensemble_index]][self.training_labels[self.train_idx[ensemble_index]]==1]
-        self.weight_num_training   = self.weights[self.train_idx[ensemble_index]][self.training_labels[self.train_idx[ensemble_index]]==1]
+        self.score_den_training     = self.full_data_prediction[self.train_idx][self.training_labels[self.train_idx]==0]
+        self.weight_den_training    = self.weights[self.train_idx][self.training_labels[self.train_idx]==0]
+        self.score_num_training     = self.full_data_prediction[self.train_idx][self.training_labels[self.train_idx]==1]
+        self.weight_num_training    = self.weights[self.train_idx][self.training_labels[self.train_idx]==1]
 
         # HOLDOUT inputs
-        self.score_den_holdout = self.full_data_prediction[ensemble_index][self.holdout_idx[ensemble_index]][self.training_labels[self.holdout_idx[ensemble_index]]==0]
-        self.weight_den_holdout   = self.weights[self.holdout_idx[ensemble_index]][self.training_labels[self.holdout_idx[ensemble_index]]==0]
-        self.score_num_holdout = self.full_data_prediction[ensemble_index][self.holdout_idx[ensemble_index]][self.training_labels[self.holdout_idx[ensemble_index]]==1]
-        self.weight_num_holdout   = self.weights[self.holdout_idx[ensemble_index]][self.training_labels[self.holdout_idx[ensemble_index]]==1]
+        self.score_den_holdout      = self.full_data_prediction[self.holdout_idx][self.training_labels[self.holdout_idx]==0]
+        self.weight_den_holdout     = self.weights[self.holdout_idx][self.training_labels[self.holdout_idx]==0]
+        self.score_num_holdout      = self.full_data_prediction[self.holdout_idx][self.training_labels[self.holdout_idx]==1]
+        self.weight_num_holdout     = self.weights[self.holdout_idx][self.training_labels[self.holdout_idx]==1]
 
         # Some diagnostics to ensure numerical stability - min/max must not be exactly 0 or 1
         min_max_values = [
@@ -890,77 +623,10 @@ class density_ratio_trainer:
         for name, training_holdout_label, min_val, max_val in min_max_values:
             
             if min_val == 0:
-                logger.warning(f"{name} {training_holdout_label} data has min score = 0 for ensemble member {ensemble_index}, which may indicate numerical instability!")
+                logger.warning(f"{name} {training_holdout_label} data has min score = 0, which may indicate numerical instability!")
             
             if max_val == 1:
-                logger.warning(f"{name} {training_holdout_label} data has max score = 1 for ensemble member {ensemble_index}, which may indicate numerical instability!")            
-
-
-    
-    def predict_with_model(self, data, ensemble_index = 0, use_log_loss=False):
-        """
-        Evaluate the trained density-ratio model on an input dataset.
-
-        Applies feature scaling, runs ONNX inference, optionally converts
-        from log-likelihood-ratio space to a probability score, and
-        optionally applies the calibration layer.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            Dataset to evaluate. Must contain all columns listed in
-            ``self.features``. The dataframe may contain additional columns
-            which are silently ignored.
-
-        ensemble_index : int, optional
-            Index of the ensemble member to use for prediction. Must be in
-            the range ``[0, num_ensemble_members)``. Default ``0``.
-
-        use_log_loss : bool, optional
-            If ``True``, the raw model output is interpreted as
-            :math:`\\log(p_A / p_B)` and converted to a probability score
-            via :math:`s = \\sigma(\\log r) = 1 / (1 + r^{-1})` before
-            returning. Must match the ``use_log_loss`` setting used during
-            training. Default ``False``.
-
-        Returns
-        -------
-        numpy.ndarray, shape (n_events,)
-            Predicted scores in the range ``(0, 1)``, where values close to
-            ``1`` indicate high probability of belonging to hypothesis A
-            (numerator) and values close to ``0`` indicate hypothesis B
-            (denominator). If calibration is enabled, the output is
-            additionally clipped to ``[1e-8, 1 - 1e-8]`` for numerical safety.
-
-        Notes
-        -----
-        * To obtain the density ratio :math:`r = p_A / p_B` from the returned
-        score :math:`s`, use :math:`r = s / (1 - s)`.
-        * This method is used internally by :meth:`evaluate_and_save_ratios`
-        and the diagnostic plot methods, but can also be called directly
-        for custom downstream analyses.
-
-        See Also
-        --------
-        evaluate_and_save_ratios : Ensemble-aggregated ratio evaluation with
-            automatic saving.
-        """
-
-        pred = nsbi_common_utils.training.utils.predict_with_onnx(data[self.features], 
-                                self.scaler[ensemble_index],
-                                self.model_NN[ensemble_index])
-
-        if use_log_loss:
-
-            pred = nsbi_common_utils.training.utils.convert_logLR_to_score(pred)
-
-        if (self.calibration) & (self.calibration_switch):
-    
-            pred = self.histogram_calibrator[ensemble_index].cali_pred(pred)
-            pred = pred.reshape(pred.shape[0],)
-            pred = np.clip(pred, 1e-8, 1.0 - 1e-8)
-
-        return pred
+                logger.warning(f"{name} {training_holdout_label} data has max score = 1, which may indicate numerical instability!")            
     
     
     def make_overfit_plots(self, ensemble_index=0):
@@ -1038,68 +704,22 @@ class density_ratio_trainer:
 
     def test_normalization(self):
         '''
-        Test if \int p_A/p_B x p_B ~ 1
+        Test the normalisation condition :math:`\\int (p_A / p_B) \\, p_B \\, dx \\approx 1`.
+
+        A value close to 1 indicates the density ratio is correctly normalised.
+        Significant deviation suggests training instability or weight mis-normalisation.
         '''
+
         # Normalized reference (denominator) hypothesis
         weight_ref = self.weights[self.training_labels==0].copy()
 
-        ratio_rwt = np.zeros((self.num_ensemble_members, weight_ref.shape[0]))
+        # Calculate p_A/p_B for B hypothesis events
+        score_rwt = nsbi_common_utils.training.utils.predict_with_model(self.dataset[self.features], 
+                                                            scaler = self.scaler, 
+                                                            model = self.model_NN,
+                                                            calibration_model = self.histogram_calibrator,
+                                                            use_log_loss = self.use_log_loss)[self.training_labels==0]
 
-        for ensemble_index in range(self.num_ensemble_members):
-            
-            # Calculate p_A/p_B for B hypothesis events
-            score_rwt = self.predict_with_model(self.dataset[self.features], 
-                                                ensemble_index=ensemble_index, 
-                                                use_log_loss=self.use_log_loss)[self.training_labels==0]
-            ratio_rwt[ensemble_index] = score_rwt / ( 1.0 - score_rwt )
-    
-            # Calculate \sum p_A/p_B x p_B
-            logger.info(f"\n\n\nThe sum of PDFs in ensemble member {ensemble_index} is {np.sum(ratio_rwt[ensemble_index] * weight_ref)}\n\n")
+        ratio_rwt = score_rwt / ( 1.0 - score_rwt )
 
-        ratio_rwt_aggregate = np.mean(ratio_rwt, axis=0)
-        
-        logger.info(f"The sum of PDFs using the whole ensemble is {np.sum(ratio_rwt_aggregate * weight_ref)}\n\n\n")
-        
-
-    def evaluate_and_save_ratios(self, dataset, aggregation_type = 'mean_ratio'):
-        '''
-        Evaluate with self.model on the input dataset, and save to self.path_to_ratios
-
-        aggregation_type: choose an option on how to aggregate the ensemble models - 'median_ratio', 'mean_ratio', 'median_score', 'mean_score'
-        '''
-
-        logger.info(f"Evaluating density ratios")
-        score_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
-        ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
-        log_ratio_pred = np.ones((self.num_ensemble_members, dataset.shape[0]))
-
-        for ensemble_index in range(self.num_ensemble_members):
-            score_pred[ensemble_index] = self.predict_with_model(dataset[self.features], 
-                                                                 use_log_loss=self.use_log_loss, 
-                                                                 ensemble_index=ensemble_index)
-            
-            ratio_pred[ensemble_index] = score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index])
-            log_ratio_pred[ensemble_index] = np.log(score_pred[ensemble_index] / (1.0 - score_pred[ensemble_index]))
-
-        if aggregation_type == 'median_ratio':
-            ratio_ensemble = np.median(ratio_pred, axis=0)
-            
-        elif aggregation_type == 'mean_ratio':
-            ratio_ensemble = np.mean(ratio_pred, axis=0)
-            
-        elif aggregation_type == 'median_score':
-            score_aggregate = np.median(score_pred, axis=0)
-            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
-            
-        elif aggregation_type == 'mean_score':
-            score_aggregate = np.mean(score_pred, axis=0)
-            ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
-
-        else:
-            raise Exception("aggregation_type not recognized, please choose between median_ratio, mean_ratio, median_score or mean_score")
-
-        saved_ratio_path = f"{self.path_to_ratios}ratio_{self.sample_name[0]}.npy"
-        np.save(saved_ratio_path, ratio_ensemble)
-
-        return saved_ratio_path
-
+        logger.info(f"\n\n\nThe sum of PDFs is {np.sum(ratio_rwt * weight_ref)}\n\n")

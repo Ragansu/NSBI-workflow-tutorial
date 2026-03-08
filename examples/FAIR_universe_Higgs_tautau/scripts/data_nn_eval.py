@@ -125,7 +125,7 @@ def main():
             logger.info(f"Reading saved models from {path_to_saved_model}")
 
             scaler, model_NN                = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
-            score_pred[ensemble_index]      = nsbi_common_utils.training.predict_with_onnx(dataset_Asimov_SR[features], scaler, model_NN, batch_size = 10_000)
+            score_pred[ensemble_index]      = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], scaler, model_NN)
             ratio_pred[ensemble_index]      = nsbi_common_utils.training.convert_score_to_ratio(score_pred[ensemble_index])    
             if process_type == "htautau": print(score_pred[ensemble_index])
 
@@ -202,10 +202,9 @@ def main():
                         file_calibration = open(path_to_calibrator_model, 'rb') 
                         calibration_model = pickle.load(file_calibration)
 
-                score_pred      = nsbi_common_utils.training.predict_with_onnx(dataset_Asimov_SR[features], 
+                score_pred      = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], 
                                                                                                scaler, model_NN, 
-                                                                                               calibration_model = calibration_model, 
-                                                                                               batch_size = 10_000)
+                                                                                               calibration_model = calibration_model)
                 ratio_pred      = nsbi_common_utils.training.convert_score_to_ratio(score_pred)    
 
                 saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"

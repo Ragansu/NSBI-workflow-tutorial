@@ -15,6 +15,7 @@ __all__ = [
     "preselection_network_trainer",
     "save_model",
     "predict_with_onnx",
+    "predict_with_model",
     "convert_torch_to_onnx",
     "convert_logLR_to_score",
     "load_trained_model",
