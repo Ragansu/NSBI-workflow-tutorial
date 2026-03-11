@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import mplhep as hep
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_curve, auc, confusion_matrix
-from utils import calculate_preselection_observable
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -91,6 +90,19 @@ def plot_score_distribution(dataset_dict, output_dir):
     plt.close()
     print(f"Score distribution plot saved to {save_path}")
 
+def calculate_preselection_observable(pred_NN_incl, samples_list, signal_processes, background_processes, pre_factor_dict = {}):
+
+    signal_sum = np.sum(
+        [pre_factor_dict[signal] * pred_NN_incl[:, samples_list[signal]] for signal in signal_processes], axis=0
+    )
+
+    background_sum = np.sum(
+        [pre_factor_dict[background] * pred_NN_incl[:, samples_list[background]] for background in background_processes], axis=0
+    )
+    # the preselection score as defined above - log(P_S/P_B)
+    presel_score = np.log(signal_sum/background_sum)
+
+    return presel_score
 
 def main():
     args = parse_args()
