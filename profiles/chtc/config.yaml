@@ -1,0 +1,42 @@
+# profiles/chtc/config.yaml
+# --------------------------
+# Snakemake profile for CHTC HTCondor submission.
+#
+# Activate with:  snakemake --profile profiles/chtc
+# Or set env var: export SNAKEMAKE_PROFILE=profiles/chtc
+
+# -- Cluster submission command
+# Snakemake expands {rule}, {resources.*}, {log} etc. before calling the script.
+cluster: >-
+  python profiles/chtc/htcondor_submit.py
+  --job-name  {rule}
+  --cpus      {resources.cpus}
+  --mem-mb    {resources.mem_mb}
+  --gpus      {resources.gpus}
+  --disk-mb   {resources.disk_mb}
+  --log-base  logs/{rule}
+
+# How Snakemake polls condor_q to determine job status
+cluster-status: "python profiles/chtc/htcondor_status.py"
+
+# Maximum simultaneously submitted jobs
+jobs: 50
+
+# Polling interval (seconds)
+latency-wait: 60
+
+# Retry a job up to 2 times on failure before giving up
+retries: 2
+
+# Default resources used when a rule doesn't specify them
+default-resources:
+  cpus:    1
+  mem_mb:  4096     # 4 GB
+  gpus:    0
+  disk_mb: 4096     # 4 GB
+
+# Always print shell commands to the log for debugging
+printshellcmds: true
+
+# Keep incomplete output files on failure (useful for debugging)
+keep-incomplete: false
