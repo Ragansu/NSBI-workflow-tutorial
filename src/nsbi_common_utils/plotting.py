@@ -36,29 +36,22 @@ def fill_histograms_wError(data, weights, edges, histrange, normalize=True):
     return h, h_err
 
 # Diagnostics for training loss and accuracy 
-def plot_loss(history, path_to_figures=""):
+def plot_loss(loss_history, path_to_figures="", ensemble_index=0):
 
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    
-    plt.title('model loss', size=12)
-    plt.ylabel('loss', size=12)
-    plt.xlabel('epoch', size=12)
-    plt.legend(['train', 'validation'], loc='upper left')
-    plt.show()
-    plt.savefig(f'{path_to_figures}/loss_plot.png', bbox_inches='tight')
+    plt.plot(loss_history.train_loss)
+    plt.plot(loss_history.val_loss)
+    plt.title("model loss", size=12)
+    plt.ylabel("loss", size=12)
+    plt.xlabel("epoch", size=12)
+    plt.legend(["train", "validation"], loc="upper left")
+    plt.savefig(f"{path_to_figures}/loss_plot_{ensemble_index}.png", bbox_inches="tight")
     plt.clf()
-    
-    plt.plot(history.history['binary_accuracy'])
-    plt.plot(history.history['val_binary_accuracy'])
-    plt.show()
-    plt.savefig(f'{path_to_figures}/accuracy_plot.png', bbox_inches='tight')
-    plt.clf()
+
 
 def plot_calibration_curve(data_den, weight_den, data_num, weight_num, 
                            data_den_holdout, weight_den_holdout, data_num_holdout, weight_num_holdout, 
                            path_to_figures="", nbins=100, epsilon=1.0e-20, 
-                           label="Calibration Curve", score_range="standard"):
+                           label="Calibration Curve", score_range="standard", ensemble_index=0):
 
     data = np.concatenate([data_num, data_den, data_den_holdout, data_num_holdout]).flatten()
     xmin = np.amin(data)
@@ -129,15 +122,15 @@ def plot_calibration_curve(data_den, weight_den, data_num, weight_num,
 
     # ---------- Finalize ----------
     plt.tight_layout()
+    plt.savefig(f"{path_to_figures}/calib_plot_{score_range}_{ensemble_index}.png", bbox_inches='tight')
     plt.show()
-    plt.savefig(f"{path_to_figures}/calib_plot_{score_range}.png", bbox_inches='tight')
     plt.clf()
 
 def plot_calibration_curve_ratio(
     data_den, weight_den, data_num, weight_num, 
     data_den_holdout, weight_den_holdout, data_num_holdout, weight_num_holdout, 
     path_to_figures="", nbins=100, epsilon=1.0e-20, 
-    label="Calibration Curve", score_range="standard"):
+    label="Calibration Curve", score_range="standard", ensemble_index=0):
 
     # --- transform scores to logit (LLR proxy) ---
     data_den        = np.log(data_den / (1.0 - data_den))
@@ -190,14 +183,14 @@ def plot_calibration_curve_ratio(
     abline(1.0, 0.0)
     plt.title(label + " (Training)", fontsize=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-10, ymax=10)
-    plt.ylabel("Probability ratio", size=16)
+    plt.ylabel("Log Density Ratio MC", size=16)
 
     plt.sca(axes[1, 0])
     residue = np.empty_like(hist_ratio); residue[:] = np.nan
     residue[err_ok] = (hist_ratio[err_ok] - slopeOne[err_ok]) / hist_ratio_err[err_ok]
     plt.errorbar(slopeOne[err_ok], residue[err_ok], yerr=1.0, drawstyle='steps-mid')
     abline(0.0, 0.0)
-    plt.xlabel("Predicted Score", size=16)
+    plt.xlabel("Predicted Log Density Ratio", size=16)
     plt.ylabel("Residue", size=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-4.0, ymax=4.0)
 
@@ -207,20 +200,20 @@ def plot_calibration_curve_ratio(
     abline(1.0, 0.0)
     plt.title(label + " (Holdout)", fontsize=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-10, ymax=10)
+    plt.ylabel("Log Density Ratio MC", size=16)
 
     plt.sca(axes[1, 1])
     residue_h = np.empty_like(hist_ratio_h); residue_h[:] = np.nan
     residue_h[err_ok_holdout] = (hist_ratio_h[err_ok_holdout] - slopeOne[err_ok_holdout]) / hist_ratio_err_h[err_ok_holdout]
     plt.errorbar(slopeOne[err_ok_holdout], residue_h[err_ok_holdout], yerr=1.0, drawstyle='steps-mid', color="blue")
     abline(0.0, 0.0)
-    plt.xlabel("Predicted Score", size=16)
+    plt.xlabel("Predicted Log Density Ratio", size=16)
     plt.ylabel("Residue", size=16)
     plt.axis(xmin=xmin, xmax=xmax, ymin=-4.0, ymax=4.0)
 
-    # --- finalize ---
     plt.tight_layout()
+    plt.savefig(f"{path_to_figures}/calib_plot_llr_{score_range}_{ensemble_index}.png", bbox_inches='tight')
     plt.show()
-    plt.savefig(f"{path_to_figures}/calib_plot_llr_{score_range}.png", bbox_inches='tight')
     plt.clf()
 
 
@@ -229,7 +222,7 @@ def plot_reweighted(
     dataset_holdout, score_den_holdout, weight_den_holdout, score_num_holdout, weight_num_holdout,
     path_to_figures="", num=15, variables=['NN_MELA_incl_disc'],
     sample_name=['Bkg','Ref'], scale="linear",
-    label_left='Training Data Diagnostic', label_right='Holdout Data Diagnostic'
+    label_left='Training Data Diagnostic', label_right='Holdout Data Diagnostic', ensemble_index=0
 ):
     """
     Draw training (left) and holdout (right) reweighting diagnostic plots side-by-side..
@@ -332,54 +325,17 @@ def plot_reweighted(
         abline(0.0,1.0)
 
         plt.tight_layout()
+        plt.savefig(f'{path_to_figures}/reweighted_{str(variable)}_{ensemble_index}.png', bbox_inches='tight')
         plt.show()
-        plt.savefig(f'{path_to_figures}/reweighted_{str(variable)}.png', bbox_inches='tight')
         plt.clf()
 
-def plot_overfit(score_1, score_2, w_train, w_test, nbins=50, 
-                 plotRange=[0.0,1.0], holdout_index=1, 
-                 label='X', path_to_figures=""):
-
-    bins = np.linspace(plotRange[0],plotRange[1],num=nbins)
-
-    w_train = w_train/w_train.sum()
-    w_test = w_test/w_test.sum()
-
-    score_1_h, bins = np.histogram(score_1, bins=bins, weights=w_train)
-    score_2_h, bins = np.histogram(score_2, bins=bins, weights=w_test)
-
-    score_1_err, bins = np.histogram(score_1, bins=bins, weights=w_train**2)
-    score_2_err, bins = np.histogram(score_2, bins=bins, weights=w_test**2)
-
-    fig1 = plt.figure(1)
-    frame1=fig1.add_axes((.1,.3,.6,.6),xticklabels=([]))
-    hep.histplot(score_1_h, bins, yerr=np.sqrt(score_1_err), label='Holdout')
-    hep.histplot(score_2_h, bins, yerr=np.sqrt(score_2_err), label='Train')
-
-    plt.title("Overfit Plot for "+str(label), fontsize=18)
-    plt.ylabel("Normalized", fontsize=18)
-    plt.legend(loc='upper right', fontsize=18)
-    plt.axis(xmin=0.0, xmax=1.0)
-
-    #Residual plot
-    difference = score_1_h - score_2_h
-    frame2=fig1.add_axes((.1,.1,.6,.2))
-    hep.histplot(difference, bins, yerr = np.sqrt(score_2_err+score_1_err))
-    plt.axis(xmin=0.0, xmax=1.0, ymin=-0.0015, ymax=0.0015)
-
-    plt.xlabel("NN Prediction", fontsize=18)
-    plt.ylabel("Residue", loc="center", size=18)
-    abline(0.0,0.0)
-    plt.savefig(f'{path_to_figures}/overfit_'+str(holdout_index)+'_'+str(label)+'.png', bbox_inches='tight')
-    plt.show()
-    plt.clf()
 
 def plot_overfit_side_by_side(
     score_den_train, score_den_holdout, w_den_train, w_den_holdout,
     score_num_train, score_num_holdout, w_num_train, w_num_holdout,
     nbins=50, plotRange=[0.0,1.0], holdout_index=1,
     labels=('Bkg','Ref'),  # left=den label, right=num label
-    path_to_figures=""
+    path_to_figures="", ensemble_index=0
 ):
     """
     Draw overfit diagnostics for DEN (left) and NUM (right) side-by-side.
@@ -390,7 +346,6 @@ def plot_overfit_side_by_side(
     bins = np.linspace(plotRange[0], plotRange[1], num=nbins)
 
     def _compute(score_1, score_2, w_train, w_test):
-        # NOTE: keep original normalization and error definitions exactly
         w_train = w_train / w_train.sum()
         w_test  = w_test  / w_test.sum()
 
@@ -452,8 +407,8 @@ def plot_overfit_side_by_side(
     abline(0.0, 0.0)
 
     plt.tight_layout()
+    plt.savefig(f'{path_to_figures}/overfit_side_by_side_{holdout_index}_{ensemble_index}.png', bbox_inches='tight')
     plt.show()
-    plt.savefig(f'{path_to_figures}/overfit_side_by_side_{holdout_index}.png', bbox_inches='tight')
     plt.clf()
 
 
