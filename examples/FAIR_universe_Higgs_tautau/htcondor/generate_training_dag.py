@@ -17,6 +17,11 @@ job_config_path = os.path.basename(config_path)
 basis_processes = config["basis_processes_to_train"]
 print(basis_processes)
 
+saved_data_path = os.path.join(config["saved_data_path"], config["output_training_dir"])
+archive_dir     = config.get("archive_dir", "/staging/jsandesara/model_archives")
+
+POST_SCRIPT = "examples/FAIR_universe_Higgs_tautau/htcondor/append_and_cleanup.sh"
+
 lines = []
 for process in basis_processes:
     n_ensemble = config["num_ensemble_members_training"]
@@ -24,6 +29,7 @@ for process in basis_processes:
         node = f"train_{process}_{idx}"
         lines.append(f"JOB {node} examples/FAIR_universe_Higgs_tautau/htcondor/job_density_ratio_training.sub")
         lines.append(f'VARS {node} PROCESS_TYPE="{process}" ENSEMBLE_INDEX="{idx}" CONFIG="{job_config_path}" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"')
+        lines.append(f'SCRIPT POST {node} {POST_SCRIPT} {process} {idx} {saved_data_path} {archive_dir}')
         lines.append("")
 
 with open("examples/FAIR_universe_Higgs_tautau/htcondor/train_ensemble.dag", "w") as f:

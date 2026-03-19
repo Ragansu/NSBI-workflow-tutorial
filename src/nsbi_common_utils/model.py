@@ -9,11 +9,34 @@ from jax.tree_util import tree_map
 from functools import partial
 from typing import Dict, Union, Any, Optional
 
-class Model:
+class sbi_parametric_model:
     """
-    The RooFit equivalent in the NSBI case - class that defines the core model to be passed to fitting algotithms
+    Statistical model for semi-parametric Simulation-Based Inference (SBI).
+
+    Defines parameterized expected yields, density ratios, and the negative log-likelihood (NLL) passed to fitting algorithms. Supports both binned and unbinned channels with systematic uncertainties handled via polynomial interpolation / exponential extrapolation (HistFactory strategy 5).
+
+    Parameters
+    ----------
+    workspace : dict
+        A workspace dictionary following the pyhf-like JSON schema. Must contain ``"measurements"`` and ``"channels"`` keys. Channels may be tagged with ``"type": "binned"`` or ``"type": "unbinned"``.
+    measurement_to_fit : str
+        Name of the measurement block inside ``workspace["measurements"]`` to use. Selects the parameter of interest (POI) and the list of parameters to fit.
+
+    Attributes
+    ----------
+    list_parameters : list of str
+        Ordered parameter names: POI first, then unconstrained norm factors, then constrained nuisance parameters.
+    initial_parameter_values : jnp.ndarray
+        Starting values for every parameter, in the same order as ``list_parameters``.
+    num_unconstrained_param : int
+        Number of leading parameters that are unconstrained (POI + free norm factors).
+    expected_hist : jnp.ndarray Binned expected yields evaluated at the initial parameter values.
+
+    See Also
+    --------
+    nsbi_common_utils.inference.inference : Fits and scans this model.
     """
-    def __init__(self, 
+    def __init__(self,
                  workspace: Dict[Any, Any],
                  measurement_to_fit: str):
 
@@ -66,13 +89,21 @@ class Model:
         
         self.weight_arrays_unbinned                     = self._get_asimov_weights_array()
         self.expected_hist                              = self._get_expected_hist(param_vec = self.initial_parameter_values)
-        # TO-DO - compute expected weight vector without additional input from workspace provide functionality for real data
 
         self._finalize_to_device()
 
     def get_model_parameters(self):
         """
-        Get the list of parameters and initial values in the right order to pass to fitting algorithms
+        Return parameter names and initial values for fitting.
+
+        The returned order matches the convention expected by :class:`~nsbi_common_utils.inference.inference`: POI at index 0, followed by unconstrained norm factors, then constrained nuisance parameters.
+
+        Returns
+        -------
+        list_parameters : list of str
+            Ordered parameter names.
+        initial_parameter_values : jnp.ndarray, shape (n_params,)
+            Starting values aligned with ``list_parameters``.
         """
         return self.list_parameters, self.initial_parameter_values
         
@@ -90,7 +121,7 @@ class Model:
             
             if self.has_normplusshape:
 
-                hist_vars_binned[process]   = calculate_combined_var(  param_vec_interpolation, 
+                hist_vars_binned[process]   = _calculate_combined_var(  param_vec_interpolation, 
                                                                             self.combined_var_up_binned[process],
                                                                             self.combined_var_dn_binned[process]    )
 
@@ -255,10 +286,22 @@ class Model:
     
     def model(self, param_array: Union[np.array, jnp.array, list[float]]):
         """
-        Output model to pass onto inference algorithms
+        High-level API that returns the full negative log-likelihood for a parameter point.
+
+        Computes the combined NLL in all channels defined by the input workspace - unbinned SBI and binned Control and Signal regions. This callable is the function to be passed to :class:`~nsbi_common_utils.inference.inference` as ``model_nll``.
+
+        Parameters
+        ----------
+        param_array : array-like, shape (n_params,)
+            Parameter values in the order defined by :meth:`get_model_parameters`.
+
+        Returns
+        -------
+        nll : jnp.ndarray, scalar
+            The negative log-likelihood value (scalar).
         """
         param_array                         = jnp.asarray(param_array)
-        nll                                 = self.nll_function(param_array,
+        nll                                 = self._nll_function(param_array,
                                                                 self.ratios_array_dict,
                                                                 self.combined_var_up_binned,
                                                                 self.combined_var_dn_binned,
@@ -268,7 +311,7 @@ class Model:
                                                                 self.combined_tot_dn_unbinned)
         return nll
     
-    def nll_function(self, 
+    def _nll_function(self, 
                      param_vec: list[float],
                      ratios_dict,
                      combined_var_up_binned,
@@ -294,15 +337,15 @@ class Model:
 
             if self.has_normplusshape:
                 
-                hist_vars_binned[process]   = calculate_combined_var(  param_vec_interpolation, 
+                hist_vars_binned[process]   = _calculate_combined_var(  param_vec_interpolation, 
                                                                             combined_var_up_binned[process],
                                                                             combined_var_dn_binned[process]    )
     
-                hist_vars_unbinned[process]  = calculate_combined_var(  param_vec_interpolation, 
+                hist_vars_unbinned[process]  = _calculate_combined_var(  param_vec_interpolation, 
                                                                             combined_tot_up_unbinned[process],
                                                                             combined_tot_dn_unbinned[process]    )   
     
-                ratio_vars_unbinned[process] = calculate_combined_var( param_vec_interpolation, 
+                ratio_vars_unbinned[process] = _calculate_combined_var( param_vec_interpolation, 
                                                                             combined_var_up_unbinned[process],
                                                                             combined_var_dn_unbinned[process]    )  
 
@@ -319,7 +362,7 @@ class Model:
         # Asimov-only for now - need to generalize to applications for real data
         expected_hist = self.expected_hist
         
-        llr_tot_binned = pois_loglikelihood(expected_hist, nu_binned)
+        llr_tot_binned = _pois_loglikelihood(expected_hist, nu_binned)
 
         nu_tot_unbinned = self._calculate_parameterized_yields(self.unbinned_total_dict, 
                                                                         hist_vars_unbinned,
@@ -515,11 +558,27 @@ class Model:
         return None
 
     
-# poynomial interpolation, same as HistFactory
 @jax.jit
-def poly_interp(tuple_input):
+def _poly_interp(tuple_input):
     """
-    Function for polynomial interpolation
+    Sixth-order polynomial interpolation for systematic variations.
+
+    Implements the HistFactory "strategy 5" interpolation used when
+    :math:`|\\alpha| \\le 1`. Smoothly connects the upward and downward
+    variation multipliers using a degree-6 polynomial in the nuisance
+    parameter :math:`\\alpha`.
+
+    Parameters
+    ----------
+    tuple_input : tuple of (jnp.ndarray, jnp.ndarray, jnp.ndarray)
+        ``(alpha, pow_up, pow_down)`` where *alpha* is the nuisance
+        parameter value, *pow_up* the upward variation ratio, and
+        *pow_down* the downward variation ratio.
+
+    Returns
+    -------
+    variation : jnp.ndarray
+        Multiplicative correction to apply to the nominal prediction.
     """
     alpha, pow_up, pow_down = tuple_input
     
@@ -546,19 +605,58 @@ def poly_interp(tuple_input):
 
     return alpha * (a1 + alpha * ( a2 + alpha * ( a3 + alpha * ( a4 + alpha * ( a5 + alpha * a6 ) ) ) ) )
 
-# exponential function for extrapolation   
 @jax.jit
-def exp_extrap(tuple_input):
+def _exp_extrap(tuple_input):
     """
-    Function for exponential extrapolation
+    Exponential extrapolation for systematic variations.
+
+    Used when :math:`|\\alpha| > 1` (outside the interpolation region).
+    Extrapolates the variation as a power law in :math:`\\alpha`.
+
+    Parameters
+    ----------
+    tuple_input : tuple of (jnp.ndarray, jnp.ndarray, jnp.ndarray)
+        ``(alpha, varUp, varDown)`` where *alpha* is the nuisance
+        parameter value, *varUp* the upward variation ratio, and
+        *varDown* the downward variation ratio.
+
+    Returns
+    -------
+    variation : jnp.ndarray
+        Multiplicative correction (minus 1) to apply to the nominal
+        prediction.
+
+    See Also
+    --------
+    _poly_interp : Polynomial interpolation for :math:`|\\alpha| \\le 1`.
     """
     alpha, varUp, varDown = tuple_input
 
     return jnp.where(alpha>1.0, (varUp)**alpha, (varDown)**(-alpha)) - 1.0
 
-# loop over systematic uncertainty variations to calculate net effect
 @jax.jit
-def calculate_combined_var(param_vec, combined_var_up, combined_var_down):
+def _calculate_combined_var(param_vec, combined_var_up, combined_var_down):
+    """
+    Compute the net multiplicative effect of all systematic variations.
+
+    Sequentially applies each nuisance parameter's variation using
+    :func:`_poly_interp` (for :math:`|\\alpha| \\le 1`) or
+    :func:`_exp_extrap` (for :math:`|\\alpha| > 1`) via ``jax.lax.scan``.
+
+    Parameters
+    ----------
+    param_vec : jnp.ndarray, shape (n_syst,)
+        Values of the constrained nuisance parameters.
+    combined_var_up : jnp.ndarray, shape (n_syst, n_datapoints)
+        Upward variation ratios for each systematic and data point.
+    combined_var_down : jnp.ndarray, shape (n_syst, n_datapoints)
+        Downward variation ratios for each systematic and data point.
+
+    Returns
+    -------
+    combined_var : jnp.ndarray, shape (n_datapoints,)
+        Net multiplicative variation factor across all systematics.
+    """
 
     def calculate_variations(carry, param_val):
         
@@ -568,8 +666,8 @@ def calculate_combined_var(param_vec, combined_var_up, combined_var_down):
     
         # Strategy 5 of RooFit:
         combined_var_array_alpha += combined_var_array_alpha * jax.lax.cond(jnp.abs(param)<=1.0, 
-                                                                            poly_interp, 
-                                                                            exp_extrap, 
+                                                                            _poly_interp, 
+                                                                            _exp_extrap, 
                                                                             (param, combined_var_up_NP, combined_var_down_NP))            
         return combined_var_array_alpha, None
 
@@ -582,10 +680,25 @@ def calculate_combined_var(param_vec, combined_var_up, combined_var_down):
     return combined_var_array
 
 
-# Compute the poisson likelihood ratio
 @jax.jit
-def pois_loglikelihood(data_hist, exp_hist):
+def _pois_loglikelihood(data_hist, exp_hist):
     """
-    Computes the Poisson log-likelihood for observing data_hist, given expected exp_hist
+    Compute the Poisson log-likelihood ratio statistic for binned data.
+
+    Evaluates :math:`-2 \\sum_i (n_i \\ln \\nu_i - \\nu_i)` where
+    :math:`n_i` are the observed (or Asimov) bin counts and
+    :math:`\\nu_i` the expected yields.
+
+    Parameters
+    ----------
+    data_hist : jnp.ndarray, shape (n_bins,)
+        Observed (or Asimov) bin counts.
+    exp_hist : jnp.ndarray, shape (n_bins,)
+        Expected bin yields from the model.
+
+    Returns
+    -------
+    nll : jnp.ndarray, scalar
+        The :math:`-2 \\ln L` value summed over all bins.
     """
     return -2 * jnp.sum( data_hist * jnp.log(exp_hist) - exp_hist )

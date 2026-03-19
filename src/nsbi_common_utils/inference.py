@@ -145,7 +145,7 @@ class inference:
         initial_values : list of float or jnp.ndarray, shape (n_params,)
             Starting values for all parameters passed to MIGRAD. The order
             must match ``list_parameters`` exactly. Typically obtained from
-            :meth:`Model.get_model_parameters`.
+            :meth:`sbi_parametric_model.get_model_parameters`.
 
         list_parameters : list of str
             Names of all parameters in the model, in the same order as
@@ -194,6 +194,13 @@ class inference:
             Minuit strategy (0 = fast, 1 = default, 2 = robust).
         freeze_params : list[str] | None
             List of parameter names to fix during the global fit.
+
+        Notes
+        -----
+        After a successful fit, ``self.pulls_global_fit`` is set to a
+        :class:`numpy.ndarray` of best-fit values. This is required
+        before calling :meth:`perform_profile_scan` with
+        ``doStatOnly=True``.
         """
 
         # Instantiate the iminuit object
@@ -248,7 +255,26 @@ class inference:
         isConstrainedNP : bool
             If True, change the y-axis label to t_alpha; else use t_mu.
         size : int
-            Number of scan points
+            Number of scan points.
+
+        Returns
+        -------
+        scan_points : array-like
+            Parameter values at which the NLL was evaluated.
+        NLL_value : array-like
+            :math:`\\Delta NLL` values (minimum-subtracted).
+        scan_points_StatOnly : array-like, optional
+            Returned only when ``doStatOnly=True``. Scan points for the
+            stat-only curve.
+        NLL_value_StatOnly : array-like, optional
+            Returned only when ``doStatOnly=True``. :math:`\\Delta NLL`
+            for the stat-only curve.
+
+        Raises
+        ------
+        RuntimeError
+            If ``doStatOnly=True`` but :meth:`perform_fit` has not been
+            called yet.
         """
 
         m = Minuit(self.model_nll, 
