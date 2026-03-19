@@ -74,7 +74,7 @@ def main():
     
     plots_dir = config_workflow["output"]["plots_dir"]
     
-    logger.info("Starting Inference Pipeline...")
+    logger.info("Starting Inference Pipeline")
     logger.info(f"Configurations: Hist={config_workflow['configs']['histogram']}, NSBI={config_workflow['configs']['nsbi']}")
 
     measurement = config_workflow["measurement"]
@@ -94,10 +94,10 @@ def main():
         
         logger.info("Initializing Models")
 
-        model_hist = nsbi_common_utils.model.Model(workspace=ws_hist, 
+        model_hist = nsbi_common_utils.models.sbi_parametric_model(workspace=ws_hist, 
                                                    measurement_to_fit=measurement)
         
-        model_nsbi = nsbi_common_utils.model.Model(workspace=ws_nsbi, 
+        model_nsbi = nsbi_common_utils.models.sbi_parametric_model(workspace=ws_nsbi, 
                                                    measurement_to_fit=measurement)
         
         list_params, init_values = model_hist.get_model_parameters()
@@ -134,7 +134,7 @@ def main():
 
         logger.info(f"\nRunning Profile Scans for {scan_param}")
 
-        logger.info("Scanning Histogram Model...")
+        logger.info("Scanning Histogram Model")
         pts_hist, nll_hist, pts_stat_hist, nll_stat_hist = inf_hist.perform_profile_scan(
             parameter_name=scan_param,
             freeze_params=freeze_params,
@@ -144,7 +144,7 @@ def main():
             size=scan_steps
         )
 
-        logger.info("Scanning NSBI Model...")
+        logger.info("Scanning NSBI Model")
         pts_nsbi, nll_nsbi, pts_stat_nsbi, nll_stat_nsbi = inf_nsbi.perform_profile_scan(
             parameter_name=scan_param,
             freeze_params=freeze_params,
