@@ -174,7 +174,7 @@ systematic_uncertainty:
     num_bins_cal: 50
     
     callback: true
-    callback_patience: 30
+    callback_patience: 50
     callback_factor: 0.5
     
     validation_split: 0.2
