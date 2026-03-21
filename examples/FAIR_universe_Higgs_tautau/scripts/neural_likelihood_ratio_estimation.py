@@ -43,7 +43,7 @@ def main():
     features, features_scaling = fit_config_nsbi.get_training_features()
     logger.info(f"Training features loaded: {len(features)} features")
 
-    logger.info("Initializing datasets...")
+    logger.info("Initializing datasets")
     branches_to_load = features + ['presel_score'] # Can be defined independently of config when using just the APIs
     
     # datasets library helps with preparation of data, reads metadata from fit configuration file
@@ -52,7 +52,7 @@ def main():
         branches_to_load=branches_to_load
     )
 
-    logger.info("Loading datasets from paths defined in fit config...")
+    logger.info("Loading datasets from paths defined in fit config")
     dataset_incl_dict = datasets_helper.load_datasets_from_config(load_systematics=False)
 
     # The loaded dataframe is a dictionary, with "Nominal" key referring to the nominal dataset
@@ -100,7 +100,7 @@ def main():
         logger.info(f"Only training process type {process_type_input}")
     else:
         logger.info(f"Train all processes")
-    logger.info("Preparing datasets and initializing trainers...")
+    logger.info("Preparing datasets and initializing trainers")
 
     for process_type in basis_processes:
         if process_type_input is not None:
@@ -165,13 +165,13 @@ def main():
         
         del dataset_mix_model
 
-        logger.info(f"Processing {process_type}...")
+        logger.info(f"Processing {process_type}")
         
         logger.info(f"Starting training/loading for {process_type}")
 
         NN_training_mix_model[process_type].train(**settings)
 
-        logger.info(f"Testing normalization for {process_type}...")
+        logger.info(f"Testing normalization for {process_type}")
         NN_training_mix_model[process_type].test_normalization()
         NN_training_mix_model[process_type].make_overfit_plots(ensemble_index = ensemble_index_label)
 

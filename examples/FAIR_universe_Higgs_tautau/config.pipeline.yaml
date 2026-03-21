@@ -158,18 +158,18 @@ systematic_uncertainty:
   saved_data_path: "./saved_datasets/"
   output_training_dir: "output_training_systematics"
   filter_region: "SR"
-  force_train: true
+  force_train: false
   
   training_settings:
     hidden_layers: 4
     neurons: 1000
     number_of_epochs: 50
-    batch_size: 10000
+    batch_size: 512
     learning_rate: 0.0001
     scalerType: "MinMax"
     
-    calibration: true
-    recalibrate_output: true
+    calibration: false
+    recalibrate_output: false
     type_of_calibration: "isotonic"
     num_bins_cal: 50
     

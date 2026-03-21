@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2025-present jsandesa <jay.ajitbhai.sandesara@cern.ch>
-#
-# SPDX-License-Identifier: MIT
-
 import importlib as _importlib
 
 __all__ = [
@@ -11,7 +7,7 @@ __all__ = [
     'plotting',
     'inference',
     'workspace_builder',
-    'model',
+    'models',
 ]
 
 def __getattr__(name):

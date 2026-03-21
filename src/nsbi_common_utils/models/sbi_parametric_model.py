@@ -7,7 +7,10 @@ jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 from jax.tree_util import tree_map
 from typing import Dict, Union, Any, Optional, Literal
-import evermore as evm
+try:
+    import evermore as evm
+except ImportError:
+    evm = None
 
 
 class sbi_parametric_model:
@@ -148,9 +151,7 @@ class sbi_parametric_model:
         hist_vars_binned, hist_vars_unbinned, ratio_vars_unbinned = self._compute_shape_variations(alpha_vec)
 
         nu_binned  = sum(norm_modifiers[p] * hist_vars_binned[p] for p in self.all_samples)
-        llr_binned = -2.0 * evm.pdf.PoissonContinuous(lamb=nu_binned).log_prob(
-            self.expected_hist
-        ).sum()
+        llr_binned = -2 * jnp.sum(self.expected_hist * jnp.log(nu_binned) - nu_binned)
 
         nu_tot_unbinned = sum(norm_modifiers[p] * hist_vars_unbinned[p] for p in self.all_samples)
         dnu_dx          = sum(norm_modifiers[p] * hist_vars_unbinned[p] * ratio_vars_unbinned[p]

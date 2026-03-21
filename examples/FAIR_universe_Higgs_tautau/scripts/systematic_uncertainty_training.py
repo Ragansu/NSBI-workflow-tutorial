@@ -27,10 +27,16 @@ def load_config(path):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Systematic Uncertainty Estimation")
-    parser.add_argument('--config', type=str, default='config.pipeline.yaml', 
+    parser.add_argument('--config', type=str, default='config.pipeline.yaml',
                         help='Path to the main pipeline configuration file')
-    parser.add_argument('--train', action='store_true', 
+    parser.add_argument('--train', action='store_true',
                         help='Force training of Neural Network for systematics')
+    parser.add_argument('--process', type=str, default=None,
+                        help='Single process to train (e.g. ttbar). If not set, trains all.')
+    parser.add_argument('--systematic', type=str, default=None,
+                        help='Single systematic to train (e.g. JES). If not set, trains all.')
+    parser.add_argument('--direction', type=str, default=None, choices=['Up', 'Dn'],
+                        help='Single direction to train. If not set, trains both.')
     return parser.parse_args()
 
 def main():
@@ -92,23 +98,33 @@ def main():
         path_to_figures           = {}
         path_to_models            = {}
 
-        for process in config_nsbi.get_basis_samples():
-                    
+        basis_samples = config_nsbi.get_basis_samples()
+        if args.process:
+            basis_samples = [p for p in basis_samples if p == args.process]
+
+        for process in basis_samples:
+
             NN_training_syst_process[process] = {}
             path_to_figures[process]          = {}
             path_to_models[process]           = {}
-            
+
             # Iterate through systematics defined in NSBI config
             for dict_syst in config_nsbi.config["Systematics"]:
 
                 if (process not in dict_syst["Samples"]) or (dict_syst["Type"] != "NormPlusShape"): continue
 
                 syst = dict_syst["Name"]
+                if args.systematic and syst != args.systematic: continue
+
                 NN_training_syst_process[process][syst] = {}
                 path_to_figures[process][syst]          = {}
                 path_to_models[process][syst]           = {}
 
-                for direction in ["Up", "Dn"]:
+                directions = ["Up", "Dn"]
+                if args.direction:
+                    directions = [args.direction]
+
+                for direction in directions:
                     samples_to_train = config_nsbi.get_samples_in_syst_for_training(syst, direction)
                     
                     if (process not in samples_to_train):
