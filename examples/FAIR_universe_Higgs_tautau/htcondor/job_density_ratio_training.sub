@@ -41,7 +41,17 @@ periodic_hold_reason = "Job exceeded maximum runtime"
 periodic_release = (JobStatus == 5) && ((CurrentTime - EnteredCurrentStatus) > 60)
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-transfer_output_files = $(EXAMPLE_DIR)/output
-transfer_output_remaps = "output = ./$(WORK_DIR)/output"
+
+MODEL_DIR = output_model_params_$(PROCESS_TYPE)$(ENSEMBLE_INDEX)
+FIGURES_DIR = output_figures_$(PROCESS_TYPE)$(ENSEMBLE_INDEX)
+TRAINING_OUT = $(EXAMPLE_DIR)/saved_datasets/output_training_nominal
+
+transfer_output_files = $(TRAINING_OUT)/$(MODEL_DIR), \
+                        $(TRAINING_OUT)/$(FIGURES_DIR), \
+                        $(EXAMPLE_DIR)/output
+
+transfer_output_remaps = "$(MODEL_DIR)   = ./$(WORK_DIR)/saved_datasets/output_training_nominal/$(MODEL_DIR); \
+                          $(FIGURES_DIR) = ./$(WORK_DIR)/saved_datasets/output_training_nominal/$(FIGURES_DIR); \
+                          output         = ./$(WORK_DIR)/output"
 
 queue
