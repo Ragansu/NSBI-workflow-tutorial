@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import os
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -165,10 +167,10 @@ class inference:
         Notes
         -----
         * ``pulls_global_fit`` is initialised to ``None`` and populated
-        only after :meth:`perform_fit` is called. Methods that depend on
-        global-fit values (e.g. ``doStatOnly=True`` in
-        :meth:`perform_profile_scan`) will raise a ``RuntimeError`` if
-        called before :meth:`perform_fit`.
+          only after :meth:`perform_fit` is called. Methods that depend on
+          global-fit values (e.g. ``doStatOnly=True`` in
+          :meth:`perform_profile_scan`) will raise a ``RuntimeError`` if
+          called before :meth:`perform_fit`.
 
         See Also
         --------
