@@ -4,8 +4,8 @@ import sys
 sys.path.insert(0, os.path.abspath("../src"))
 
 project = "nsbi-common-utils"
-copyright = "2024, FAIR Universe Collaboration"
-author = "FAIR Universe Collaboration"
+# copyright = "2026, FAIR Universe Collaboration"
+author = "Jay Ajitbhai Sandesara"
 
 extensions = [
     "sphinx.ext.autodoc",

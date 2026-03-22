@@ -1,8 +1,7 @@
-Inference
+Parameter Fitting and Hypothesis Testing
 =========
 
-Inference engine wrapping iminuit for profiled negative log-likelihood
-minimisation and parameter scans.
+Statistical inference engine wrapping iminuit for profiled negative log-likelihood minimisation and parameter scans.
 
 .. currentmodule:: nsbi_common_utils.inference
 

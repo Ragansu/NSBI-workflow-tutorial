@@ -168,10 +168,10 @@ systematic_uncertainty:
     learning_rate: 0.0001
     scalerType: "MinMax"
     
-    calibration: false
-    recalibrate_output: false
+    calibration: true
+    recalibrate_output: true
     type_of_calibration: "isotonic"
-    num_bins_cal: 50
+    num_bins_cal: 25
     
     callback: true
     callback_patience: 50
