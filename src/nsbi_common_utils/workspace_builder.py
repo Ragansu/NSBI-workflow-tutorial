@@ -324,3 +324,8 @@ class WorkspaceBuilder:
         with open(outpath, "w") as f:
             json.dump(ws, f, indent=2)
         print(f"Wrote {outpath}")
+
+    @staticmethod
+    def load_workspace(path: str) -> dict:
+        with open(path) as f:
+            return json.load(f)

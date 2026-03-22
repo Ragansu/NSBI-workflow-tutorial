@@ -137,7 +137,7 @@ neural_likelihood_ratio_estimation:
     verbose: 1
     plot_scaled_features: false
 
-    num_workers: 4
+    num_workers: 0
 
   # Process-specific settings - can be different from the default
   training_settings:
@@ -158,33 +158,37 @@ systematic_uncertainty:
   saved_data_path: "./saved_datasets/"
   output_training_dir: "output_training_systematics"
   filter_region: "SR"
-  force_train: false
-  
+  force_train: true
+
+  num_ensemble_members_training: 20
+  num_ensemble_members_evaluation: 20
+  ensemble_aggregation_type: "mean_ratio"
+
   training_settings:
     hidden_layers: 4
     neurons: 1000
-    number_of_epochs: 50
-    batch_size: 512
+    number_of_epochs: 100
+    batch_size: 1024
     learning_rate: 0.0001
     scalerType: "MinMax"
     
-    calibration: true
-    recalibrate_output: true
-    type_of_calibration: "isotonic"
+    calibration: false
+    recalibrate_output: false
+    type_of_calibration: "histogram"
     num_bins_cal: 25
     
     callback: true
-    callback_patience: 50
-    callback_factor: 0.5
+    callback_patience: 30
+    callback_factor: 0.01
     
-    validation_split: 0.2
-    holdout_split: 0.2
+    validation_split: 0.1
+    holdout_split: 0.25
     
     verbose: 0
     plot_scaled_features: false
     load_trained_models: false
 
-    num_workers: 4
+    num_workers: 0
 
 
 # Parameter fit settings

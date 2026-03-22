@@ -177,10 +177,10 @@ def main():
     logger.info(f"Trained models path: {trained_models_path}")
 
     calibration_flag        = config_workflow_systematics["training_settings"].get("calibration", False)
+    syst_ensemble_members   = config_workflow_systematics.get("num_ensemble_members_evaluation", 1)
+    syst_aggregation_type   = config_workflow_systematics.get("ensemble_aggregation_type", "mean_ratio")
 
     for process_type in basis_processes:
-
-        ensemble_index = '' #TODO: support ensemble evaluations for systematics too
 
         for dict_syst in fit_config_nsbi.config["Systematics"]:
 
@@ -191,45 +191,68 @@ def main():
 
             for direction in ["Up", "Dn"]:
 
-                output_name = f'{process_type}_{syst}_{direction}'
-                        
-                path_to_saving_evaluated_ratios     = os.path.join(trained_models_path, f'output_ratios_{output_name}/')
-                path_to_trained_models              = os.path.join(trained_models_path, f'output_model_params_{output_name}/')
+                output_name_base = f'{process_type}_{syst}_{direction}'
+                path_to_saving_evaluated_ratios = os.path.join(trained_models_path, f'output_ratios_{output_name_base}/')
 
-                path_to_saved_scaler        = f"{path_to_trained_models}model_scaler{ensemble_index}.bin"
-                path_to_saved_model         = f"{path_to_trained_models}model{ensemble_index}.onnx"
+                score_pred_all = np.ones((syst_ensemble_members, dataset_Asimov_SR.shape[0]))
+                ratio_pred_all = np.ones((syst_ensemble_members, dataset_Asimov_SR.shape[0]))
+                loaded_indices = []
 
-                logger.info(f"Evaluating and Saving Ratios for {process_type} {syst} {direction}")
+                for ensemble_index in range(syst_ensemble_members):
 
-                logger.info(f"Reading saved models from {path_to_trained_models}")
-                scaler, model_NN                = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
+                    output_name = f'{output_name_base}{ensemble_index}'
+                    path_to_trained_models = os.path.join(trained_models_path, f'output_model_params_{output_name}/')
 
-                path_to_calibrator_model    = None
-                if calibration_flag:
-                    path_to_calibrator_model         = f"{path_to_trained_models}model_calibrated_hist{ensemble_index}.obj"
-                    if not os.path.exists(path_to_calibrator_model):
-                        logger.warning(f"No calibration model found with name {path_to_calibrator_model}")
-                        calibration_model = None
-                    else:
-                        file_calibration = open(path_to_calibrator_model, 'rb') 
-                        calibration_model = pickle.load(file_calibration)
-                else:
+                    path_to_saved_scaler = f"{path_to_trained_models}model_scaler{ensemble_index}.bin"
+                    path_to_saved_model  = f"{path_to_trained_models}model{ensemble_index}.onnx"
+
+                    model_file = Path(path_to_saved_model)
+                    if not model_file.is_file():
+                        logger.warning(f"No model exists for ensemble index {ensemble_index} for {output_name_base}")
+                        continue
+
+                    logger.info(f"Reading saved models from {path_to_saved_model}")
+                    scaler, model_NN = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
+
                     calibration_model = None
+                    if calibration_flag:
+                        path_to_calibrator_model = f"{path_to_trained_models}model_calibrated_hist{ensemble_index}.obj"
+                        if not os.path.exists(path_to_calibrator_model):
+                            logger.warning(f"No calibration model found with name {path_to_calibrator_model}")
+                        else:
+                            with open(path_to_calibrator_model, 'rb') as file_calibration:
+                                calibration_model = pickle.load(file_calibration)
 
-                score_pred      = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], 
-                                                                                               scaler, model_NN, 
-                                                                                               calibration_model = calibration_model)
-                ratio_pred      = nsbi_common_utils.training.convert_score_to_ratio(score_pred)    
+                    score_pred_all[ensemble_index] = nsbi_common_utils.training.predict_with_model(
+                        dataset_Asimov_SR[features], scaler, model_NN, calibration_model=calibration_model)
+                    ratio_pred_all[ensemble_index] = nsbi_common_utils.training.convert_score_to_ratio(score_pred_all[ensemble_index])
+                    loaded_indices.append(ensemble_index)
+
+                if not loaded_indices:
+                    logger.error(f"No ensemble members loaded for {output_name_base}, skipping")
+                    continue
+
+                if syst_aggregation_type == 'median_ratio':
+                    ratio_ensemble = np.median(ratio_pred_all[loaded_indices], axis=0)
+                elif syst_aggregation_type == 'mean_ratio':
+                    ratio_ensemble = np.mean(ratio_pred_all[loaded_indices], axis=0)
+                elif syst_aggregation_type == 'median_score':
+                    score_aggregate = np.median(score_pred_all[loaded_indices], axis=0)
+                    ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+                elif syst_aggregation_type == 'mean_score':
+                    score_aggregate = np.mean(score_pred_all[loaded_indices], axis=0)
+                    ratio_ensemble = score_aggregate / (1.0 - score_aggregate)
+                else:
+                    raise ValueError(f"Unknown aggregation_type: {syst_aggregation_type}")
 
                 saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"
-
                 os.makedirs(path_to_saving_evaluated_ratios, exist_ok=True)
-                
-                np.save(saved_ratio_path, ratio_pred)
+                np.save(saved_ratio_path, ratio_ensemble)
 
-                logger.info(f"Systematic density ratios for {syst}_{direction} affecting the {process_type} basis point saved to: {saved_ratio_path}")
+                logger.info(f"Systematic density ratios for {syst}_{direction} ({len(loaded_indices)} ensemble members) "
+                            f"affecting {process_type} saved to: {saved_ratio_path}")
 
-                logger.info("All systematic density ratios evaluated on Asimov and saved.")
+    logger.info("All systematic density ratios evaluated on Asimov and saved.")
 
 if __name__ == "__main__":
     print(f"Running Main")
