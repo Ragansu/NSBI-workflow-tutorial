@@ -9,4 +9,3 @@ The statistical models available for NSBI. Defines the JIT-compiled negative log
    :members:
    :undoc-members: False
    :show-inheritance:
-   :special-members: __init__

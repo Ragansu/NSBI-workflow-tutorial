@@ -32,7 +32,16 @@ To start with we provide documentation for the model building and fitting parts.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Basics
+
+   basics/overview
+   basics/fit_config
+   basics/workflow
+
+.. toctree::
+   :maxdepth: 2
    :caption: API Reference
 
+   api/workspace_builder
    api/model
    api/inference

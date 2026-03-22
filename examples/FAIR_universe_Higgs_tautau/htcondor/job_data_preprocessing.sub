@@ -37,7 +37,11 @@ gpus_minimum_capability = 7.0
 
 
 transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-# transfer_output_files = $(EXAMPLE_DIR)/saved_datasets
-# transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets"
+
+transfer_output_files = $(EXAMPLE_DIR)/saved_datasets, \
+                        $(EXAMPLE_DIR)/output
+
+transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets; \
+                          output         = ./$(WORK_DIR)/output"
 
 queue

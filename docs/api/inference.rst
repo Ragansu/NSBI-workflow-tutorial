@@ -1,5 +1,5 @@
 Parameter Fitting and Hypothesis Testing
-=========
+==========================================
 
 Statistical inference engine wrapping iminuit for profiled negative log-likelihood minimisation and parameter scans.
 
@@ -9,6 +9,5 @@ Statistical inference engine wrapping iminuit for profiled negative log-likeliho
    :members:
    :undoc-members: False
    :show-inheritance:
-   :special-members: __init__
 
 .. autofunction:: plot_NLL_scans

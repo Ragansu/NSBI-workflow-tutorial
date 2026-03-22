@@ -22,7 +22,7 @@ stream_error  = True
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
-requirements = (GPUs_DriverVersion >= 12.4) && (Target.HasCHTCStaging == true) && (Machine != "vetsigian0001.chtc.wisc.edu") && (Machine != "vetsigian0000.chtc.wisc.edu")
+requirements = (GPUs_DriverVersion >= 12.4) && (Target.HasCHTCStaging == true) && (Machine != "vetsigian0001.chtc.wisc.edu") && (Machine != "vetsigian0000.chtc.wisc.edu") && (Machine != "gpulab2003.chtc.wisc.edu")
 
 gpus_minimum_capability = 7.0
 

@@ -4,8 +4,8 @@ import sys
 sys.path.insert(0, os.path.abspath("../src"))
 
 project = "nsbi-common-utils"
-# copyright = "2026, FAIR Universe Collaboration"
-author = "Jay Ajitbhai Sandesara"
+copyright = "2025, Jay Sandesara (IRIS-HEP, NSF OAC-1836650 / PHY-2323298)"
+author = "Jay Sandesara"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -28,7 +28,6 @@ autodoc_default_options = {
     "members": True,
     "undoc-members": False,
     "show-inheritance": True,
-    "special-members": "__init__",
 }
 autodoc_typehints = "description"
 add_module_names = False
@@ -51,9 +50,14 @@ intersphinx_mapping = {
 
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
-    "github_url": "https://github.com/jsandesa/nsbi-common-utils",
-    "show_toc_level": 2,
+    "github_url": "https://github.com/iris-hep/NSBI-workflow-tutorial",
+    "show_toc_level": 3,
     "navigation_with_keys": True,
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "header_links_before_dropdown": 0,
+}
+html_sidebars = {
+    "**": ["globaltoc"],
 }
 
 exclude_patterns = ["_build"]
