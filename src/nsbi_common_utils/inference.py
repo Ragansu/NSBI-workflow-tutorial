@@ -129,7 +129,8 @@ class inference:
              model_nll,
              initial_values: list[float],
              list_parameters: list[str],
-             num_unconstrained_params: int):
+             num_unconstrained_params: int,
+             model_grad=None):
         """
         Initialise the inference engine around a callable NLL function.
 
@@ -164,6 +165,13 @@ class inference:
             constructing a stat-only NLL curve in
             :meth:`perform_profile_scan`.
 
+        model_grad : callable or None, optional
+            A function that returns the gradient of the NLL with respect to
+            all parameters.  Signature: ``model_grad(param_array) -> ndarray``.
+            If provided, iminuit uses analytical gradients instead of
+            finite-difference approximations, reducing the number of NLL
+            evaluations by a factor of ~(n_params + 1).
+
         Notes
         -----
         * ``pulls_global_fit`` is initialised to ``None`` and populated
@@ -177,11 +185,12 @@ class inference:
         perform_fit : Run the global MIGRAD minimisation.
         perform_profile_scan : Compute a profiled NLL scan over one parameter.
         """
-        
+
         self.model_nll                      = model_nll
         self.initial_values                 = initial_values
         self.list_parameters                = list_parameters
         self.num_unconstrained_params       = num_unconstrained_params
+        self.model_grad                     = model_grad
         self.pulls_global_fit               = None
 
     def perform_fit(self, 
@@ -206,9 +215,9 @@ class inference:
         """
 
         # Instantiate the iminuit object
-        m = Minuit(self.model_nll, 
-                    self.initial_values, 
-                    grad=None, 
+        m = Minuit(self.model_nll,
+                    self.initial_values,
+                    grad=self.model_grad,
                     name=tuple(self.list_parameters))
         
         m.errordef = Minuit.LEAST_SQUARES
@@ -279,9 +288,9 @@ class inference:
             called yet.
         """
 
-        m = Minuit(self.model_nll, 
-                   self.initial_values, 
-                   grad=None, 
+        m = Minuit(self.model_nll,
+                   self.initial_values,
+                   grad=self.model_grad,
                    name=tuple(self.list_parameters))
             
         m.errordef = Minuit.LEAST_SQUARES
@@ -305,9 +314,9 @@ class inference:
                 )
 
             # Re-initialize with global fit pulls so that fixed params are at the best-fit point
-            m_StatOnly = Minuit(self.model_nll, 
-                                self.pulls_global_fit, 
-                                grad=None, 
+            m_StatOnly = Minuit(self.model_nll,
+                                self.pulls_global_fit,
+                                grad=self.model_grad,
                                 name=tuple(self.list_parameters))
         
             m_StatOnly.errordef = Minuit.LEAST_SQUARES

@@ -94,6 +94,10 @@ class sbi_parametric_model:
         self.expected_hist                              = self._get_expected_hist(param_vec = self.initial_parameter_values)
         self.expected_rate_unbinned                     = self._get_expected_rate_unbinned(param_vec = self.initial_parameter_values)
 
+        # Stack per-process dicts into arrays for vectorized NLL
+        self._build_stacked_data()
+        self._jit_nll, self._jit_val_and_grad           = self._build_jit_functions()
+
     def get_model_parameters(self):
         """
         Return parameter names and initial values for fitting.
@@ -318,9 +322,27 @@ class sbi_parametric_model:
         nll : jnp.ndarray, scalar
             The negative log-likelihood value (scalar).
         """
-        param_array                         = jnp.asarray(param_array)
-        nll                                 = self._nll_function(param_array)
-        return nll
+        param_array = jnp.asarray(param_array)
+        return self._jit_nll(param_array, self._model_data)
+
+    def model_grad(self, param_array: Union[np.array, jnp.array, list[float]]):
+        """
+        Return the gradient of the NLL with respect to all parameters.
+
+        Uses JAX reverse-mode autodiff (JIT-compiled). Suitable as the
+        ``grad`` argument to :class:`iminuit.Minuit`.
+
+        Parameters
+        ----------
+        param_array : array-like, shape (n_params,)
+
+        Returns
+        -------
+        grad : np.ndarray, shape (n_params,)
+        """
+        param_array = jnp.asarray(param_array)
+        _, g = self._jit_val_and_grad(param_array, self._model_data)
+        return np.asarray(g)
     
     def _nll_function(self, param_vec):
         """Compute the full NLL at ``param_vec``."""
@@ -511,7 +533,133 @@ class sbi_parametric_model:
 
         self.weight_arrays_unbinned     = jnp.asarray(self.weight_arrays_unbinned)
         
-    def _index_of_modifiers(self, 
+    def _build_stacked_data(self):
+        """Stack per-process dicts into arrays and bundle into a single pytree for JIT."""
+        samples = self.all_samples
+
+        # Stack nominal data: (n_samples, n_datapoints)
+        yield_stacked           = jnp.stack([self.yield_array_dict[s] for s in samples])
+        unbinned_total_stacked  = jnp.stack([self.unbinned_total_dict[s] for s in samples])
+        ratios_stacked          = jnp.stack([self.ratios_array_dict[s] for s in samples])
+
+        # Stack systematic variations: (n_samples, n_syst, n_datapoints)
+        var_up_binned_stacked   = jnp.stack([self.combined_var_up_binned[s] for s in samples])
+        var_dn_binned_stacked   = jnp.stack([self.combined_var_dn_binned[s] for s in samples])
+        var_up_unbinned_stacked = jnp.stack([self.combined_var_up_unbinned[s] for s in samples])
+        var_dn_unbinned_stacked = jnp.stack([self.combined_var_dn_unbinned[s] for s in samples])
+        tot_up_unbinned_stacked = jnp.stack([self.combined_tot_up_unbinned[s] for s in samples])
+        tot_dn_unbinned_stacked = jnp.stack([self.combined_tot_dn_unbinned[s] for s in samples])
+
+        # Norm-factor mask: (n_samples, n_params) — True where param j is a
+        # normfactor for sample i.  prod(where(mask, param_vec, 1)) gives the
+        # per-sample multiplicative modifier.
+        n_samples = len(samples)
+        n_params  = len(self.list_parameters)
+        norm_matrix = np.zeros((n_samples, n_params), dtype=bool)
+        for i, sample in enumerate(samples):
+            if sample in self.norm_sample_map:
+                for nf_name in self.norm_sample_map[sample]:
+                    j = self.index_normparam_map[nf_name]
+                    norm_matrix[i, j] = True
+
+        # Bundle everything into a dict pytree passed as a *dynamic* argument
+        # to the JIT-compiled NLL so that arrays are traced as abstract inputs
+        # (no constant-folding / memory blow-up).
+        self._model_data = {
+            'yield':            yield_stacked,
+            'unbinned_total':   unbinned_total_stacked,
+            'ratios':           ratios_stacked,
+            'var_up_binned':    var_up_binned_stacked,
+            'var_dn_binned':    var_dn_binned_stacked,
+            'var_up_unbinned':  var_up_unbinned_stacked,
+            'var_dn_unbinned':  var_dn_unbinned_stacked,
+            'tot_up_unbinned':  tot_up_unbinned_stacked,
+            'tot_dn_unbinned':  tot_dn_unbinned_stacked,
+            'norm_matrix':      jnp.array(norm_matrix),
+            'expected_hist':    self.expected_hist,
+            'expected_rate':    self.expected_rate_unbinned,
+            'weights':          self.weight_arrays_unbinned,
+        }
+
+    def _build_jit_functions(self):
+        """Create JIT-compiled NLL and value-and-grad functions.
+
+        Python scalars (num_unc, has_syst) are captured in the closure and
+        become compile-time constants — fine because they are tiny.
+        All large arrays flow through the ``data`` dict argument so JAX
+        traces them as abstract inputs (no constant folding).
+        """
+        num_unc  = self.num_unconstrained_param
+        has_syst = self.has_normplusshape
+
+        # vmap _calculate_combined_var over the sample axis (axis 0)
+        _batched_var = jax.vmap(_calculate_combined_var, in_axes=(None, 0, 0))
+
+        def _nll_pure(param_vec, data):
+            param_syst = param_vec[num_unc:]
+
+            # --- Norm modifiers: (n_samples,) ---
+            norm_mods = jnp.prod(
+                jnp.where(data['norm_matrix'], param_vec[None, :], 1.0), axis=1
+            )
+
+            # --- Systematic variations (one vmapped call per category) ---
+            if has_syst:
+                hist_vars_b = _batched_var(param_syst,
+                                           data['var_up_binned'],
+                                           data['var_dn_binned'])
+                hist_vars_u = _batched_var(param_syst,
+                                           data['tot_up_unbinned'],
+                                           data['tot_dn_unbinned'])
+                ratio_vars  = _batched_var(param_syst,
+                                           data['var_up_unbinned'],
+                                           data['var_dn_unbinned'])
+            else:
+                hist_vars_b = jnp.ones_like(data['yield'])
+                hist_vars_u = jnp.ones_like(data['unbinned_total'])
+                ratio_vars  = jnp.ones_like(data['ratios'])
+
+            # --- Binned Poisson NLL ---
+            nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_b,
+                                 axis=0)
+            llr_binned = -2.0 * jnp.sum(
+                data['expected_hist'] * jnp.log(nu_binned) - nu_binned
+            )
+
+            # --- Unbinned rate term ---
+            nu_unbinned = jnp.sum(
+                norm_mods[:, None] * data['unbinned_total'] * hist_vars_u,
+                axis=0
+            )
+            llr_rate = -2.0 * jnp.sum(
+                data['expected_rate'] * jnp.log(nu_unbinned) - nu_unbinned
+            )
+
+            # --- Per-event shape term ---
+            dnu_dx = jnp.sum(
+                norm_mods[:, None]
+                * hist_vars_u
+                * data['unbinned_total']
+                * data['ratios']
+                * ratio_vars,
+                axis=0
+            )
+            llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
+
+            # --- Gaussian constraints on nuisance parameters ---
+            llr_constraints = jnp.sum(param_syst ** 2)
+
+            return (llr_binned
+                    + llr_rate
+                    - 2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
+                    + llr_constraints)
+
+        jit_nll          = jax.jit(_nll_pure)
+        jit_val_and_grad = jax.jit(jax.value_and_grad(_nll_pure, argnums=0))
+
+        return jit_nll, jit_val_and_grad
+
+    def _index_of_modifiers(self,
                           channel_name: str,
                           sample_name: str,
                           systematic_name: str) -> Optional[int]:

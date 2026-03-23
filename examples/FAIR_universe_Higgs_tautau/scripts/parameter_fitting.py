@@ -11,6 +11,8 @@ import nsbi_common_utils
 
 jax.config.update("jax_enable_x64", True)
 
+print(f"JAX backend: {jax.default_backend()}, devices: {jax.devices()}")
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -87,34 +89,36 @@ def main():
         logger.info("Building Workspaces")
 
         hist_config_path = config_workflow["configs"]["histogram"]
-        ws_hist = nsbi_common_utils.workspace_builder.WorkspaceBuilder(config_path=hist_config_path).build()
+        workspace_histogram = nsbi_common_utils.workspace_builder.WorkspaceBuilder(config_path=hist_config_path).build()
 
         nsbi_config_path = config_workflow["configs"]["nsbi"]
-        ws_nsbi = nsbi_common_utils.workspace_builder.WorkspaceBuilder(config_path=nsbi_config_path).build()
+        workspace_nsbi = nsbi_common_utils.workspace_builder.WorkspaceBuilder(config_path=nsbi_config_path).build()
         
         logger.info("Initializing Models")
 
-        model_hist = nsbi_common_utils.models.sbi_parametric_model(workspace=ws_hist, 
+        model_hist = nsbi_common_utils.models.sbi_parametric_model(workspace=workspace_histogram, 
                                                    measurement_to_fit=measurement)
         
-        model_nsbi = nsbi_common_utils.models.sbi_parametric_model(workspace=ws_nsbi, 
+        model_nsbi = nsbi_common_utils.models.sbi_parametric_model(workspace=workspace_nsbi, 
                                                    measurement_to_fit=measurement)
         
         list_params, init_values = model_hist.get_model_parameters()
         num_unconstrained = model_hist.num_unconstrained_param
         
-        inf_hist = nsbi_common_utils.inference.inference(
+        inference_histogram = nsbi_common_utils.inference.inference(
             model_nll=model_hist.model,
             initial_values=init_values,
             list_parameters=list_params,
-            num_unconstrained_params=num_unconstrained
+            num_unconstrained_params=num_unconstrained,
+            model_grad=model_hist.model_grad
         )
-        
-        inf_nsbi = nsbi_common_utils.inference.inference(
+
+        inference_nsbi = nsbi_common_utils.inference.inference(
             model_nll=model_nsbi.model,
             initial_values=init_values,
             list_parameters=list_params,
-            num_unconstrained_params=num_unconstrained
+            num_unconstrained_params=num_unconstrained,
+            model_grad=model_nsbi.model_grad
         )
 
         logger.info("\nPerforming Fits (Tables logged to file)")
@@ -127,17 +131,17 @@ def main():
         print("\n" + "="*40)
         print(" NSBI FIT RESULTS ")
         print("="*40 + "\n")
-        inf_nsbi.perform_fit(freeze_params=freeze_params)
+        inference_nsbi.perform_fit(freeze_params=freeze_params)
         
         print("\n" + "="*40)
         print(" HISTOGRAM FIT RESULTS ")
         print("="*40 + "\n")
-        inf_hist.perform_fit(freeze_params=freeze_params)
+        inference_histogram.perform_fit(freeze_params=freeze_params)
 
         logger.info(f"\nRunning Profile Scans for {scan_param}")
 
         logger.info("Scanning Histogram Model")
-        pts_hist, nll_hist, pts_stat_hist, nll_stat_hist = inf_hist.perform_profile_scan(
+        pts_hist, nll_hist, pts_stat_hist, nll_stat_hist = inference_histogram.perform_profile_scan(
             parameter_name=scan_param,
             freeze_params=freeze_params,
             bound_range=scan_range,
@@ -147,7 +151,7 @@ def main():
         )
 
         logger.info("Scanning NSBI Model")
-        pts_nsbi, nll_nsbi, pts_stat_nsbi, nll_stat_nsbi = inf_nsbi.perform_profile_scan(
+        pts_nsbi, nll_nsbi, pts_stat_nsbi, nll_stat_nsbi = inference_nsbi.perform_profile_scan(
             parameter_name=scan_param,
             freeze_params=freeze_params,
             bound_range=scan_range,
