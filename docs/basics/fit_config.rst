@@ -1,21 +1,15 @@
 Writing a Fit Configuration
 ===========================
 
-The fit configuration YAML file is the central input to the analysis. It
-defines the measurement, samples, systematic uncertainties, analysis regions,
-and pointers to trained density-ratio models. The
-:class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` reads this file
-and produces a workspace dictionary.
+The fit configuration YAML file is the central input to the analysis. It defines the measurement, samples, systematic uncertainties, analysis regions,
+and pointers to trained density-ratio models. The :class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` reads this file and produces a workspace dictionary.
 
-A complete reference of each section is in the
-:doc:`Workspace Builder API docs </api/workspace_builder>`. This page explains
-the *purpose* of each section and how they connect.
+A complete reference of each section is in the :doc:`Workspace Builder API docs </api/workspace_builder>`. This page explains the *purpose* of each section and how they connect.
 
 Measurement and parameters
 --------------------------
 
-The ``General`` block names the measurement and declares which parameters
-enter the fit:
+The ``General`` block names the measurement and declares which parameters enter the fit:
 
 .. code-block:: yaml
 
@@ -31,8 +25,7 @@ enter the fit:
          - JES
 
 - **POI** — the parameter of interest (signal strength).
-- **ParametersToFit** — only these parameters appear in the likelihood.
-  Omitting a parameter here effectively fixes it at its nominal value.
+- **ParametersToFit** — only these parameters appear in the likelihood. Omitting a parameter here effectively fixes it at its nominal value.
 
 Samples
 -------
@@ -49,11 +42,8 @@ Each row in ``Samples`` is a physics process read from a ROOT file:
        UseAsReference: True
        UseAsBasis: True
 
-- **UseAsBasis** — this process gets its own density-ratio network and
-  normalization factor.
-- **UseAsReference** — the denominator process in the density ratio
-  :math:`r(x) = p / p_{\text{ref}}`. At least one sample should be a
-  reference.
+- **UseAsBasis** — this process gets its own density-ratio network and normalization factor.
+- **UseAsReference** — the denominator process in the density ratio :math:`r(x) = p / p_{\text{ref}}`. (Optional, users can choose to pass their own reference hypothesis when just using APIs from the toolkit).
 
 Normalization factors
 ---------------------
@@ -93,10 +83,8 @@ Shape + normalization uncertainties point to the up/down varied ROOT files:
            Tree: tree_htautau
            Weight: weights
 
-- **Nominal: 0** — the nuisance parameter starts at zero (the Gaussian
-  constraint is centred here).
-- The workspace builder computes variation ratios (varied / nominal)
-  automatically from the histograms.
+- **Nominal: 0** — the nuisance parameter starts at zero (the Gaussian constraint is centred here).
+- The workspace builder computes variation ratios (varied / nominal) automatically from the histograms.
 
 Analysis regions
 ----------------
@@ -127,10 +115,8 @@ Regions define event selections and whether the channel is binned or unbinned:
                RatiosUp: ./saved_datasets/.../ratio_htautau.npy
                RatiosDn: ./saved_datasets/.../ratio_htautau.npy
 
-For **unbinned** regions, ``TrainedModels`` points to the pre-evaluated
-density-ratio ``.npy`` arrays produced by the evaluation pipeline step.
-For **binned** regions, the workspace builder histograms the data
-automatically using ``Variable`` and ``Binning``.
+For **unbinned** regions, ``TrainedModels`` points to the pre-evaluated density-ratio ``.npy`` arrays produced by the evaluation pipeline step.
+For **binned** regions, the workspace builder histograms the data automatically using ``Variable`` and ``Binning``.
 
 Training features
 -----------------
@@ -148,5 +134,4 @@ Which branches from the ROOT file are used as NN inputs:
      - DER_mass_transverse_met_lep
      - log_DER_mass_vis
 
-Features listed in ``TrainingFeaturesToStandardize`` are z-scored before
-being passed to the network. Features not listed are passed through unchanged.
+Features listed in ``TrainingFeaturesToStandardize`` are z-scored before being passed to the network. Features not listed are passed through unchanged.
