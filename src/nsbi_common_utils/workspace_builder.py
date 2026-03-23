@@ -321,8 +321,18 @@ class WorkspaceBuilder:
 
 
     def dump_workspace(self, ws: dict, outpath: str = "workspace.json"):
+        class NumpyEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                if isinstance(obj, np.floating):
+                    return float(obj)
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                return super().default(obj)
+
         with open(outpath, "w") as f:
-            json.dump(ws, f, indent=2)
+            json.dump(ws, f, indent=2, cls=NumpyEncoder)
         print(f"Wrote {outpath}")
 
     @staticmethod

@@ -162,7 +162,7 @@ systematic_uncertainty:
 
   num_ensemble_members_training: 20
   num_ensemble_members_evaluation: 20
-  ensemble_aggregation_type: "median_score"
+  ensemble_aggregation_type: "mean_ratio"
 
   training_settings:
     hidden_layers: 4

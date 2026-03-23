@@ -96,9 +96,7 @@ Each norm factor applies to the listed samples and is unconstrained in the fit.
 Systematics
 ^^^^^^^^^^^
 
-Shape + normalization uncertainties (``NormPlusShape``). Each systematic points
-to the up/down varied ROOT files per sample. The workspace builder computes
-variation ratios (varied / nominal) automatically.
+Within the set of constrained nuisance parameters, the toolkit currently supports the types of uncertainties that affect normalization and shape of the distribution (``NormPlusShape``), i.e. equivalent of `HistoSys` in HistFactory. Each systematic points to the ROOT files of simulations associated up/down variation of some nuisance parameter in the model. The workspace builder computes variation ratios (varied / nominal) automatically.
 
 .. code-block:: yaml
 
@@ -129,8 +127,7 @@ variation ratios (varied / nominal) automatically.
 Regions
 ^^^^^^^
 
-Analysis regions define where events are counted. Each region can be
-**binned** (template fit) or **unbinned** (SBI density-ratio fit).
+Analysis regions define where events are counted. Each region can be **binned** (template fit) or **unbinned** (SBI density-ratio fit).
 
 .. code-block:: yaml
 
@@ -161,15 +158,12 @@ Analysis regions define where events are counted. Each region can be
                RatiosUp: ./saved_datasets/output_training_systematics/output_ratios_htautau_JES_Up/ratio_htautau.npy
                RatiosDn: ./saved_datasets/output_training_systematics/output_ratios_htautau_JES_Dn/ratio_htautau.npy
 
-For unbinned regions, ``TrainedModels`` points to the pre-trained density-ratio
-networks and their evaluated ratio arrays. These are produced by the training
-and evaluation pipeline steps before the workspace is built.
+For unbinned regions, ``TrainedModels`` points to the pre-trained density-ratio networks and their evaluated ratio arrays. These are produced by the training and evaluation pipeline steps before the workspace is built.
 
 TrainingFeatures
 ^^^^^^^^^^^^^^^^
 
-Features used to train the density-ratio networks. Also used by the dataset
-loader to select branches from the ROOT files.
+Features used to train the density-ratio networks. Also used by the dataset loader to select branches from the ROOT files.
 
 .. code-block:: yaml
 
