@@ -1,4 +1,4 @@
-# Neural Simulation-Based Inference Workflow demonstration
+# Toolkit for Neural Simulation-Based Inference at the LHC
 
 The full documtation can be found here: [https://toolkit-for-simulation-based-inference.readthedocs.io](https://toolkit-for-simulation-based-inference.readthedocs.io/en/latest/index.html#)
 
