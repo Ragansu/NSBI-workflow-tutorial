@@ -164,19 +164,6 @@ The YAML config defines five sections consumed by the workspace builder. See :do
              RatiosUp: .../output_ratios_htautau_JES_Up/ratio_htautau.npy
              RatiosDn: .../output_ratios_htautau_JES_Dn/ratio_htautau.npy
 
-Adding images to this page
---------------------------
-
-To include an image (e.g. an NLL scan comparison plot), place the file in ``docs/_static/`` and reference it with:
-
-.. code-block:: rst
-
-   .. figure:: /_static/nll_scan_comparison.png
-      :width: 80%
-      :align: center
-
-      Comparison of profile-likelihood scans: NSBI vs histogram-only.
-
 Notebooks
 ---------
 
