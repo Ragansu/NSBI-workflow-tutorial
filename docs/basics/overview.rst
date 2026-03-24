@@ -2,13 +2,20 @@ Overview
 ========
 
 What is Simulation-Based Inference?
--------------
+-----------------------------------
 
 Simulation-Based Inference (SBI) or Neural Simulation-Based Inference (NSBI) refers to set of statistical techniques that allow statistical inference directly using high-dimensional data. This circumvents the need to build low-dimensional summaries as is traditionally done and which can lose sensitive information. 
 
-In this toolkit, we will apply a type of SBI that is scalable for LHC-style analysis with high-dimensional parameter spaces, where the systematic uncertainty modeling is done via certain domain-specific assumptions. 
+This toolkit helps facilitate the application of a type of SBI that is scalable for LHC-style analysis with high-dimensional parameter spaces, where the systematic uncertainty modeling is done via certain domain-specific assumptions. This is done via easy-to-use APIs for the various stages in the analysis as well as providing an end-to-end workflow orchestratation pipeline steered via human-readable configuration files.
 
-More details on the statistics to be added soon!
+More details to be added soon!
+
+.. figure:: /_static/toolkit_workflow_AGCstyle.png
+   :width: 80%
+   :align: center
+
+   High-level overview of the SBI workflow and the various stages.
+
 
 How the pieces fit together
 ---------------------------

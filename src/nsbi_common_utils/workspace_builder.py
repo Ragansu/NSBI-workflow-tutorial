@@ -18,10 +18,43 @@ logging.basicConfig(filename="workspace.log",
 
 
 class WorkspaceBuilder:
-    """Collects functionality to build a workspace"""
+    """Build a pyhf-like JSON workspace from a YAML configuration file.
+
+    Reads sample definitions, region definitions, normalization factors, and systematic uncertainties from a YAML config (via :class:`~nsbi_common_utils.configuration.ConfigManager`), loads the corresponding ROOT datasets and trained density-ratio models, and assembles them into a workspace dictionary that can be consumed by :class:`~nsbi_common_utils.models.sbi_parametric_model`.
+
+    Parameters
+    ----------
+    config_path : pathlib.Path or str
+        Path to the YAML configuration file that defines samples, regions, normalization factors, and systematics.
+
+    Attributes
+    ----------
+    config : ConfigManager
+        Parsed configuration object.
+    config_dict : dict
+        Raw configuration dictionary.
+    ParametersToFit : list of str or None
+        Subset of parameters the user wants to include in the fit. ``None`` means all parameters are included.
+
+    See Also
+    --------
+    nsbi_common_utils.models.sbi_parametric_model : Consumes the workspace dictionary produced by :meth:`build`.
+
+    Examples
+    --------
+    >>> builder = WorkspaceBuilder("config_fit_nsbi.yml")
+    >>> ws = builder.build()
+    >>> builder.dump_workspace(ws, "workspace.json")
+    """
 
     def __init__(self, config_path: Union[pathlib.Path, str]) -> None:
-        """Creates a workspace corresponding to configuration file"""
+        """Initialise the builder from a YAML configuration file.
+
+        Parameters
+        ----------
+        config_path : pathlib.Path or str
+            Path to the YAML configuration file.
+        """
         self.config_path = config_path
         self.config = nsbi_common_utils.configuration.ConfigManager(file_path_string = config_path)
         self.config_dict = self.config.config
@@ -38,12 +71,26 @@ class WorkspaceBuilder:
         
 
 
-    def normfactor_modifiers(self, 
-                             region_name: str, 
+    def normfactor_modifiers(self,
+                             region_name: str,
                              sample_name: str) -> list[dict[str, Any]]:
-        '''
-        returns the modifier list of all normfactors affecting a sample in a region
-        '''
+        """Return normfactor modifiers that affect a given sample in a region.
+
+        Iterates over all ``NormFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
+
+        Parameters
+        ----------
+        region_name : str
+            Name of the region (channel) to filter on.
+        sample_name : str
+            Name of the physics sample to filter on.
+
+        Returns
+        -------
+        list of dict
+            Each dict has keys ``"name"``, ``"data"``, and
+            ``"type": "normfactor"``.
+        """
         list_dict_norm_factors = self.config.config.get("NormFactors", [])
         modifiers = []
         for norm_factor_dict in list_dict_norm_factors:
@@ -63,14 +110,38 @@ class WorkspaceBuilder:
                                       "type": "normfactor"})
         return modifiers
 
-    def normplusshape_modifiers(self, 
-                                dataset           : pd.DataFrame, 
-                                region            : dict[str, Any], 
-                                sample            : dict[str, Any], 
+    def normplusshape_modifiers(self,
+                                dataset           : pd.DataFrame,
+                                region            : dict[str, Any],
+                                sample            : dict[str, Any],
                                 systematic_dict   : dict[str, Any],
                                 nominal_data      : np.array,
                                 type_of_fit: str) -> list[dict[str, Any]]:
+        """Build a NormPlusShape modifier for one systematic on one sample.
 
+        Histograms the up/down systematic variations, divides by the nominal to obtain variation ratios, and (for unbinned channels) attaches paths to the pre-computed density-ratio arrays.
+
+        Parameters
+        ----------
+        dataset : dict of dict of DataFrame
+            Nested dict keyed by ``"<syst>_Up"``/``"<syst>_Dn"`` then
+            sample name, as returned by :meth:`datasets.filter_region_by_type`.
+        region : dict
+            Region (channel) configuration dictionary.  Must contain ``"Name"``, ``"Variable"``, and ``"Binning"`` keys.
+        sample : dict
+            Sample configuration dictionary with at least ``"Name"`` and ``"SamplePath"`` keys.
+        systematic_dict : dict
+            Single systematic entry from the YAML config (has ``"Name"``).
+        nominal_data : np.ndarray
+            Nominal histogram bin counts used to normalise the variations.
+        type_of_fit : ``"binned"`` or ``"unbinned"``
+            Determines whether density-ratio file paths are included.
+
+        Returns
+        -------
+        list of dict
+            A single-element list containing the modifier dictionary with keys ``"name"``, ``"type": "normplusshape"``, and ``"data"``.
+        """
         syst_name                      = systematic_dict["Name"]
         
         channel_name    = region["Name"]
@@ -117,12 +188,39 @@ class WorkspaceBuilder:
 
         return modifiers
 
-    def sys_modifiers(self, dataset: pd.DataFrame, 
-                      region: dict[str, Any], 
+    def sys_modifiers(self, dataset: pd.DataFrame,
+                      region: dict[str, Any],
                       sample: dict[str, Any],
-                      nominal_data: np.array, 
+                      nominal_data: np.array,
                       type_of_fit: str = "binned") -> list[dict[str, Any]]:
+        """Collect all systematic modifiers for a sample in a region.
 
+        Loops over every systematic in the configuration, checks region/sample applicability, and delegates to :meth:`normplusshape_modifiers` for ``NormPlusShape`` types.
+
+        Parameters
+        ----------
+        dataset : dict
+            Dataset dictionary as returned by
+            :meth:`datasets.filter_region_by_type`.
+        region : dict
+            Region configuration dictionary.
+        sample : dict
+            Sample configuration dictionary.
+        nominal_data : np.ndarray
+            Nominal histogram used for ratio computation.
+        type_of_fit : str, optional
+            ``"binned"`` (default) or ``"unbinned"``.
+
+        Returns
+        -------
+        list of dict
+            Modifier dictionaries for all applicable systematics.
+
+        Raises
+        ------
+        NotImplementedError
+            If a systematic type other than ``NormPlusShape`` is encountered.
+        """
         sample_name = sample["Name"]
         modifiers = []
         for systematic_dict in self.config_dict.get("Systematics", []):
@@ -148,10 +246,14 @@ class WorkspaceBuilder:
         
 
     def channels(self) -> List[Dict[str, Any]]:
-        """Returns the channel information: yields/density ratio models per sample and modifiers.
+        """Build the ``"channels"`` list for the workspace.
 
-        Returns:
-            List[Dict[str, Any]]: channels for workspace
+        For every region in the configuration, loads datasets from ROOT files, computes nominal histograms, attaches density-ratio file paths (for unbinned regions), and collects all applicable normfactor and systematic modifiers per sample.
+
+        Returns
+        -------
+        list of dict
+            Each dict represents one channel with keys ``"name"``, ``"type"`` (``"binned"``/``"unbinned"``), ``"samples"``, and optionally ``"weights"`` (path to Asimov weight file for unbinned channels).
         """
         channels = []
         for region in self.config_dict["Regions"]:
@@ -247,8 +349,16 @@ class WorkspaceBuilder:
             
         return channels
 
-    def measurements(self):
-        
+    def measurements(self) -> List[Dict[str, Any]]:
+        """Build the ``"measurements"`` list for the workspace.
+
+        Extracts parameter initial values and bounds from the ``NormFactors`` and ``Systematics`` sections of the config, filters to the ``ParametersToFit`` subset (if specified), and records the parameter of interest (POI).
+
+        Returns
+        -------
+        list of dict
+            A single-element list.  The dict contains ``"name"`` and ``"config"`` (with ``"parameters"`` and ``"poi"`` keys).
+        """
         measurements = []
         measurement = {}
         measurement.update({"name": self.config_dict["General"]["Measurement"]['Name']})
@@ -294,11 +404,14 @@ class WorkspaceBuilder:
 
 
     def build(self) -> Dict[str, Any]:
-        """
-        Constructs a workspace.
+        """Construct the full workspace dictionary.
 
-        Returns:
-            Dict[str, Any]
+        Calls :meth:`channels` and :meth:`measurements` and combines them with a version tag into the top-level workspace dict.
+
+        Returns
+        -------
+        dict
+            Workspace with keys ``"channels"``, ``"measurements"``, and ``"version"``.  Ready to be passed to :class:`~nsbi_common_utils.models.sbi_parametric_model` or serialised via :meth:`dump_workspace`.
         """
         ws: Dict[str, Any] = {}  # the workspace
 
@@ -321,6 +434,16 @@ class WorkspaceBuilder:
 
 
     def dump_workspace(self, ws: dict, outpath: str = "workspace.json"):
+        """
+        Serialise a workspace dictionary to a JSON file.
+
+        Parameters
+        ----------
+        ws : dict
+            Workspace dictionary returned by :meth:`build`.
+        outpath : str, optional
+            Output file path. Defaults to ``"workspace.json"``.
+        """
         class NumpyEncoder(json.JSONEncoder):
             def default(self, obj):
                 if isinstance(obj, np.integer):
@@ -337,5 +460,17 @@ class WorkspaceBuilder:
 
     @staticmethod
     def load_workspace(path: str) -> dict:
+        """Load a workspace dictionary from a JSON file.
+
+        Parameters
+        ----------
+        path : str
+            Path to the JSON workspace file written by :meth:`dump_workspace`.
+
+        Returns
+        -------
+        dict
+            The deserialised workspace dictionary.
+        """
         with open(path) as f:
             return json.load(f)

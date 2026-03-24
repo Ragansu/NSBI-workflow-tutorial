@@ -15,6 +15,11 @@ class sbi_parametric_model:
 
     Defines parameterized expected yields, density ratios, and the negative log-likelihood (NLL) passed to fitting algorithms. Supports both binned and unbinned channels with systematic uncertainties handled via polynomial interpolation / exponential extrapolation (HistFactory strategy 5).
 
+    Two JIT-compiled entry points are built:
+
+    * :meth:`model` — evaluates the NLL (used as ``model_nll`` by :class:`~nsbi_common_utils.inference.inference`).
+    * :meth:`model_grad` — evaluates the NLL gradient via JAX reverse-mode autodiff (used as ``model_grad`` by :class:`~nsbi_common_utils.inference.inference` to supply analytical gradients to iminuit, eliminating finite-difference overhead).
+
     Parameters
     ----------
     workspace : dict

@@ -19,12 +19,14 @@ Workflow
    # 2. Initialize the statistical model
    model = models.sbi_parametric_model(workspace=ws, measurement_to_fit="my_measurement")
 
-   # 3. Fit
+   # 3. Fit (model_grad supplies JAX autodiff gradients to iminuit)
    params, init_vals = model.get_model_parameters()
    fitter = inference.inference(
        model_nll=model.model,
+       model_grad=model.model_grad,
        list_parameters=params,
        initial_values=init_vals,
+       num_unconstrained_params=model.num_unconstrained_param,
    )
    fitter.perform_fit()
 

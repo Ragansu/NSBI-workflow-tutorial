@@ -37,6 +37,7 @@ To start with we provide documentation for the model building and fitting parts.
    basics/overview
    basics/fit_config
    basics/workflow
+   basics/model_building_example
 
 .. toctree::
    :maxdepth: 2
