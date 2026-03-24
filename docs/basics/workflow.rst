@@ -3,7 +3,9 @@ Running the Workflow
 
 The full NSBI pipeline can be executed step-by-step or orchestrated via HTCondor DAGMan on a cluster. We will soon add Snakemake as an option for workflow orchestration, being agnostic to the computing infrastructure and thus allowing runs on HPC, HTC or even a personal laptop.
 
-Below is an example workflow using FAIR Universe $H\to \tau\tau$ dataset.
+Below is an example workflow using the FAIR Universe :math:`H\to \tau\tau` dataset.
+
+All pipeline scripts are driven by a single configuration file, ``config.pipeline.yaml``, located at the root of each example directory (e.g. ``examples/FAIR_universe_Higgs_tautau/config.pipeline.yaml``). This file defines dataset paths, training hyperparameters, ensemble sizes, systematic variations, and fit settings. Inspect the example config to understand the available options.
 
 Pipeline overview
 -----------------
@@ -61,10 +63,6 @@ The ``htcondor/`` directory contains submit descriptions and DAG files that orch
          generate_systematics_dag.py        # generates train_systematics.dag dynamically
          train_ensemble.dag                 # one job per (process, ensemble_index)
          train_systematics.dag              # one job per (process, systematic, direction)
-         job_density_ratio_training.sub     # submit file for nominal training
-         job_systematics_training.sub       # submit file for systematic training
-         job_density_ratio_eval.sub         # submit file for evaluation
-         run_step.sh                        # wrapper script executed on the EP
      stage_parameter_fitting.dag        # Build model and fit parameters for statistical inference
 
 Submit the full pipeline:
@@ -112,3 +110,14 @@ Each job transfers the source code and example directory to the execute point vi
                            .../output
 
 The evaluation job (``data_nn_eval``) transfers the full ``saved_datasets/`` back since it is a single job with no concurrency risk.
+
+Adapting to your cluster
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The HTCondor setup under ``htcondor/`` is written for the `CHTC <https://chtc.cs.wisc.edu/>`_ pool at UW-Madison and will not work out of the box on other clusters. To adapt it you will need to modify at minimum:
+
+- **Submit descriptions** (``*.sub`` files) — resource requests (``request_gpus``, ``request_memory``), container image or ``requirements`` classad, and ``transfer_input_files`` / ``transfer_output_files`` paths to match your storage layout.
+- **``config.pipeline.yaml``** — update all dataset and output paths to reflect your directory structure.
+- **Environment setup** — the submit files assume a specific container or software stack; replace with your site's equivalent (conda/pixi env, Apptainer image, module loads, etc.).
+
+If your site uses a different batch system (SLURM, PBS, etc.) you can still use the local sequential commands above and wrap them in the appropriate job scripts.  Snakemake support (infrastructure-agnostic) is planned.
