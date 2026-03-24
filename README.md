@@ -1,4 +1,6 @@
-# Neural Simulation-Based Inference Workflow demonstration
+# Toolkit for Simulation-Based Inference at the LHC
+
+The full documtation can be found here: [https://toolkit-for-simulation-based-inference.readthedocs.io](https://toolkit-for-simulation-based-inference.readthedocs.io/en/latest/index.html#)
 
 -----
 
@@ -24,7 +26,13 @@ pixi run -e nsbi-env-gpu python -m ipykernel install --user --name nsbi-env-gpu 
 
 ## Introduction
 
-The notebooks presented here aim to serve as a guide to use the `nsbi-common-utils` library being developed (currently not deployed to PyPi). The core model and workflow is related to the NSBI analysis recently published by ATLAS:
+Simulation-Based Inference (SBI) or Neural Simulation-Based Inference (NSBI) refers to set of statistical techniques that allow statistical inference directly using high-dimensional data. This circumvents the need to build low-dimensional summaries as is traditionally done and which can lose sensitive information. 
+
+This toolkit helps facilitate the application of a type of SBI that is scalable for LHC-style analysis with high-dimensional parameter spaces, where the systematic uncertainty modeling is done via certain domain-specific assumptions. This is done via easy-to-use APIs for the various stages in the analysis as well as providing an end-to-end workflow orchestratation pipeline steered via human-readable configuration files. 
+
+``nsbi-common-utils`` provides building blocks for SBI analysis tailored to the statistical models typical at the ATLAS and CMS experiments. It implements semi-parametric approach to SBI where the statistical models are built using a combination of non-parametric and parametric methods targeting different parts. The toolkit has a modular structure, and offers APIs for dataset preparation, density-ratio estimation, model building and profiled-likelihood ratio fitting.
+
+The semi-parametric model and workflow is related to the SBI analysis recently published by ATLAS:
 
 <br/>
 
@@ -42,9 +50,7 @@ The notebooks presented here aim to serve as a guide to use the `nsbi-common-uti
 <br/>
 <br/>
 
-We demonstrate the usage of `nsbi-common-utils` applied to a full-scale LHC analysis. The physics results presented in the notebooks only serve as examples of the workflow. The code in this tutorial is partially derived from the original ATLAS analysis code written by Jay Sandesara [[git](https://github.com/JaySandesara)], R.D. Schaffer [[git](https://gitlab.cern.ch/schaffer)] and Arnaud Maury [[git](https://github.com/Maury98)].
-
-The workflow currently uses the Higgs to tau tau dataset from FAIR universe challenge. More open datasets will be added in the future. 
+We demonstrate the usage of `nsbi-common-utils` applied to a full-scale LHC-style analysis in the `examples/`. The workflow currently uses the Higgs to tau tau dataset from FAIR universe challenge. More open datasets will be added in the future. 
 
 ## Library
 
@@ -53,8 +59,6 @@ To use the library `nsbi_common_utils` developed here in general cases outside o
 ```console
 python -m pip install --upgrade 'nsbi-common-utils @ git+https://github.com/iris-hep/NSBI-workflow-tutorial.git'
 ```
-
-The library tools are steered by a configuration file - an example can be found in the FAIR Universe Challenge workflow [config.yml](https://github.com/iris-hep/NSBI-workflow-tutorial/blob/main/FAIR_universe_Higgs_tautau/config.yml).
 
 Workflow bluprint (**tentative**):
 
