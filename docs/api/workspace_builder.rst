@@ -33,3 +33,5 @@ API Reference
 
 .. autoclass:: WorkspaceBuilder
    :members:
+   :undoc-members: False
+   :show-inheritance:

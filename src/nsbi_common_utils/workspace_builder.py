@@ -25,16 +25,7 @@ class WorkspaceBuilder:
     Parameters
     ----------
     config_path : pathlib.Path or str
-        Path to the YAML configuration file that defines samples, regions, normalization factors, and systematics.
-
-    Attributes
-    ----------
-    config : ConfigManager
-        Parsed configuration object.
-    config_dict : dict
-        Raw configuration dictionary.
-    ParametersToFit : list of str or None
-        Subset of parameters the user wants to include in the fit. ``None`` means all parameters are included.
+        Path to the YAML configuration file that defines samples, regions, normalization factors, and systematics. See :doc:`/basics/fit_config` for the expected format.
 
     See Also
     --------
@@ -48,13 +39,6 @@ class WorkspaceBuilder:
     """
 
     def __init__(self, config_path: Union[pathlib.Path, str]) -> None:
-        """Initialise the builder from a YAML configuration file.
-
-        Parameters
-        ----------
-        config_path : pathlib.Path or str
-            Path to the YAML configuration file.
-        """
         self.config_path = config_path
         self.config = nsbi_common_utils.configuration.ConfigManager(file_path_string = config_path)
         self.config_dict = self.config.config
