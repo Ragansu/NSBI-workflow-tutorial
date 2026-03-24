@@ -1,10 +1,9 @@
 Writing a Fit Configuration
 ===========================
 
-The fit configuration YAML file is the central input to the analysis. It defines the measurement, samples, systematic uncertainties, analysis regions,
-and pointers to trained density-ratio models. The :class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` reads this file and produces a workspace dictionary.
+The fit configuration YAML file is the central input to the workspace builder. It defines the measurement, samples, systematic uncertainties, analysis regions, and pointers to trained density-ratio models. The :class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` reads this file and produces a workspace dictionary that the statistical model consumes.
 
-A complete reference of each section is in the :doc:`Workspace Builder API docs </api/workspace_builder>`. This page explains the *purpose* of each section and how they connect.
+This page is the canonical reference for the YAML format. For the Python API, see :doc:`/api/workspace_builder`. For a hands-on walkthrough, see :doc:`model_building_example`.
 
 Measurement and parameters
 --------------------------
