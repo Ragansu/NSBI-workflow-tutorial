@@ -206,3 +206,7 @@ logs/*
 lightning_logs/
 
 data/
+
+docs/_build/
+
+.snakemake

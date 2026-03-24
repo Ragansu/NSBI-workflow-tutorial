@@ -1,14 +1,4 @@
-# SPDX-FileCopyrightText: 2025-present jsandesa <jay.ajitbhai.sandesara@cern.ch>
-#
-# SPDX-License-Identifier: MIT
-
-from nsbi_common_utils import configuration
-from nsbi_common_utils import datasets
-from nsbi_common_utils import training
-from nsbi_common_utils import plotting
-from nsbi_common_utils import inference
-from nsbi_common_utils import model
-from nsbi_common_utils import workspace_builder
+import importlib as _importlib
 
 __all__ = [
     'configuration',
@@ -17,5 +7,10 @@ __all__ = [
     'plotting',
     'inference',
     'workspace_builder',
-    'model'
+    'models',
 ]
+
+def __getattr__(name):
+    if name in __all__:
+        return _importlib.import_module(f"nsbi_common_utils.{name}")
+    raise AttributeError(f"module 'nsbi_common_utils' has no attribute {name!r}")

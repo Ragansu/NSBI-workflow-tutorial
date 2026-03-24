@@ -5,7 +5,7 @@ EXAMPLE_DIR = FAIR_universe_Higgs_tautau
 WORK_DIR = examples/$(EXAMPLE_DIR)
 
 executable = $(WORK_DIR)/htcondor/run_step.sh
-arguments  = systematic_uncertainty_training $(CONFIG) $(SKIP)
+arguments  = systematic_uncertainty_training $(CONFIG) --process $(PROCESS) --systematic $(SYSTEMATIC) --direction $(DIRECTION) --ensemble_index $(ENSEMBLE_INDEX) --train
 
 log    = logs/systematic_uncertainty_training.$(Cluster).log
 output = logs/systematic_uncertainty_training.$(Cluster).out
@@ -22,7 +22,7 @@ stream_error  = True
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 
-requirements = (GPUs_DriverVersion >= 12.0) && (Target.HasCHTCStaging == true)
+requirements = (GPUs_DriverVersion >= 12.4) && (Target.HasCHTCStaging == true) && (Machine != "vetsigian0001.chtc.wisc.edu") && (Machine != "vetsigian0000.chtc.wisc.edu") && (Machine != "gpulab2003.chtc.wisc.edu")
 
 gpus_minimum_capability = 7.5
 
@@ -35,11 +35,25 @@ gpus_minimum_capability = 7.5
 
 +GPUJobLength = "short"
 
-transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
-# transfer_output_files = $(EXAMPLE_DIR)/saved_datasets, $(EXAMPLE_DIR)/output
-# transfer_output_remaps = "saved_datasets = ./$(WORK_DIR)/saved_datasets; output = ./$(WORK_DIR)/output"
+# Kill jobs that run longer than 1 hour (likely hung), then auto-release for retry
+periodic_hold = (JobStatus == 2) && ((CurrentTime - EnteredCurrentStatus) > 3600)
+periodic_hold_reason = "Job exceeded 1 hour wall time — likely hung"
+periodic_release = (HoldReasonCode == 3) && (NumJobStarts < 4)
 
-transfer_output_files = $(EXAMPLE_DIR)/output
-transfer_output_remaps = "output = ./$(WORK_DIR)/output"
+transfer_input_files = pyproject.toml, src, $(WORK_DIR), README.md
+
+# Per-job output dirs (unique per process+systematic+direction+ensemble)
+OUTPUT_NAME = $(PROCESS)_$(SYSTEMATIC)_$(DIRECTION)$(ENSEMBLE_INDEX)
+MODEL_DIR = output_model_params_$(OUTPUT_NAME)
+FIGURES_DIR = output_figures_$(OUTPUT_NAME)
+TRAINING_OUT = $(EXAMPLE_DIR)/saved_datasets/output_training_systematics
+
+transfer_output_files = $(TRAINING_OUT)/$(MODEL_DIR), \
+                        $(TRAINING_OUT)/$(FIGURES_DIR), \
+                        $(EXAMPLE_DIR)/output
+
+transfer_output_remaps = "$(MODEL_DIR)   = ./$(WORK_DIR)/saved_datasets/output_training_systematics/$(MODEL_DIR); \
+                          $(FIGURES_DIR) = ./$(WORK_DIR)/saved_datasets/output_training_systematics/$(FIGURES_DIR); \
+                          output         = ./$(WORK_DIR)/output"
 
 queue

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import os
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -127,7 +129,8 @@ class inference:
              model_nll,
              initial_values: list[float],
              list_parameters: list[str],
-             num_unconstrained_params: int):
+             num_unconstrained_params: int,
+             model_grad=None):
         """
         Initialise the inference engine around a callable NLL function.
 
@@ -145,7 +148,7 @@ class inference:
         initial_values : list of float or jnp.ndarray, shape (n_params,)
             Starting values for all parameters passed to MIGRAD. The order
             must match ``list_parameters`` exactly. Typically obtained from
-            :meth:`Model.get_model_parameters`.
+            :meth:`sbi_parametric_model.get_model_parameters`.
 
         list_parameters : list of str
             Names of all parameters in the model, in the same order as
@@ -162,24 +165,32 @@ class inference:
             constructing a stat-only NLL curve in
             :meth:`perform_profile_scan`.
 
+        model_grad : callable or None, optional
+            A function that returns the gradient of the NLL with respect to
+            all parameters.  Signature: ``model_grad(param_array) -> ndarray``.
+            If provided, iminuit uses analytical gradients instead of
+            finite-difference approximations, reducing the number of NLL
+            evaluations by a factor of ~(n_params + 1).
+
         Notes
         -----
         * ``pulls_global_fit`` is initialised to ``None`` and populated
-        only after :meth:`perform_fit` is called. Methods that depend on
-        global-fit values (e.g. ``doStatOnly=True`` in
-        :meth:`perform_profile_scan`) will raise a ``RuntimeError`` if
-        called before :meth:`perform_fit`.
+          only after :meth:`perform_fit` is called. Methods that depend on
+          global-fit values (e.g. ``doStatOnly=True`` in
+          :meth:`perform_profile_scan`) will raise a ``RuntimeError`` if
+          called before :meth:`perform_fit`.
 
         See Also
         --------
         perform_fit : Run the global MIGRAD minimisation.
         perform_profile_scan : Compute a profiled NLL scan over one parameter.
         """
-        
+
         self.model_nll                      = model_nll
         self.initial_values                 = initial_values
         self.list_parameters                = list_parameters
         self.num_unconstrained_params       = num_unconstrained_params
+        self.model_grad                     = model_grad
         self.pulls_global_fit               = None
 
     def perform_fit(self, 
@@ -194,12 +205,19 @@ class inference:
             Minuit strategy (0 = fast, 1 = default, 2 = robust).
         freeze_params : list[str] | None
             List of parameter names to fix during the global fit.
+
+        Notes
+        -----
+        After a successful fit, ``self.pulls_global_fit`` is set to a
+        :class:`numpy.ndarray` of best-fit values. This is required
+        before calling :meth:`perform_profile_scan` with
+        ``doStatOnly=True``.
         """
 
         # Instantiate the iminuit object
-        m = Minuit(self.model_nll, 
-                    self.initial_values, 
-                    grad=None, 
+        m = Minuit(self.model_nll,
+                    self.initial_values,
+                    grad=self.model_grad,
                     name=tuple(self.list_parameters))
         
         m.errordef = Minuit.LEAST_SQUARES
@@ -248,12 +266,31 @@ class inference:
         isConstrainedNP : bool
             If True, change the y-axis label to t_alpha; else use t_mu.
         size : int
-            Number of scan points
+            Number of scan points.
+
+        Returns
+        -------
+        scan_points : array-like
+            Parameter values at which the NLL was evaluated.
+        NLL_value : array-like
+            :math:`\\Delta NLL` values (minimum-subtracted).
+        scan_points_StatOnly : array-like, optional
+            Returned only when ``doStatOnly=True``. Scan points for the
+            stat-only curve.
+        NLL_value_StatOnly : array-like, optional
+            Returned only when ``doStatOnly=True``. :math:`\\Delta NLL`
+            for the stat-only curve.
+
+        Raises
+        ------
+        RuntimeError
+            If ``doStatOnly=True`` but :meth:`perform_fit` has not been
+            called yet.
         """
 
-        m = Minuit(self.model_nll, 
-                   self.initial_values, 
-                   grad=None, 
+        m = Minuit(self.model_nll,
+                   self.initial_values,
+                   grad=self.model_grad,
                    name=tuple(self.list_parameters))
             
         m.errordef = Minuit.LEAST_SQUARES
@@ -277,9 +314,9 @@ class inference:
                 )
 
             # Re-initialize with global fit pulls so that fixed params are at the best-fit point
-            m_StatOnly = Minuit(self.model_nll, 
-                                self.pulls_global_fit, 
-                                grad=None, 
+            m_StatOnly = Minuit(self.model_nll,
+                                self.pulls_global_fit,
+                                grad=self.model_grad,
                                 name=tuple(self.list_parameters))
         
             m_StatOnly.errordef = Minuit.LEAST_SQUARES
