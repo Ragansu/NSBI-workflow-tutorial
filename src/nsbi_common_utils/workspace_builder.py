@@ -1,4 +1,4 @@
-import json, math
+import json, math, re
 import numpy as np
 import pandas as pd
 from collections.abc import Callable as CABC
@@ -261,9 +261,14 @@ class WorkspaceBuilder:
                 region_variable = self.config.get_training_features()[0][0] # Bin any random variable in a single bin for total event yield calculation
                 region["Variable"] =  region_variable
                 
-            branches_to_load    = [region_variable] 
-            if region_variable != 'presel_score':
-                branches_to_load += ['presel_score'] # Hard coded for now - TODO
+            branches_to_load    = [region_variable]
+            # Extract variable names used in the Filter expression
+            # so the dataset loader reads the columns needed for df.query()
+            filter_vars = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                           if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
+            for v in filter_vars:
+                if v not in branches_to_load:
+                    branches_to_load.append(v)
                 
             samples = []
             for sample_dict in self.config_dict["Samples"]:

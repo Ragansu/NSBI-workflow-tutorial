@@ -10,7 +10,7 @@ This toolkit helps facilitate the application of a type of SBI that is scalable 
 
 More details to be added soon!
 
-.. figure:: /_images/toolkit_workflow_AGCstyle.png
+.. figure:: ../_images/toolkit_workflow_AGCstyle.png
    :width: 80%
    :align: center
 
