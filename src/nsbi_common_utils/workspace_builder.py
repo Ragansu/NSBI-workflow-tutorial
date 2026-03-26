@@ -257,16 +257,20 @@ class WorkspaceBuilder:
             region_variable     = region.get("Variable", None)
                 
             region_filters      = region["Filter"]
-            if region_variable is None:
-                region_variable = self.config.get_training_features()[0][0] # Bin any random variable in a single bin for total event yield calculation
-                region["Variable"] =  region_variable
-                
-            branches_to_load    = [region_variable]
+
             # Extract variable names used in the Filter expression
             # so the dataset loader reads the columns needed for df.query()
-            filter_vars = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
-                           if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
-            for v in filter_vars:
+            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
+
+            if region_variable is None:
+                # For unbinned regions with no explicit Variable, use the first
+                # filter variable for the dummy single-bin yield histogram
+                region_variable = filter_variables[0]
+                region["Variable"] = region_variable
+
+            branches_to_load = [region_variable]
+            for v in filter_variables:
                 if v not in branches_to_load:
                     branches_to_load.append(v)
                 
