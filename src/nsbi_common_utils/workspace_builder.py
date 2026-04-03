@@ -53,7 +53,48 @@ class WorkspaceBuilder:
         elif self.ParametersToFit is None:
             logging.warning('No ParametersToFit specified in config. All parameters will be included in the fitting.')
         
+    def lagrange_modifiers(self,
+                             region_name: str,
+                             sample_name: str) -> list[dict[str, Any]]:
+        """Return normfactor modifiers that affect a given sample in a region.
 
+        Iterates over all ``NormFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
+
+        Parameters
+        ----------
+        region_name : str
+            Name of the region (channel) to filter on.
+        sample_name : str
+            Name of the physics sample to filter on.
+
+        Returns
+        -------
+        list of dict
+            Each dict has keys ``"name"``, ``"data"``, and
+            ``"type": "lagrange"``.
+        """
+        list_dict_lagranges = self.config.config.get("LagrangeFactors", [])
+        modifiers = []
+        for lagrange_dict in list_dict_lagranges:
+            lagrange_name = lagrange_dict["Name"]
+            lagrange_data = lagrange_dict.get("Data", None)
+            lagrange_basis = lagrange_dict.get("Basis", None)
+            lagrange_coeffs = define_stat_function(lagrange_basis)
+            
+            regions_affected = lagrange_dict.get("Region", None)
+            if regions_affected is not None:
+                if region_name not in regions_affected:
+                    continue
+            samples_affected = lagrange_dict.get("Samples", None)
+            if samples_affected is not None:
+                if sample_name not in samples_affected:
+                    continue
+                else:
+                    modifiers.append({"name": lagrange_name, 
+                                      "data": lagrange_data, 
+                                      "coeff": lagrange_coeffs[sample_name],
+                                      "type": "lagrange"})
+        return modifiers
 
     def normfactor_modifiers(self,
                              region_name: str,
@@ -326,6 +367,11 @@ class WorkspaceBuilder:
                 nf_modifier_list = self.normfactor_modifiers(channel_name, sample_name)
 
                 modifiers += nf_modifier_list
+                
+                # check if lagrange factors affect sample in region, add modifiers as needed
+                lagrange_modifier_list = self.lagrange_modifiers(channel_name, sample_name)
+                
+                modifiers += lagrange_modifier_list
 
                 # check if systematics affect sample in region, add modifiers as needed
                 sys_modifier_list = self.sys_modifiers(dataset_region_dict, region, sample_dict, sample_data, type_of_fit = type_of_fit)
@@ -467,3 +513,18 @@ class WorkspaceBuilder:
         """
         with open(path) as f:
             return json.load(f)
+
+
+def define_stat_function(kls):
+    stat_coeff = {}
+
+    A = np.array([[k**2, k, 1] for k in kls])
+    A_inv = np.linalg.inv(A)
+
+    kls_dict = get_basis_tags(kls)
+
+    for i, kl in enumerate(kls):
+        key = kls_dict[kl]
+        stat_coeff[key] = [A_inv[0][i], A_inv[1][i], A_inv[2][i]]
+
+    return stat_coeff

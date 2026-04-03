@@ -70,9 +70,13 @@ class sbi_parametric_model:
             self.list_parameters_types, \
                 self.num_unconstrained_param            = self._get_parameters(sorting_order)
 
-        self.list_syst_normplusshape                    = self._get_list_syst_for_interp() 
+        self.list_syst_normplusshape                    = self._get_list_syst_for_interp()
+        
         self.list_normfactors, \
             self.norm_sample_map                        = self._get_norm_factors() 
+
+        self.list_langrange_coeffs, \
+            self.langrange_coeffs_map                   = self._get_lagrange_coefficients()
 
         self.has_normplusshape                          = len(self.list_syst_normplusshape) > 0
 
@@ -199,6 +203,32 @@ class sbi_parametric_model:
 
         return list_all_norm_factors, dict_sample_normfactors
 
+    def _get_lagrange_coefficients(self) -> Dict[str, list[float]]:
+        """Assume same lagrange coefficients across channels for now 
+           (TO-DO: Add support for lagrange coefficients per channel)
+        """
+        dict_sample_lagrange_factors         = {sample_name: {} for sample_name in self.all_samples}
+        list_all_lagrange_factors           = []
+        for channel in self.all_channels[:1]:
+            channel_index = self._index_of_region(channel_name=channel)
+            for sample in self.all_samples:
+                sample_index = self._index_of_sample(channel_name=channel, sample_name=sample)
+                modifier_list = self.workspace["channels"][channel_index]["samples"][sample_index]["modifiers"]
+                for modifier in modifier_list:
+                    if modifier["type"] == "lagrange":
+                        modifier_name = modifier["name"]
+                        modiefier_coeffs = modifier.get("coeff", [1,0]) # Default to linear variation if no coefficients provided
+                        if modifier_name not in list_all_lagrange_factors               : list_all_lagrange_factors.append(modifier_name)
+                        if modifier_name not in dict_sample_lagrange_factors[sample]     : dict_sample_lagrange_factors[sample][modifier_name] = modiefier_coeffs
+
+        list_all_lagrange_factors = [p for p in list_all_norm_factors if p in self.param_names]
+        dict_sample_lagrange_factors = {key: val for key, val in dict_sample_normfactors.items()
+                                    if any(p in self.param_names for p in val)
+                                }
+        
+        return list_all_lagrange_factors, dict_sample_lagrange_factors
+
+        return list_all_norm_factors, dict_sample_normfactors    
     def _get_parameters_to_fit(self) -> tuple[list[str], dict[str, float]]:
         """
         Outputs a list of parameters specified by the user for fitting in the workspace
@@ -432,14 +462,22 @@ class sbi_parametric_model:
                 ratio_expected[sample_name] =   np.append(ratio_expected[sample_name], sample_ratio)
 
         return data_expected, ratio_expected
-    
+
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
         for sample, params_sample in self.norm_sample_map.items():  
             # params_sample: list[str]
             for param in params_sample:
                 index_param             = self.index_normparam_map[param]
-                norm_var[sample]        *= param_vec[index_param]
+                norm_var[sample]       *= param_vec[index_param]
+        
+        for sample , params_sample in self.langrange_coeffs_map.items():
+            # params_sample is a dict of param name to list of lagrange coefficients
+            for param, coeffs in params_sample.items():
+                index_param             = self.index_normparam_map[param]
+                coeffs                  = self.langrange_coeffs.get(param, [1,0])
+                norm_var[sample]       *= np.polyval(coeffs, param_vec[index_param])
+                
         return norm_var
     
     def _get_systematic_data(self, type_of_fit: str) -> Dict[str, jnp.ndarray]:
