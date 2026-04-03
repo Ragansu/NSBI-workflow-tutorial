@@ -83,6 +83,7 @@ class sbi_parametric_model:
         self.initial_parameter_values                   = self._get_param_vec_initial()
 
         self.index_normparam_map                        = self._make_map_index_norm()
+        self.index_langrangeparam_map                   = self._make_map_index_lag()
 
         self.yield_array_dict, _                        = self._get_nominal_expected_arrays( type_of_fit = "binned" )
         self.unbinned_total_dict, \
@@ -175,6 +176,16 @@ class sbi_parametric_model:
             dict_index_normfactor[normfactor] = index
         return dict_index_normfactor
 
+    def _make_map_index_lag(self):
+        """
+        Maps the index of parameter in the parameter vector to norm factor
+        """
+        dict_index_langrangefactor = {}
+        for langrangefactor in self.list_langrange_coeffs:
+            index = self.list_parameters.index( langrangefactor )
+            dict_index_langrangefactor[langrangefactor] = index
+        return dict_index_langrangefactor
+
     def _get_param_vec_initial(self):
         initial_values_vec                     = np.ones((len(self.list_parameters),)) 
         for count, parameter in enumerate(self.list_parameters):
@@ -221,14 +232,13 @@ class sbi_parametric_model:
                         if modifier_name not in list_all_lagrange_factors               : list_all_lagrange_factors.append(modifier_name)
                         if modifier_name not in dict_sample_lagrange_factors[sample]     : dict_sample_lagrange_factors[sample][modifier_name] = modiefier_coeffs
 
-        list_all_lagrange_factors = [p for p in list_all_norm_factors if p in self.param_names]
-        dict_sample_lagrange_factors = {key: val for key, val in dict_sample_normfactors.items()
+        list_all_lagrange_factors = [p for p in list_all_lagrange_factors if p in self.param_names]
+        dict_sample_lagrange_factors = {key: val for key, val in dict_sample_lagrange_factors.items()
                                     if any(p in self.param_names for p in val)
                                 }
         
         return list_all_lagrange_factors, dict_sample_lagrange_factors
 
-        return list_all_norm_factors, dict_sample_normfactors    
     def _get_parameters_to_fit(self) -> tuple[list[str], dict[str, float]]:
         """
         Outputs a list of parameters specified by the user for fitting in the workspace
@@ -474,8 +484,7 @@ class sbi_parametric_model:
         for sample , params_sample in self.langrange_coeffs_map.items():
             # params_sample is a dict of param name to list of lagrange coefficients
             for param, coeffs in params_sample.items():
-                index_param             = self.index_normparam_map[param]
-                coeffs                  = self.langrange_coeffs.get(param, [1,0])
+                index_param             = self.index_langrangeparam_map[param]
                 norm_var[sample]       *= np.polyval(coeffs, param_vec[index_param])
                 
         return norm_var
@@ -603,6 +612,10 @@ class sbi_parametric_model:
             if sample in self.norm_sample_map:
                 for nf_name in self.norm_sample_map[sample]:
                     j = self.index_normparam_map[nf_name]
+                    norm_matrix[i, j] = True
+            if sample in self.langrange_coeffs_map:
+                for lf_name in self.langrange_coeffs_map[sample]:
+                    j = self.index_langrangeparam_map[lf_name]
                     norm_matrix[i, j] = True
 
         # Bundle everything into a dict pytree passed as a *dynamic* argument

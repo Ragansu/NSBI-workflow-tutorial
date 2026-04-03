@@ -58,7 +58,7 @@ class WorkspaceBuilder:
                              sample_name: str) -> list[dict[str, Any]]:
         """Return normfactor modifiers that affect a given sample in a region.
 
-        Iterates over all ``NormFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
+        Iterates over all ``LagrangeFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
 
         Parameters
         ----------
@@ -391,7 +391,7 @@ class WorkspaceBuilder:
     def measurements(self) -> List[Dict[str, Any]]:
         """Build the ``"measurements"`` list for the workspace.
 
-        Extracts parameter initial values and bounds from the ``NormFactors`` and ``Systematics`` sections of the config, filters to the ``ParametersToFit`` subset (if specified), and records the parameter of interest (POI).
+        Extracts parameter initial values and bounds from the ``NormFactors`` ,``LagrangeFactors`` and ``Systematics`` sections of the config, filters to the ``ParametersToFit`` subset (if specified), and records the parameter of interest (POI).
 
         Returns
         -------
@@ -405,6 +405,19 @@ class WorkspaceBuilder:
 
         # get the norm factor initial values / bounds / constant setting
         parameters_list = []
+        for lf in self.config_dict.get("LagrangeFactors", []):
+            lf_name = lf["Name"]  # every LagrangeFactors has a name
+            init = lf.get("Nominal", None)
+            bounds = lf.get("Bounds", None)
+
+            parameter = {"name": lf_name}
+            if init is not None:
+                parameter.update({"inits": [init]})
+            if bounds is not None:
+                parameter.update({"bounds": [bounds]})
+
+            parameters_list.append(parameter)
+
         for nf in self.config_dict.get("NormFactors", []):
             nf_name = nf["Name"]  # every NormFactor has a name
             init = nf.get("Nominal", None)
@@ -515,13 +528,13 @@ class WorkspaceBuilder:
             return json.load(f)
 
 
-def define_stat_function(kls):
+def define_stat_function(kls_dict):
     stat_coeff = {}
+    
+    kls = list(kls_dict.keys())
 
     A = np.array([[k**2, k, 1] for k in kls])
     A_inv = np.linalg.inv(A)
-
-    kls_dict = get_basis_tags(kls)
 
     for i, kl in enumerate(kls):
         key = kls_dict[kl]
