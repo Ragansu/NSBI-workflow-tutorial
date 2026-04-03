@@ -99,6 +99,8 @@ class sbi_parametric_model:
         
         self.weight_arrays_unbinned                     = self._get_asimov_weights_array()
 
+        self.observed_array = self._get_observed_arrays()
+
         self._finalize_to_device()
 
         self.expected_hist                              = self._get_expected_hist(param_vec = self.initial_parameter_values)
@@ -415,8 +417,8 @@ class sbi_parametric_model:
                 ratio_vars_unbinned[process] = jnp.ones_like( self.ratios_array_dict[process] )
 
         # --- Binned Poisson NLL (control regions + binned signal region) ---
-        nu_binned      = self._calculate_parameterized_yields(self.yield_array_dict, hist_vars_binned, norm_modifiers)
-        llr_tot_binned = _pois_loglikelihood(self.expected_hist, nu_binned)
+        nu_binned      = self.observed_array
+        llr_tot_binned = _pois_loglikelihood(nu_binned, self.expected_hist)
 
         # --- Unbinned extended likelihood (SBI signal region) ---
         nu_tot_unbinned = self._calculate_parameterized_yields(self.unbinned_total_dict, hist_vars_unbinned, norm_modifiers)
@@ -472,6 +474,17 @@ class sbi_parametric_model:
                 ratio_expected[sample_name] =   np.append(ratio_expected[sample_name], sample_ratio)
 
         return data_expected, ratio_expected
+
+    def _get_observed_arrays(self):
+        """
+        Get an array of expected event yields or ratios
+        """
+        data_observed   = np.array(self.workspace["observation"]["data"])
+
+        for channel_name in self.channels_binned:
+            channel_index           = self._index_of_region(channel_name = channel_name)
+            ["channels"][channel_index]
+        return data_observed
 
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}

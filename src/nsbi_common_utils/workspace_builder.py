@@ -484,6 +484,40 @@ class WorkspaceBuilder:
 
         return ws
 
+    def observations(self) -> List[Dict[str, Any]]:
+        """Build the ``"observations"`` list for the workspace.
+
+        Loads observed data from ROOT files as specified in the ``Observations`` section of the config, applies region filters, and histograms to produce observed counts per channel.
+
+        Returns
+        -------
+        list of dict
+            Each dict has keys ``"name"`` and ``"data"`` (list of observed counts per bin).
+        """
+        observations = []
+        for region in self.config_dict["Regions"]:
+            region_name = region["Name"]
+            region_binning      = region.get("Binning", None)
+            region_variable     = region.get("Variable", None)
+            region_filters      = region["Filter"]
+            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
+            branches_to_load = [region_variable]
+            for v in filter_variables:
+                if v not in branches_to_load:
+                    branches_to_load.append(v)  
+
+            dataset_obs = nsbi_common_utils.datasets.datasets(self.config_path,
+                                                            branches_to_load = branches_to_load)
+            
+            dataset_obs.load_datasets_from_config(load_systematics=False)
+            dataset_obs_region = dataset_obs.filter_region_by_type(region = region_name)
+
+            observation = {"name": region_name,
+                            "data":  list(np.histogram(dataset_obs_region["Nominal"]["data_obs"][region_variable], bins = region_binning)[0])}
+            observations.append(observation)
+
+        return observations
 
     def dump_workspace(self, ws: dict, outpath: str = "workspace.json"):
         """
