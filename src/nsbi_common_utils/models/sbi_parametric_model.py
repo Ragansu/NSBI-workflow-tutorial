@@ -75,16 +75,16 @@ class sbi_parametric_model:
         self.list_normfactors, \
             self.norm_sample_map                        = self._get_norm_factors() 
 
-        self.list_langrange_coeffs, \
-            self.langrange_coeffs_map, \
-                self._max_lagrange_coeffs               = self._get_lagrange_coefficients()
+        self.list_vandermonde_coeffs, \
+            self.vandermonde_coeffs_map, \
+                self._max_vandermonde_coeffs               = self._get_vandermonde_coefficients()
 
         self.has_normplusshape                          = len(self.list_syst_normplusshape) > 0
 
         self.initial_parameter_values                   = self._get_param_vec_initial()
 
         self.index_normparam_map                        = self._make_map_index_norm()
-        self.index_langrangeparam_map                   = self._make_map_index_lag()
+        self.index_vandermondeparam_map                   = self._make_map_index_lag()
 
         self.yield_array_dict, _                        = self._get_nominal_expected_arrays( type_of_fit = "binned" )
         self.unbinned_total_dict, \
@@ -183,11 +183,11 @@ class sbi_parametric_model:
         """
         Maps the index of parameter in the parameter vector to norm factor
         """
-        dict_index_langrangefactor = {}
-        for langrangefactor in self.list_langrange_coeffs:
-            index = self.list_parameters.index( langrangefactor )
-            dict_index_langrangefactor[langrangefactor] = index
-        return dict_index_langrangefactor
+        dict_index_vandermondefactor = {}
+        for vandermondefactor in self.list_vandermonde_coeffs:
+            index = self.list_parameters.index( vandermondefactor )
+            dict_index_vandermondefactor[vandermondefactor] = index
+        return dict_index_vandermondefactor
 
     def _get_param_vec_initial(self):
         initial_values_vec                     = np.ones((len(self.list_parameters),)) 
@@ -217,32 +217,32 @@ class sbi_parametric_model:
 
         return list_all_norm_factors, dict_sample_normfactors
 
-    def _get_lagrange_coefficients(self) -> Dict[str, list[float]]:
-        """Assume same lagrange coefficients across channels for now 
-           (TO-DO: Add support for lagrange coefficients per channel)
+    def _get_vandermonde_coefficients(self) -> Dict[str, list[float]]:
+        """Assume same vandermonde coefficients across channels for now 
+           (TO-DO: Add support for vandermonde coefficients per channel)
         """
-        dict_sample_lagrange_factors        = {sample_name: {} for sample_name in self.all_samples}
-        list_all_lagrange_factors           = []
-        max_lagrange_coeffs                 = 0
+        dict_sample_vandermonde_factors        = {sample_name: {} for sample_name in self.all_samples}
+        list_all_vandermonde_factors           = []
+        max_vandermonde_coeffs                 = 0
         for channel in self.all_channels[:1]:
             channel_index = self._index_of_region(channel_name=channel)
             for sample in self.all_samples:
                 sample_index = self._index_of_sample(channel_name=channel, sample_name=sample)
                 modifier_list = self.workspace["channels"][channel_index]["samples"][sample_index]["modifiers"]
                 for modifier in modifier_list:
-                    if modifier["type"] == "lagrange":
+                    if modifier["type"] == "vandermonde":
                         modifier_name = modifier["name"]
                         modiefier_coeffs = modifier.get("coeff", [1,0]) # Default to linear variation if no coefficients provided
-                        max_lagrange_coeffs = max(max_lagrange_coeffs, len(modiefier_coeffs))
-                        if modifier_name not in list_all_lagrange_factors               : list_all_lagrange_factors.append(modifier_name)
-                        if modifier_name not in dict_sample_lagrange_factors[sample]     : dict_sample_lagrange_factors[sample][modifier_name] = modiefier_coeffs
+                        max_vandermonde_coeffs = max(max_vandermonde_coeffs, len(modiefier_coeffs))
+                        if modifier_name not in list_all_vandermonde_factors               : list_all_vandermonde_factors.append(modifier_name)
+                        if modifier_name not in dict_sample_vandermonde_factors[sample]     : dict_sample_vandermonde_factors[sample][modifier_name] = modiefier_coeffs
 
-        list_all_lagrange_factors = [p for p in list_all_lagrange_factors if p in self.param_names]
-        dict_sample_lagrange_factors = {key: val for key, val in dict_sample_lagrange_factors.items()
+        list_all_vandermonde_factors = [p for p in list_all_vandermonde_factors if p in self.param_names]
+        dict_sample_vandermonde_factors = {key: val for key, val in dict_sample_vandermonde_factors.items()
                                     if any(p in self.param_names for p in val)
                                 }
  
-        return list_all_lagrange_factors, dict_sample_lagrange_factors, max_lagrange_coeffs
+        return list_all_vandermonde_factors, dict_sample_vandermonde_factors, max_vandermonde_coeffs
 
     def _get_parameters_to_fit(self) -> tuple[list[str], dict[str, float]]:
         """
@@ -507,10 +507,10 @@ class sbi_parametric_model:
                 index_param             = self.index_normparam_map[param]
                 norm_var[sample]       *= param_vec[index_param]
         
-        for sample , params_sample in self.langrange_coeffs_map.items():
-            # params_sample is a dict of param name to list of lagrange coefficients
+        for sample , params_sample in self.vandermonde_coeffs_map.items():
+            # params_sample is a dict of param name to list of vandermonde coefficients
             for param, coeffs in params_sample.items():
-                index_param             = self.index_langrangeparam_map[param]
+                index_param             = self.index_vandermondeparam_map[param]
                 norm_var[sample]       *= np.polyval(coeffs, param_vec[index_param])
                 
         return norm_var
@@ -634,7 +634,7 @@ class sbi_parametric_model:
         n_samples = len(samples)
         n_params  = len(self.list_parameters)
         norm_matrix = np.zeros((n_samples, n_params), dtype=bool)
-        coeffs_matrix = np.zeros((n_samples, n_params, self._max_lagrange_coeffs), dtype=float) 
+        coeffs_matrix = np.zeros((n_samples, n_params, self._max_vandermonde_coeffs), dtype=float) 
         coeffs_matrix[:, :, -1] = 1.0
         
         for i, sample in enumerate(samples):
@@ -643,9 +643,9 @@ class sbi_parametric_model:
                     j = self.index_normparam_map[nf_name]
                     norm_matrix[i, j] = True
 
-            if sample in self.langrange_coeffs_map:
-                for lf_name, coeffs in self.langrange_coeffs_map[sample].items():
-                    j = self.index_langrangeparam_map[lf_name]
+            if sample in self.vandermonde_coeffs_map:
+                for lf_name, coeffs in self.vandermonde_coeffs_map[sample].items():
+                    j = self.index_vandermondeparam_map[lf_name]
                     
                     # Important: polyval expects coefficients in descending order.
                     # If your coeffs are [A, B, C], we place them at the end of the row.

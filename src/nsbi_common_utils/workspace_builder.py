@@ -63,12 +63,12 @@ class WorkspaceBuilder:
                 "No ParametersToFit specified in config. All parameters will be included in the fitting."
             )
 
-    def lagrange_modifiers(
+    def vandermonde_modifiers(
         self, region_name: str, sample_name: str
     ) -> list[dict[str, Any]]:
         """Return normfactor modifiers that affect a given sample in a region.
 
-        Iterates over all ``LagrangeFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
+        Iterates over all ``VandermondeFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
 
         Parameters
         ----------
@@ -81,31 +81,31 @@ class WorkspaceBuilder:
         -------
         list of dict
             Each dict has keys ``"name"``, ``"data"``, and
-            ``"type": "lagrange"``.
+            ``"type": "vandermonde"``.
         """
-        list_dict_lagranges = self.config.config.get("LagrangeFactors", [])
+        list_dict_vandermondes = self.config.config.get("VandermondeFactors", [])
         modifiers = []
-        for lagrange_dict in list_dict_lagranges:
-            lagrange_name = lagrange_dict["Name"]
-            lagrange_data = lagrange_dict.get("Data", None)
-            lagrange_basis = lagrange_dict.get("Basis", None)
-            lagrange_coeffs = define_stat_function(lagrange_basis)
+        for vandermonde_dict in list_dict_vandermondes:
+            vandermonde_name = vandermonde_dict["Name"]
+            vandermonde_data = vandermonde_dict.get("Data", None)
+            vandermonde_basis = vandermonde_dict.get("Basis", None)
+            vandermonde_coeffs = define_stat_function(vandermonde_basis)
 
-            regions_affected = lagrange_dict.get("Region", None)
+            regions_affected = vandermonde_dict.get("Region", None)
             if regions_affected is not None:
                 if region_name not in regions_affected:
                     continue
-            samples_affected = lagrange_dict.get("Samples", None)
+            samples_affected = vandermonde_dict.get("Samples", None)
             if samples_affected is not None:
                 if sample_name not in samples_affected:
                     continue
                 else:
                     modifiers.append(
                         {
-                            "name": lagrange_name,
-                            "data": lagrange_data,
-                            "coeff": lagrange_coeffs[sample_name],
-                            "type": "lagrange",
+                            "name": vandermonde_name,
+                            "data": vandermonde_data,
+                            "coeff": vandermonde_coeffs[sample_name],
+                            "type": "vandermonde",
                         }
                     )
         return modifiers
@@ -442,12 +442,12 @@ class WorkspaceBuilder:
 
                 modifiers += nf_modifier_list
 
-                # check if lagrange factors affect sample in region, add modifiers as needed
-                lagrange_modifier_list = self.lagrange_modifiers(
+                # check if vandermonde factors affect sample in region, add modifiers as needed
+                vandermonde_modifier_list = self.vandermonde_modifiers(
                     channel_name, sample_name
                 )
 
-                modifiers += lagrange_modifier_list
+                modifiers += vandermonde_modifier_list
 
                 # check if systematics affect sample in region, add modifiers as needed
                 sys_modifier_list = self.sys_modifiers(
@@ -471,7 +471,7 @@ class WorkspaceBuilder:
     def measurements(self) -> List[Dict[str, Any]]:
         """Build the ``"measurements"`` list for the workspace.
 
-        Extracts parameter initial values and bounds from the ``NormFactors`` ,``LagrangeFactors`` and ``Systematics`` sections of the config, filters to the ``ParametersToFit`` subset (if specified), and records the parameter of interest (POI).
+        Extracts parameter initial values and bounds from the ``NormFactors`` ,``VandermondeFactors`` and ``Systematics`` sections of the config, filters to the ``ParametersToFit`` subset (if specified), and records the parameter of interest (POI).
 
         Returns
         -------
@@ -485,8 +485,8 @@ class WorkspaceBuilder:
 
         # get the norm factor initial values / bounds / constant setting
         parameters_list = []
-        for lf in self.config_dict.get("LagrangeFactors", []):
-            lf_name = lf["Name"]  # every LagrangeFactors has a name
+        for lf in self.config_dict.get("VandermondeFactors", []):
+            lf_name = lf["Name"]  # every VandermondeFactors has a name
             init = lf.get("Nominal", None)
             bounds = lf.get("Bounds", None)
 
