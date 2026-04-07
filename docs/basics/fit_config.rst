@@ -1,7 +1,14 @@
 Writing a Fit Configuration
 ===========================
 
-The fit configuration YAML file is the central input to the workspace builder. It defines the measurement, samples, systematic uncertainties, analysis regions, and pointers to trained density-ratio models. The :class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` reads this file and produces a workspace dictionary that the statistical model consumes.
+The fit configuration YAML file is the central input to the entire SBI workflow. It defines the measurement, samples, systematic uncertainties, analysis regions, training features, and pointers to trained density-ratio models. The :class:`~nsbi_common_utils.configuration.ConfigManager` reads this file and exposes its contents through a set of accessor methods that are consumed at every stage of the pipeline:
+
+- **Data preparation** — the ``datasets`` module reads sample paths, ROOT tree names, weight branches, and systematic variation files from the config to load and organise the data.
+- **Preselection training** — training features and feature scaling lists are retrieved via ``ConfigManager.get_training_features()``.
+- **Density-ratio training** — basis processes (``get_basis_samples()``), the reference hypothesis (``get_reference_samples()``), training features, and region filters (``get_channel_filters()``) are all read from the config.
+- **Systematic uncertainty training** — the ``Systematics`` block and ``get_samples_in_syst_for_training()`` determine which processes are affected by each variation and where the varied ROOT files are located.
+- **Evaluation** — Asimov weight paths (``get_channel_asimov_weight_path()``) and trained model metadata come from the config.
+- **Workspace building** — the :class:`~nsbi_common_utils.workspace_builder.WorkspaceBuilder` assembles the full statistical model from all of the above, producing a workspace dictionary that the statistical model consumes.
 
 This page is the canonical reference for the YAML format. For the Python API, see :doc:`/api/workspace_builder`. For a hands-on walkthrough, see :doc:`model_building_example`.
 

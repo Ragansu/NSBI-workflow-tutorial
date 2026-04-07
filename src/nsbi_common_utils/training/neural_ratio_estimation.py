@@ -7,8 +7,11 @@ import math
 import pickle 
 
 import warnings
-from sklearn.exceptions import InconsistentVersionWarning
-warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+try:
+    from sklearn.exceptions import InconsistentVersionWarning
+    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+except (ImportError, TypeError):
+    pass
 
 import torch
 torch.set_float32_matmul_precision("medium")
@@ -82,79 +85,51 @@ class density_ratio_trainer:
         """
         Initialise the density ratio trainer.
 
-        This class trains one or more neural networks to estimate the density ratio
-        :math:`p_A(x) / p_B(x)` between two fixed hypothesis A and B using a
-        binary-classification approach. The classifier output score is then
-        converted to a density ratio via :math:`r = s / (1 - s)`.
+        This class trains one or more neural networks to estimate the density ratio :math:`p_A(x) / p_B(x)` between two fixed hypothesis A and B using a binary-classification approach. The classifier output score is then converted to a density ratio via :math:`r = s / (1 - s)`.
 
         Parameters
         ----------
         dataset : pandas.DataFrame
-            The full dataset containing events from both hypotheses A and B.
-            Rows must be aligned with ``weights`` and ``training_labels``.
+            The full dataset containing events from both hypotheses A and B. Rows must be aligned with ``weights`` and ``training_labels``.
 
         weights : numpy.ndarray, shape (n_events,)
-            Per-event weights. Weights should be normalised **independently**
-            within each class so that each class sums to the same total weight
-            before being passed in. Mis-normalised weights will bias the ratio.
+            Per-event weights. Weights should be normalised **independently** within each class so that each class sums to the same total weight before being passed in. Mis-normalised weights will bias the ratio.
 
         training_labels : numpy.ndarray of int, shape (n_events,)
-            Binary class labels: ``1`` for hypothesis A (numerator) and ``0``
-            for hypothesis B (denominator).
+            Binary class labels: ``1`` for hypothesis A (numerator) and ``0`` for hypothesis B (denominator).
 
         features : list of str
-            Column names in ``dataset`` to use as input features to the
-            neural network.
+            Column names in ``dataset`` to use as input features to the neural network.
 
         features_scaling : list of str
-            Subset of ``features`` that will be passed through the chosen
-            scaler. Features not listed here are passed through unchanged
-            (``remainder='passthrough'`` in the ``ColumnTransformer``).
+            Subset of ``features`` that will be passed through the chosen scaler. Features not listed here are passed through unchanged (``remainder='passthrough'`` in the ``ColumnTransformer``).
 
         sample_name : list of str, length 2
-            Human-readable labels for the two hypotheses,
-            e.g. ``['signal', 'background']``. Index 0 is A (numerator),
-            index 1 is B (denominator). Used in plot titles and saved file names.
+            Human-readable labels for the two hypotheses, e.g. ``['signal', 'background']``. Index 0 is A (numerator), index 1 is B (denominator). Used in plot titles and saved file names.
 
         output_name : str
             A tag used to identify outputs produced by this trainer instance.
 
         path_to_figures : str, optional
-            Directory where diagnostic plots are written. Created automatically
-            if it does not exist. Defaults to the current working directory.
+            Directory where diagnostic plots are written. Created automatically if it does not exist. Defaults to the current working directory.
 
         path_to_models : str, optional
-            Directory where trained ONNX model files and scalers are saved.
-            Created automatically if it does not exist.
+            Directory where trained ONNX model files and scalers are saved. Created automatically if it does not exist.
 
         use_log_loss : bool, optional
-            If ``True``, the network is trained with a log-likelihood-ratio
-            loss instead of binary cross-entropy, and the raw output is
-            treated as :math:`\\log(p_A / p_B)` before conversion to a
-            probability score. Default ``False``.
+            If ``True``, the network is trained with a log-likelihood-ratio loss instead of binary cross-entropy, and the raw output is treated as :math:`\\log(p_A / p_B)` before conversion to a probability score. Default ``False``.
 
         split_using_fold : bool, optional
-            Reserved for future k-fold splitting support. Not yet implemented.
-            Default ``False``.
+            Reserved for future k-fold splitting support. Not yet implemented. Default ``False``.
 
         delete_existing_models : bool, optional
-            If ``True``, the directories ``path_to_figures`` and ``path_to_models``
-            are deleted and recreated before training,
-            ensuring a clean run. Use with caution — this is irreversible.
-            Default ``False``.
+            If ``True``, the directories ``path_to_figures`` and ``path_to_models`` are deleted and recreated before training, ensuring a clean run. Use with caution — this is irreversible. Default ``False``.
 
         Notes
         -----
-        * This class trains a single density-ratio network per instance.
-        Ensemble training is handled externally by submitting multiple
-        independent jobs and passing ``ensemble_index`` to distinguish
-        saved outputs.
-        * Weight normalisation is the caller's responsibility. A common
-        convention is to normalise each class so that
-        :math:`\\sum_{i \\in A} w_i = \\sum_{j \\in B} w_j = 1`.
-        * ``features_scaling`` is typically identical to ``features``, but can
-        be a strict subset if some features are already on a suitable scale
-        (e.g. boolean flags).
+        * This class trains a single density-ratio network per instance. Ensemble training is handled externally by submitting multiple independent jobs and passing ``ensemble_index`` to distinguish saved outputs.
+        * Weight normalisation is the caller's responsibility. A common convention is to normalise each class so that :math:`\\sum_{i \\in A} w_i = \\sum_{j \\in B} w_j = 1`.
+        * ``features_scaling`` is typically identical to ``features``, but can be a strict subset if some features are already on a suitable scale (e.g. boolean flags).
         """
         self.dataset = dataset
         self.weights = weights
@@ -207,11 +182,7 @@ class density_ratio_trainer:
         """
         Train a density-ratio neural network.
 
-        This is the core training routine called internally by
-        :meth:`train_ensemble`. It can also be called directly when no
-        ensemble averaging is required. After training, the model is
-        exported to ONNX format and reloaded for inference so that
-        subsequent calls to :meth:`predict_with_model` are backend-agnostic.
+        This is the core training routine called internally by :meth:`train_ensemble`. It can also be called directly when no ensemble averaging is required. After training, the model is exported to ONNX format and reloaded for inference so that subsequent calls to :meth:`predict_with_model` are backend-agnostic.
 
         Parameters
         ----------
@@ -231,22 +202,19 @@ class density_ratio_trainer:
             Initial learning rate for the Adam optimiser.
 
         scalerType : str
-            Feature scaling method. See :meth:`train_ensemble` for accepted
-            values.
+            Feature scaling method. See :meth:`train_ensemble` for accepted values.
 
         calibration : bool, optional
             Apply post-hoc probability calibration. Default ``False``.
 
         type_of_calibration : str, optional
-            Calibration algorithm. One of ``'isotonic'`` or ``'histogram'``.
-            Default ``'isotonic'``.
+            Calibration algorithm. One of ``'isotonic'`` or ``'histogram'``. Default ``'isotonic'``.
 
         num_bins_cal : int, optional
             Bins for histogram calibration. Default ``40``.
 
         callback : bool, optional
-            Enable early stopping and learning-rate monitoring callbacks.
-            Default ``True``.
+            Enable early stopping and learning-rate monitoring callbacks. Default ``True``.
 
         callback_patience : int, optional
             Early stopping patience in epochs. Default ``30``.
@@ -261,17 +229,10 @@ class density_ratio_trainer:
             Logging verbosity (0=warnings, 1=info, 2=debug). Default ``2``.
 
         rnd_seed : int or None, optional
-            Random seed for the train/holdout split. If ``None`` (default), a
-            random seed is drawn from a uniform integer distribution and saved
-            to disk alongside the model so the same split can be recovered when
-            ``load_trained_models=True``.
+            Random seed for the train/holdout split. If ``None`` (default), a random seed is drawn from a uniform integer distribution and saved to disk alongside the model so the same split can be recovered when ``load_trained_models=True``.
 
         ensemble_index : int or None, optional
-            Integer suffix appended to saved model, scaler, calibrator and metadata
-            filenames (e.g. ``model0.onnx``, ``model_scaler0.bin``). Pass the
-            ensemble index here to avoid filename collisions when
-            multiple members are trained in parallel. When ``None``, no suffix is
-            appended (files saved as ``model.onnx`` etc.).
+            Integer suffix appended to saved model, scaler, calibrator and metadata filenames (e.g. ``model0.onnx``, ``model_scaler0.bin``). Pass the ensemble index here to avoid filename collisions when multiple members are trained in parallel. When ``None``, no suffix is appended (files saved as ``model.onnx`` etc.).
 
         validation_split : float, optional
             Fraction of training data used for validation loss. Default ``0.1``.
@@ -286,8 +247,7 @@ class density_ratio_trainer:
             Load a previously saved model instead of training. Default ``False``.
 
         recalibrate_output : bool, optional
-            Force recalibration even when a saved calibrator exists.
-            Default ``False``.
+            Force recalibration even when a saved calibrator exists. Default ``False``.
 
         num_workers : int, optional
             DataLoader worker processes. Default ``0``.
@@ -300,20 +260,13 @@ class density_ratio_trainer:
         Warns
         -----
         UserWarning
-            Logs a warning if the minimum predicted score for any class equals
-            ``0`` or the maximum equals ``1``, which may indicate numerical
-            saturation and unreliable ratio estimates.
+            Logs a warning if the minimum predicted score for any class equals ``0`` or the maximum equals ``1``, which may indicate numerical saturation and unreliable ratio estimates.
 
         Notes
         -----
-        * The holdout set is stratified by ``training_labels`` to ensure
-        class balance is preserved.
-        * When ``load_trained_models=True``, the ``holdout_num`` and
-        ``rnd_seed`` are recovered from a saved ``.npy`` file so that the
-        same holdout split is used, guaranteeing consistency between the
-        saved model and any subsequent diagnostic plots.
-        * A loss-vs-epoch plot is automatically saved to ``path_to_figures``
-        after each successful training run.
+        * The holdout set is stratified by ``training_labels`` to ensure class balance is preserved.
+        * When ``load_trained_models=True``, the ``holdout_num`` and ``rnd_seed`` are recovered from a saved ``.npy`` file so that the same holdout split is used, guaranteeing consistency between the saved model and any subsequent diagnostic plots.
+        * A loss-vs-epoch plot is automatically saved to ``path_to_figures`` after each successful training run.
         """
         self.calibration = calibration
         self.calibration_switch = False # Set the switch to false for first evaluation for calibration

@@ -37,7 +37,7 @@ autodoc_mock_imports = [
     "iminuit", "evermore", "flax",
     "jax", "jaxlib", "optax", "equinox",
     "yaml", "ruamel", "awkward", "pandas",
-    "sklearn", "scipy", "h5py", "tqdm",
+    "sklearn", "scipy", "h5py", "tqdm", "joblib",
 ]
 autodoc_class_signature = "mixed"
 

@@ -16,6 +16,7 @@ Key features
 - **Training pipeline** — density-ratio neural network training with PyTorch Lightning, ensemble support, and calibration and reweighting diagnostics.
 - **Statistical models** — pyhf-like workspace specification supporting both binned (template-based) and unbinned (SBI-style) analysis regions with HistFactory-style systematic uncertainties, compiled to JAX for fast NLL evaluation and automatic differentiation.
 - **Inference engine** — profile-likelihood fits and NLL scans via iminuit with analytic gradients, plus plotting utilities.
+- **Configuration-driven** — a single YAML :doc:`fit configuration <basics/fit_config>` defines samples, features, systematics, and regions, and is consumed across all stages of the pipeline via :class:`~nsbi_common_utils.configuration.ConfigManager`.
 - **Workflow integration** — HTCondor/DAGMan job descriptions for large-scale cluster submission, with end-to-end example pipelines.
 
 Getting started
@@ -44,7 +45,7 @@ Once installed, building a statistical model and running a fit takes just a few 
 
    from nsbi_common_utils import workspace_builder, models, inference
 
-   # Build workspace from a YAML configuration
+   # Build workspace from the fit configuration (also used for data loading, training, etc.)
    ws = workspace_builder.WorkspaceBuilder("config_fit.yml").build()
 
    # Create the statistical model (JAX-compiled NLL)
@@ -66,6 +67,8 @@ For a hands-on walkthrough, see the :doc:`basics/model_building_example`.
    :caption: Basics
 
    basics/overview
+   basics/density_ratio_training
+   basics/preselection_training
    basics/fit_config
    basics/workflow
    basics/model_building_example
@@ -74,6 +77,7 @@ For a hands-on walkthrough, see the :doc:`basics/model_building_example`.
    :maxdepth: 2
    :caption: API Reference
 
+   api/training
    api/workspace_builder
    api/model
    api/inference
