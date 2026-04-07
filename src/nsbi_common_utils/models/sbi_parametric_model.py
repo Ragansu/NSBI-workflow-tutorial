@@ -65,7 +65,7 @@ class sbi_parametric_model:
 
         self.all_samples                                = self._get_samples_list()
         
-        sorting_order                                   = {"normfactor": 0, "normplusshape": 1}
+        sorting_order                                   = {"normfactor": 0, "vandermonde": 1, "normplusshape": 2} 
         self.list_parameters, \
             self.list_parameters_types, \
                 self.num_unconstrained_param            = self._get_parameters(sorting_order)
@@ -130,11 +130,19 @@ class sbi_parametric_model:
         """
         Optimized function for NLL computations
         """
+        print("Calculating expected histograms at param_vec: ", param_vec)
+        print("List of parameters: ", self.list_parameters)
+        print("List of parameter types: ", self.list_parameters_types)
+        print("Number of unconstrained parameters: ", self.num_unconstrained_param)
+                
         param_vec_interpolation = param_vec[ self.num_unconstrained_param : ]
         norm_modifiers          = {}
         hist_vars_binned        = {}
 
         norm_modifiers     = self._calculate_norm_variations(param_vec)
+        
+        print(f"shape of param_vec_interpolation: {param_vec_interpolation.shape}")
+        print(f"shape of combined_var_dn_binned[process]: {self.combined_var_dn_binned[self.all_samples[0]].shape}")
 
         for process in self.all_samples:
             
@@ -219,7 +227,6 @@ class sbi_parametric_model:
 
     def _get_vandermonde_coefficients(self) -> Dict[str, list[float]]:
         """Assume same vandermonde coefficients across channels for now 
-           (TO-DO: Add support for vandermonde coefficients per channel)
         """
         dict_sample_vandermonde_factors        = {sample_name: {} for sample_name in self.all_samples}
         list_all_vandermonde_factors           = []
@@ -329,7 +336,7 @@ class sbi_parametric_model:
 
         num_unconstrained_params = 0
         for poi_type_ in list_param_types:
-            if poi_type_ != "normfactor":
+            if poi_type_ != "normfactor" and poi_type_ != "vandermonde":
                 break
             num_unconstrained_params += 1
 
@@ -635,8 +642,9 @@ class sbi_parametric_model:
         n_params  = len(self.list_parameters)
         norm_matrix = np.zeros((n_samples, n_params), dtype=bool)
         coeffs_matrix = np.zeros((n_samples, n_params, self._max_vandermonde_coeffs), dtype=float) 
-        coeffs_matrix[:, :, -1] = 1.0
-        
+        if self._max_vandermonde_coeffs > 0:
+            coeffs_matrix[:, :, -1] = 1.0
+                
         for i, sample in enumerate(samples):
             if sample in self.norm_sample_map:
                 for nf_name in self.norm_sample_map[sample]:
@@ -655,6 +663,9 @@ class sbi_parametric_model:
         # Bundle everything into a dict pytree passed as a *dynamic* argument
         # to the JIT-compiled NLL so that arrays are traced as abstract inputs
         # (no constant-folding / memory blow-up).
+
+        print(f"Building norm_matrix {norm_matrix} and coeffs_matrix {coeffs_matrix} for samples {samples}")
+
               
         self._model_data = {
             'yield':            yield_stacked,
@@ -686,6 +697,8 @@ class sbi_parametric_model:
 
         # vmap _calculate_combined_var over the sample axis (axis 0)
         _batched_var = jax.vmap(_calculate_combined_var, in_axes=(None, 0, 0))
+        
+        jax.debug.print("param_vec is {y}", y=param_vec)
 
         def _nll_pure(param_vec, data):
             param_syst = param_vec[num_unc:]
@@ -695,20 +708,20 @@ class sbi_parametric_model:
                 jnp.where(data['norm_matrix'], param_vec[None, :], 1.0), axis=1
             )
             
-            def compute_norm_mods(coeffs_sample, param_vec):
-                # coeffs_sample shape: (n_params, max_coeffs)
-                # param_vec shape: (n_params,)
-                
-                # 1. Map polyval across each parameter's coefficient row
-                poly_vals = jax.vmap(jnp.polyval)(coeffs_sample, param_vec)
-                
-                # 2. Multiply the results of all polynomials for this sample
-                return jnp.prod(poly_vals)
-
-            # Apply across all samples
-            final_norm_mods = jax.vmap(compute_norm_mods, in_axes=(0, None))(data['coeffs_matrix'], param_vec)
+            if self._max_vandermonde_coeffs > 0:
             
-            norm_mods = norm_mods * final_norm_mods
+                def compute_norm_mods(coeffs_sample, param_vec):
+                    
+                    # 1. Map polyval across each parameter's coefficient row
+                    poly_vals = jax.vmap(jnp.polyval)(coeffs_sample, param_vec)
+                    
+                    # 2. Multiply the results of all polynomials for this sample
+                    return jnp.prod(poly_vals)
+
+                # Apply across all samples
+                final_norm_mods = jax.vmap(compute_norm_mods, in_axes=(0, None))(data['coeffs_matrix'], param_vec)
+                
+                norm_mods = norm_mods * final_norm_mods
             
             # --- Systematic variations (one vmapped call per category) ---
             if has_syst:
