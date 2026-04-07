@@ -479,11 +479,12 @@ class sbi_parametric_model:
         """
         Get an array of expected event yields or ratios
         """
-        data_observed   = np.array(self.workspace["observation"]["data"])
-
+        data_expected   = np.array([])
         for channel_name in self.channels_binned:
             channel_index           = self._index_of_region(channel_name = channel_name)
-            ["channels"][channel_index]
+            channel_data            = np.array(self.workspace["observations"][channel_index]["data"])
+            data_observed = np.append(data_expected, channel_data)
+            
         return data_observed
 
     def _calculate_norm_variations(self, param_vec):
