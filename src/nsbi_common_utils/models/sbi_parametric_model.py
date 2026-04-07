@@ -76,7 +76,8 @@ class sbi_parametric_model:
             self.norm_sample_map                        = self._get_norm_factors() 
 
         self.list_langrange_coeffs, \
-            self.langrange_coeffs_map                   = self._get_lagrange_coefficients()
+            self.langrange_coeffs_map, \
+                self._max_lagrange_coeffs               = self._get_lagrange_coefficients()
 
         self.has_normplusshape                          = len(self.list_syst_normplusshape) > 0
 
@@ -220,8 +221,9 @@ class sbi_parametric_model:
         """Assume same lagrange coefficients across channels for now 
            (TO-DO: Add support for lagrange coefficients per channel)
         """
-        dict_sample_lagrange_factors         = {sample_name: {} for sample_name in self.all_samples}
+        dict_sample_lagrange_factors        = {sample_name: {} for sample_name in self.all_samples}
         list_all_lagrange_factors           = []
+        max_lagrange_coeffs                 = 0
         for channel in self.all_channels[:1]:
             channel_index = self._index_of_region(channel_name=channel)
             for sample in self.all_samples:
@@ -231,6 +233,7 @@ class sbi_parametric_model:
                     if modifier["type"] == "lagrange":
                         modifier_name = modifier["name"]
                         modiefier_coeffs = modifier.get("coeff", [1,0]) # Default to linear variation if no coefficients provided
+                        max_lagrange_coeffs = max(max_lagrange_coeffs, len(modiefier_coeffs))
                         if modifier_name not in list_all_lagrange_factors               : list_all_lagrange_factors.append(modifier_name)
                         if modifier_name not in dict_sample_lagrange_factors[sample]     : dict_sample_lagrange_factors[sample][modifier_name] = modiefier_coeffs
 
@@ -238,8 +241,8 @@ class sbi_parametric_model:
         dict_sample_lagrange_factors = {key: val for key, val in dict_sample_lagrange_factors.items()
                                     if any(p in self.param_names for p in val)
                                 }
-        
-        return list_all_lagrange_factors, dict_sample_lagrange_factors
+ 
+        return list_all_lagrange_factors, dict_sample_lagrange_factors, max_lagrange_coeffs
 
     def _get_parameters_to_fit(self) -> tuple[list[str], dict[str, float]]:
         """
@@ -417,8 +420,9 @@ class sbi_parametric_model:
                 ratio_vars_unbinned[process] = jnp.ones_like( self.ratios_array_dict[process] )
 
         # --- Binned Poisson NLL (control regions + binned signal region) ---
-        nu_binned      = self.observed_array
-        llr_tot_binned = _pois_loglikelihood(nu_binned, self.expected_hist)
+        nu_binned      = self._calculate_parameterized_yields(self.yield_array_dict, hist_vars_binned, norm_modifiers)
+        
+        llr_tot_binned = _pois_loglikelihood(self.observed_array, nu_binned)
 
         # --- Unbinned extended likelihood (SBI signal region) ---
         nu_tot_unbinned = self._calculate_parameterized_yields(self.unbinned_total_dict, hist_vars_unbinned, norm_modifiers)
@@ -477,14 +481,22 @@ class sbi_parametric_model:
 
     def _get_observed_arrays(self):
         """
-        Get an array of expected event yields or ratios
+        Get an array of observed event yields
         """
-        data_expected   = np.array([])
+        data_list = []
+
         for channel_name in self.channels_binned:
-            channel_index           = self._index_of_region(channel_name = channel_name)
-            channel_data            = np.array(self.workspace["observations"][channel_index]["data"])
-            data_observed = np.append(data_expected, channel_data)
-            
+            channel_index = self._index_of_region(channel_name=channel_name)
+            channel_data = np.array(self.workspace["observations"][channel_index]["data"])
+
+            print(f"shape of data for channel {channel_name} is {channel_data.shape}")
+            data_list.append(channel_data)
+
+            combined_length = sum(len(arr) for arr in data_list)
+            print(f"shape of combined data after channel {channel_name} is ({combined_length},)")
+
+        data_observed = np.concatenate(data_list)
+
         return data_observed
 
     def _calculate_norm_variations(self, param_vec):
@@ -622,19 +634,32 @@ class sbi_parametric_model:
         n_samples = len(samples)
         n_params  = len(self.list_parameters)
         norm_matrix = np.zeros((n_samples, n_params), dtype=bool)
+        coeffs_matrix = np.zeros((n_samples, n_params, self._max_lagrange_coeffs), dtype=float) 
+        coeffs_matrix[:, :, -1] = 1.0
+        
         for i, sample in enumerate(samples):
             if sample in self.norm_sample_map:
                 for nf_name in self.norm_sample_map[sample]:
                     j = self.index_normparam_map[nf_name]
                     norm_matrix[i, j] = True
+
             if sample in self.langrange_coeffs_map:
-                for lf_name in self.langrange_coeffs_map[sample]:
+                for lf_name, coeffs in self.langrange_coeffs_map[sample].items():
                     j = self.index_langrangeparam_map[lf_name]
-                    norm_matrix[i, j] = True
+                    
+                    # Important: polyval expects coefficients in descending order.
+                    # If your coeffs are [A, B, C], we place them at the end of the row.
+                    c_len = len(coeffs)
+                    coeffs_matrix[i, j, -c_len:] = coeffs
 
         # Bundle everything into a dict pytree passed as a *dynamic* argument
         # to the JIT-compiled NLL so that arrays are traced as abstract inputs
         # (no constant-folding / memory blow-up).
+        
+        print(f" coeff matrix {coeffs_matrix} and norm matrix {norm_matrix}")
+        print(f"yield stacked {yield_stacked}")
+              
+              
         self._model_data = {
             'yield':            yield_stacked,
             'unbinned_total':   unbinned_total_stacked,
@@ -646,7 +671,8 @@ class sbi_parametric_model:
             'tot_up_unbinned':  tot_up_unbinned_stacked,
             'tot_dn_unbinned':  tot_dn_unbinned_stacked,
             'norm_matrix':      jnp.array(norm_matrix),
-            'expected_hist':    self.expected_hist,
+            'coeffs_matrix':    jnp.array(coeffs_matrix),
+            'observed_hist':    self.observed_array,
             'expected_rate':    self.expected_rate_unbinned,
             'weights':          self.weight_arrays_unbinned,
         }
@@ -672,6 +698,23 @@ class sbi_parametric_model:
             norm_mods = jnp.prod(
                 jnp.where(data['norm_matrix'], param_vec[None, :], 1.0), axis=1
             )
+            
+            def compute_norm_mods(coeffs_sample, param_vec):
+                # coeffs_sample shape: (n_params, max_coeffs)
+                # param_vec shape: (n_params,)
+                
+                # 1. Map polyval across each parameter's coefficient row
+                poly_vals = jax.vmap(jnp.polyval)(coeffs_sample, param_vec)
+                
+                # 2. Multiply the results of all polynomials for this sample
+                return jnp.prod(poly_vals)
+
+            # Apply across all samples
+            final_norm_mods = jax.vmap(compute_norm_mods, in_axes=(0, None))(data['coeffs_matrix'], param_vec)
+            
+            norm_mods = norm_mods * final_norm_mods
+            
+            jax.debug.print("final_norm_mods is {y}", y=final_norm_mods)
 
             # --- Systematic variations (one vmapped call per category) ---
             if has_syst:
@@ -690,11 +733,20 @@ class sbi_parametric_model:
                 ratio_vars  = jnp.ones_like(data['ratios'])
 
             # --- Binned Poisson NLL ---
+            
+            jax.debug.print("data yield is {y}", y=data['yield'])
+            
             nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_b,
                                  axis=0)
+            
+            jax.debug.print("nu_binned is {y}", y=nu_binned)
+            jax.debug.print("observed_hist is {y}", y=data['observed_hist'])
+            
             llr_binned = -2.0 * jnp.sum(
-                data['expected_hist'] * jnp.log(nu_binned) - nu_binned
+                data['observed_hist'] * jnp.log(nu_binned) - nu_binned
             )
+            
+            
 
             # --- Unbinned rate term ---
             nu_unbinned = jnp.sum(
@@ -717,7 +769,14 @@ class sbi_parametric_model:
             llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
 
             # --- Gaussian constraints on nuisance parameters ---
-            llr_constraints = jnp.sum(param_syst ** 2)
+            # llr_constraints = jnp.sum(param_syst ** 2)
+            llr_constraints = 0.0
+            
+            jax.debug.print("llr_binned is {y}", y=llr_binned)
+            jax.debug.print("llr_rate is {y}", y=llr_rate)
+            jax.debug.print("llr_pe is {y}", y=llr_pe)
+            jax.debug.print("llr_constraints is {y}", y=llr_constraints)
+            
 
             return (llr_binned
                     + llr_rate
