@@ -655,10 +655,6 @@ class sbi_parametric_model:
         # Bundle everything into a dict pytree passed as a *dynamic* argument
         # to the JIT-compiled NLL so that arrays are traced as abstract inputs
         # (no constant-folding / memory blow-up).
-        
-        print(f" coeff matrix {coeffs_matrix} and norm matrix {norm_matrix}")
-        print(f"yield stacked {yield_stacked}")
-              
               
         self._model_data = {
             'yield':            yield_stacked,
@@ -714,8 +710,6 @@ class sbi_parametric_model:
             
             norm_mods = norm_mods * final_norm_mods
             
-            jax.debug.print("final_norm_mods is {y}", y=final_norm_mods)
-
             # --- Systematic variations (one vmapped call per category) ---
             if has_syst:
                 hist_vars_b = _batched_var(param_syst,
@@ -733,15 +727,10 @@ class sbi_parametric_model:
                 ratio_vars  = jnp.ones_like(data['ratios'])
 
             # --- Binned Poisson NLL ---
-            
-            jax.debug.print("data yield is {y}", y=data['yield'])
-            
+                        
             nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_b,
                                  axis=0)
-            
-            jax.debug.print("nu_binned is {y}", y=nu_binned)
-            jax.debug.print("observed_hist is {y}", y=data['observed_hist'])
-            
+                        
             llr_binned = -2.0 * jnp.sum(
                 data['observed_hist'] * jnp.log(nu_binned) - nu_binned
             )
@@ -771,11 +760,14 @@ class sbi_parametric_model:
             # --- Gaussian constraints on nuisance parameters ---
             # llr_constraints = jnp.sum(param_syst ** 2)
             llr_constraints = 0.0
-            
-            jax.debug.print("llr_binned is {y}", y=llr_binned)
-            jax.debug.print("llr_rate is {y}", y=llr_rate)
-            jax.debug.print("llr_pe is {y}", y=llr_pe)
-            jax.debug.print("llr_constraints is {y}", y=llr_constraints)
+
+            # jax.debug.print("final_norm_mods is {y}", y=final_norm_mods)
+            # jax.debug.print("nu_binned is {y}", y=nu_binned)
+            # jax.debug.print("observed_hist is {y}", y=data['observed_hist'])            
+            # jax.debug.print("llr_binned is {y}", y=llr_binned)
+            # jax.debug.print("llr_rate is {y}", y=llr_rate)
+            # jax.debug.print("llr_pe is {y}", y=llr_pe)
+            # jax.debug.print("llr_constraints is {y}", y=llr_constraints)
             
 
             return (llr_binned
