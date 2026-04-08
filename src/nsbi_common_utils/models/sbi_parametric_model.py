@@ -17,8 +17,8 @@ class sbi_parametric_model:
 
     Two JIT-compiled entry points are built:
 
-    * :meth:`model` — evaluates the NLL (used as ``model_nll`` by :class:`~nsbi_common_utils.inference.inference`).
-    * :meth:`model_grad` — evaluates the NLL gradient via JAX reverse-mode autodiff (used as ``model_grad`` by :class:`~nsbi_common_utils.inference.inference` to supply analytical gradients to iminuit, eliminating finite-difference overhead).
+    * :meth:`model` — evaluates the negative log-likelihood function for fit.
+    * :meth:`model_grad` — evaluates the negative log-likelihood gradient via JAX reverse-mode autodiff.
 
     Parameters
     ----------
@@ -758,26 +758,3 @@ def _calculate_combined_var(param_vec, combined_var_up, combined_var_down):
 
     return combined_var_array
 
-
-@jax.jit
-def _pois_loglikelihood(data_hist, exp_hist):
-    """
-    Compute the Poisson log-likelihood ratio statistic for binned data.
-
-    Evaluates :math:`-2 \\sum_i (n_i \\ln \\nu_i - \\nu_i)` where
-    :math:`n_i` are the observed (or Asimov) bin counts and
-    :math:`\\nu_i` the expected yields.
-
-    Parameters
-    ----------
-    data_hist : jnp.ndarray, shape (n_bins,)
-        Observed (or Asimov) bin counts.
-    exp_hist : jnp.ndarray, shape (n_bins,)
-        Expected bin yields from the model.
-
-    Returns
-    -------
-    nll : jnp.ndarray, scalar
-        The :math:`-2 \\ln L` value summed over all bins.
-    """
-    return -2 * jnp.sum( data_hist * jnp.log(exp_hist) - exp_hist )
