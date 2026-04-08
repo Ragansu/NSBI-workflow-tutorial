@@ -17,8 +17,8 @@ class sbi_parametric_model:
 
     Two JIT-compiled entry points are built:
 
-    * :meth:`model` — evaluates the NLL (used as ``model_nll`` by :class:`~nsbi_common_utils.inference.inference`).
-    * :meth:`model_grad` — evaluates the NLL gradient via JAX reverse-mode autodiff (used as ``model_grad`` by :class:`~nsbi_common_utils.inference.inference` to supply analytical gradients to iminuit, eliminating finite-difference overhead).
+    * :meth:`model` — evaluates the negative log-likelihood function for fit.
+    * :meth:`model_grad` — evaluates the negative log-likelihood gradient via JAX reverse-mode autodiff.
 
     Parameters
     ----------
@@ -394,58 +394,6 @@ class sbi_parametric_model:
         _, g = self._jit_val_and_grad(param_array, self._model_data)
         return np.asarray(g)
     
-    def _nll_function(self, param_vec):
-        """Compute the full NLL at ``param_vec``."""
-        param_vec_interpolation = param_vec[self.num_unconstrained_param:]
-        norm_modifiers          = self._calculate_norm_variations(param_vec)
-
-        hist_vars_binned    = {}
-        hist_vars_unbinned  = {}
-        ratio_vars_unbinned = {}
-
-        for process in self.all_samples:
-            if self.has_normplusshape:
-                hist_vars_binned[process]    = _calculate_combined_var( param_vec_interpolation,
-                                                                        self.combined_var_up_binned[process],
-                                                                        self.combined_var_dn_binned[process]    )
-                hist_vars_unbinned[process]  = _calculate_combined_var( param_vec_interpolation,
-                                                                        self.combined_tot_up_unbinned[process],
-                                                                        self.combined_tot_dn_unbinned[process]  )
-                ratio_vars_unbinned[process] = _calculate_combined_var( param_vec_interpolation,
-                                                                        self.combined_var_up_unbinned[process],
-                                                                        self.combined_var_dn_unbinned[process]  )
-            else:
-                hist_vars_binned[process]    = jnp.ones_like( self.yield_array_dict[process] )
-                hist_vars_unbinned[process]  = jnp.ones_like( self.unbinned_total_dict[process] )
-                ratio_vars_unbinned[process] = jnp.ones_like( self.ratios_array_dict[process] )
-
-        # --- Binned Poisson NLL (control regions + binned signal region) ---
-        nu_binned      = self._calculate_parameterized_yields(self.yield_array_dict, hist_vars_binned, norm_modifiers)
-        
-        llr_tot_binned = _pois_loglikelihood(self.observed_array, nu_binned)
-
-        # --- Unbinned extended likelihood (SBI signal region) ---
-        nu_tot_unbinned = self._calculate_parameterized_yields(self.unbinned_total_dict, hist_vars_unbinned, norm_modifiers)
-
-        # Poisson rate term: constrains the overall normalization in the unbinned region
-        llr_rate_unbinned = _pois_loglikelihood(self.expected_rate_unbinned, nu_tot_unbinned)
-
-        # Per-event shape term: log(dnu/dx / nu_tot) for each event
-        llr_pe_unbinned = self._calculate_parameterized_ratios(self.unbinned_total_dict,
-                                                                hist_vars_unbinned,
-                                                                self.ratios_array_dict,
-                                                                ratio_vars_unbinned,
-                                                                norm_modifiers) \
-                            - jnp.log(nu_tot_unbinned)
-
-        # --- Gaussian constraints on nuisance parameters ---
-        llr_constraints = jnp.sum(param_vec_interpolation**2)
-
-        return ( llr_tot_binned
-               + llr_rate_unbinned
-               - 2 * jnp.sum(self.weight_arrays_unbinned * llr_pe_unbinned, axis=0)
-               + llr_constraints )
-    
     
     def _get_nominal_expected_arrays(self, type_of_fit:str):
         """
@@ -625,9 +573,7 @@ class sbi_parametric_model:
         tot_up_unbinned_stacked = jnp.stack([self.combined_tot_up_unbinned[s] for s in samples])
         tot_dn_unbinned_stacked = jnp.stack([self.combined_tot_dn_unbinned[s] for s in samples])
 
-        # Norm-factor mask: (n_samples, n_params) — True where param j is a
-        # normfactor for sample i.  prod(where(mask, param_vec, 1)) gives the
-        # per-sample multiplicative modifier.
+        # Norm-factor mask: (n_samples, n_params) — True where param j is a normfactor for sample i.  prod(where(mask, param_vec, 1)) gives the per-sample multiplicative modifier.
         n_samples = len(samples)
         n_params  = len(self.list_parameters)
         norm_matrix = np.zeros((n_samples, n_params), dtype=bool)
@@ -670,17 +616,12 @@ class sbi_parametric_model:
         }
 
     def _build_jit_functions(self):
-        """Create JIT-compiled NLL and value-and-grad functions.
-
-        Python scalars (num_unc, has_syst) are captured in the closure and
-        become compile-time constants — fine because they are tiny.
-        All large arrays flow through the ``data`` dict argument so JAX
-        traces them as abstract inputs (no constant folding).
+        """
+        Create JIT-compiled NLL and value-and-grad functions.
         """
         num_unc  = self.num_unconstrained_param
         has_syst = self.has_normplusshape
 
-        # vmap _calculate_combined_var over the sample axis (axis 0)
         _batched_var = jax.vmap(_calculate_combined_var, in_axes=(None, 0, 0))
         
         
@@ -689,7 +630,6 @@ class sbi_parametric_model:
             
             # jax.debug.print("param_vec is {y}", y=param_vec)
 
-            # --- Norm modifiers: (n_samples,) ---
             norm_mods = jnp.prod(
                 jnp.where(data['norm_matrix'], param_vec[None, :], 1.0), axis=1
             )
@@ -711,42 +651,38 @@ class sbi_parametric_model:
             
             # --- Systematic variations (one vmapped call per category) ---
             if has_syst:
-                hist_vars_b = _batched_var(param_syst,
+                hist_vars_binned = _batched_var(param_syst,
                                            data['var_up_binned'],
                                            data['var_dn_binned'])
-                hist_vars_u = _batched_var(param_syst,
+                hist_vars_unbinned = _batched_var(param_syst,
                                            data['tot_up_unbinned'],
                                            data['tot_dn_unbinned'])
                 ratio_vars  = _batched_var(param_syst,
                                            data['var_up_unbinned'],
                                            data['var_dn_unbinned'])
             else:
-                hist_vars_b = jnp.ones_like(data['yield'])
-                hist_vars_u = jnp.ones_like(data['unbinned_total'])
+                hist_vars_binned = jnp.ones_like(data['yield'])
+                hist_vars_unbinned = jnp.ones_like(data['unbinned_total'])
                 ratio_vars  = jnp.ones_like(data['ratios'])
 
-            # --- Binned Poisson NLL ---
-                        
-            nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_b,
+            nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_binned,
                                  axis=0)
                         
             llr_binned = -2.0 * jnp.sum(
                 data['observed_hist'] * jnp.log(nu_binned) - nu_binned
             )
-            
-            # --- Unbinned rate term ---
+
             nu_unbinned = jnp.sum(
-                norm_mods[:, None] * data['unbinned_total'] * hist_vars_u,
+                norm_mods[:, None] * data['unbinned_total'] * hist_vars_unbinned,
                 axis=0
             )
             llr_rate = -2.0 * jnp.sum(
                 data['expected_rate'] * jnp.log(nu_unbinned) - nu_unbinned
             )
 
-            # --- Per-event shape term ---
             dnu_dx = jnp.sum(
                 norm_mods[:, None]
-                * hist_vars_u
+                * hist_vars_unbinned
                 * data['unbinned_total']
                 * data['ratios']
                 * ratio_vars,
@@ -754,7 +690,6 @@ class sbi_parametric_model:
             )
             llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
 
-            # --- Gaussian constraints on nuisance parameters ---
             llr_constraints = jnp.sum(param_syst ** 2)
             
             llr_unbinned = - 2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
@@ -936,26 +871,3 @@ def _calculate_combined_var(param_vec, combined_var_up, combined_var_down):
 
     return combined_var_array
 
-
-@jax.jit
-def _pois_loglikelihood(data_hist, exp_hist):
-    """
-    Compute the Poisson log-likelihood ratio statistic for binned data.
-
-    Evaluates :math:`-2 \\sum_i (n_i \\ln \\nu_i - \\nu_i)` where
-    :math:`n_i` are the observed (or Asimov) bin counts and
-    :math:`\\nu_i` the expected yields.
-
-    Parameters
-    ----------
-    data_hist : jnp.ndarray, shape (n_bins,)
-        Observed (or Asimov) bin counts.
-    exp_hist : jnp.ndarray, shape (n_bins,)
-        Expected bin yields from the model.
-
-    Returns
-    -------
-    nll : jnp.ndarray, scalar
-        The :math:`-2 \\ln L` value summed over all bins.
-    """
-    return -2 * jnp.sum( data_hist * jnp.log(exp_hist) - exp_hist )

@@ -7,8 +7,11 @@ import math
 import pickle 
 
 import warnings
-from sklearn.exceptions import InconsistentVersionWarning
-warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+try:
+    from sklearn.exceptions import InconsistentVersionWarning
+    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+except (ImportError, TypeError):
+    pass
 
 import torch
 torch.set_float32_matmul_precision("medium")

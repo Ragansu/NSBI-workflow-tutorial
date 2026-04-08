@@ -32,12 +32,12 @@ autodoc_default_options = {
 autodoc_typehints = "description"
 add_module_names = False
 autodoc_mock_imports = [
-    "uproot", "ROOT", "torch", "pytorch_lightning", "onnx", "onnxruntime",
+    "numpy", "uproot", "ROOT", "torch", "pytorch_lightning", "onnx", "onnxruntime",
     "matplotlib", "mplhep", "hist", "coffea",
     "iminuit", "evermore", "flax",
     "jax", "jaxlib", "optax", "equinox",
     "yaml", "ruamel", "awkward", "pandas",
-    "sklearn", "scipy", "h5py", "tqdm",
+    "sklearn", "scipy", "h5py", "tqdm", "joblib",
 ]
 autodoc_class_signature = "mixed"
 
@@ -48,16 +48,6 @@ intersphinx_mapping = {
     "iminuit": ("https://scikit-hep.org/iminuit", None),
 }
 
-html_theme = "pydata_sphinx_theme"
-html_theme_options = {
-    "github_url": "https://github.com/iris-hep/NSBI-workflow-tutorial",
-    "show_toc_level": 3,
-    "navigation_with_keys": True,
-    "navbar_end": ["theme-switcher", "navbar-icon-links"],
-    "header_links_before_dropdown": 0,
-}
-html_sidebars = {
-    "**": ["globaltoc"],
-}
+html_theme = "sphinx_rtd_theme"
 
 exclude_patterns = ["_build"]
