@@ -87,6 +87,7 @@ class sbi_parametric_model:
         self.index_vandermondeparam_map                   = self._make_map_index_lag()
 
         self.yield_array_dict, _                        = self._get_nominal_expected_arrays( type_of_fit = "binned" )
+        
         self.unbinned_total_dict, \
             self.ratios_array_dict                      = self._get_nominal_expected_arrays( type_of_fit = "unbinned" )
 
@@ -129,20 +130,12 @@ class sbi_parametric_model:
     def _get_expected_hist(self, param_vec):
         """
         Optimized function for NLL computations
-        """
-        print("Calculating expected histograms at param_vec: ", param_vec)
-        print("List of parameters: ", self.list_parameters)
-        print("List of parameter types: ", self.list_parameters_types)
-        print("Number of unconstrained parameters: ", self.num_unconstrained_param)
-                
+        """                
         param_vec_interpolation = param_vec[ self.num_unconstrained_param : ]
         norm_modifiers          = {}
         hist_vars_binned        = {}
 
         norm_modifiers     = self._calculate_norm_variations(param_vec)
-        
-        print(f"shape of param_vec_interpolation: {param_vec_interpolation.shape}")
-        print(f"shape of combined_var_dn_binned[process]: {self.combined_var_dn_binned[self.all_samples[0]].shape}")
 
         for process in self.all_samples:
             
@@ -495,15 +488,12 @@ class sbi_parametric_model:
         for channel_name in self.channels_binned:
             channel_index = self._index_of_region(channel_name=channel_name)
             channel_data = np.array(self.workspace["observations"][channel_index]["data"])
-
-            print(f"shape of data for channel {channel_name} is {channel_data.shape}")
+            
             data_list.append(channel_data)
-
             combined_length = sum(len(arr) for arr in data_list)
-            print(f"shape of combined data after channel {channel_name} is ({combined_length},)")
 
         data_observed = np.concatenate(data_list)
-
+        
         return data_observed
 
     def _calculate_norm_variations(self, param_vec):
@@ -663,9 +653,6 @@ class sbi_parametric_model:
         # Bundle everything into a dict pytree passed as a *dynamic* argument
         # to the JIT-compiled NLL so that arrays are traced as abstract inputs
         # (no constant-folding / memory blow-up).
-
-        print(f"Building norm_matrix {norm_matrix} and coeffs_matrix {coeffs_matrix} for samples {samples}")
-
               
         self._model_data = {
             'yield':            yield_stacked,
@@ -698,10 +685,11 @@ class sbi_parametric_model:
         # vmap _calculate_combined_var over the sample axis (axis 0)
         _batched_var = jax.vmap(_calculate_combined_var, in_axes=(None, 0, 0))
         
-        jax.debug.print("param_vec is {y}", y=param_vec)
-
+        
         def _nll_pure(param_vec, data):
             param_syst = param_vec[num_unc:]
+            
+            # jax.debug.print("param_vec is {y}", y=param_vec)
 
             # --- Norm modifiers: (n_samples,) ---
             norm_mods = jnp.prod(
@@ -748,8 +736,6 @@ class sbi_parametric_model:
                 data['observed_hist'] * jnp.log(nu_binned) - nu_binned
             )
             
-            
-
             # --- Unbinned rate term ---
             nu_unbinned = jnp.sum(
                 norm_mods[:, None] * data['unbinned_total'] * hist_vars_u,
@@ -771,22 +757,21 @@ class sbi_parametric_model:
             llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
 
             # --- Gaussian constraints on nuisance parameters ---
-            # llr_constraints = jnp.sum(param_syst ** 2)
-            llr_constraints = 0.0
+            llr_constraints = jnp.sum(param_syst ** 2)
+            
+            llr_unbinned = - 2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
+            
+            llr_total = llr_binned + llr_rate + llr_unbinned + llr_constraints
 
-            # jax.debug.print("final_norm_mods is {y}", y=final_norm_mods)
             # jax.debug.print("nu_binned is {y}", y=nu_binned)
             # jax.debug.print("observed_hist is {y}", y=data['observed_hist'])            
             # jax.debug.print("llr_binned is {y}", y=llr_binned)
             # jax.debug.print("llr_rate is {y}", y=llr_rate)
-            # jax.debug.print("llr_pe is {y}", y=llr_pe)
+            # jax.debug.print("llr_unbinned is {y}", y=llr_unbinned)
             # jax.debug.print("llr_constraints is {y}", y=llr_constraints)
+            # jax.debug.print("llr_total is {y}", y=llr_total)
             
-
-            return (llr_binned
-                    + llr_rate
-                    - 2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
-                    + llr_constraints)
+            return (llr_total)
 
         jit_nll          = jax.jit(_nll_pure)
         jit_val_and_grad = jax.jit(jax.value_and_grad(_nll_pure, argnums=0))
