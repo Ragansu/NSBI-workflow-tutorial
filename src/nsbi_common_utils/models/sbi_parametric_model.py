@@ -84,7 +84,7 @@ class sbi_parametric_model:
         self.initial_parameter_values                   = self._get_param_vec_initial()
 
         self.index_normparam_map                        = self._make_map_index_norm()
-        self.index_vandermondeparam_map                   = self._make_map_index_lag()
+        self.index_vandermondeparam_map                   = self._make_map_index_vandermorde()
 
         self.yield_array_dict, _                        = self._get_nominal_expected_arrays( type_of_fit = "binned" )
         
@@ -180,7 +180,7 @@ class sbi_parametric_model:
             dict_index_normfactor[normfactor] = index
         return dict_index_normfactor
 
-    def _make_map_index_lag(self):
+    def _make_map_index_vandermorde(self):
         """
         Maps the index of parameter in the parameter vector to norm factor
         """

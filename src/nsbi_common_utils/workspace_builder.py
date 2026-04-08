@@ -42,30 +42,20 @@ class WorkspaceBuilder:
 
     def __init__(self, config_path: Union[pathlib.Path, str]) -> None:
         self.config_path = config_path
-        self.config = nsbi_common_utils.configuration.ConfigManager(
-            file_path_string=config_path
-        )
+        self.config = nsbi_common_utils.configuration.ConfigManager(file_path_string = config_path)
         self.config_dict = self.config.config
-        self.ParametersToFit = self.config_dict["General"]["Measurement"].get(
-            "ParametersToFit", None
-        )
+        self.ParametersToFit = self.config_dict["General"]["Measurement"].get("ParametersToFit", None)
         self._check_ParametersToFit()
 
     def _check_ParametersToFit(self):
         poi = self.config_dict["General"]["Measurement"].get("POI", "")
         if (self.ParametersToFit) and (poi not in self.ParametersToFit):
-            logging.warning(
-                f"The POI {poi} is not included in the ParametersToFit. Adding the POI {poi} to ParametersToFit list."
-            )
+            logging.warning(f'The POI {poi} is not included in the ParametersToFit. Adding the POI {poi} to ParametersToFit list.')
             self.ParametersToFit.append(poi)
         elif self.ParametersToFit is None:
-            logging.warning(
-                "No ParametersToFit specified in config. All parameters will be included in the fitting."
-            )
-
-    def vandermonde_modifiers(
-        self, region_name: str, sample_name: str
-    ) -> list[dict[str, Any]]:
+            logging.warning('No ParametersToFit specified in config. All parameters will be included in the fitting.')
+            
+    def vandermonde_modifiers(self, region_name: str, sample_name: str) -> list[dict[str, Any]]:
         """Return normfactor modifiers that affect a given sample in a region.
 
         Iterates over all ``VandermondeFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
@@ -89,7 +79,7 @@ class WorkspaceBuilder:
             vandermonde_name = vandermonde_dict["Name"]
             vandermonde_data = vandermonde_dict.get("Data", None)
             vandermonde_basis = vandermonde_dict.get("Basis", None)
-            vandermonde_coeffs = define_stat_function(vandermonde_basis)
+            vandermonde_coeffs = compute_vandermonde_coeffs(vandermonde_basis)
 
             regions_affected = vandermonde_dict.get("Region", None)
             if regions_affected is not None:
@@ -110,9 +100,9 @@ class WorkspaceBuilder:
                     )
         return modifiers
 
-    def normfactor_modifiers(
-        self, region_name: str, sample_name: str
-    ) -> list[dict[str, Any]]:
+    def normfactor_modifiers(self,
+                             region_name: str,
+                             sample_name: str) -> list[dict[str, Any]]:
         """Return normfactor modifiers that affect a given sample in a region.
 
         Iterates over all ``NormFactors`` in the configuration and keeps only those whose ``Region`` and ``Samples`` lists include the requested region/sample (or are unset, meaning they apply everywhere).
@@ -144,24 +134,18 @@ class WorkspaceBuilder:
                 if sample_name not in samples_affected:
                     continue
                 else:
-                    modifiers.append(
-                        {
-                            "name": norm_factor_name,
-                            "data": norm_factor_data,
-                            "type": "normfactor",
-                        }
-                    )
+                    modifiers.append({"name": norm_factor_name, 
+                                      "data": norm_factor_data, 
+                                      "type": "normfactor"})
         return modifiers
 
-    def normplusshape_modifiers(
-        self,
-        dataset: pd.DataFrame,
-        region: dict[str, Any],
-        sample: dict[str, Any],
-        systematic_dict: dict[str, Any],
-        nominal_data: np.array,
-        type_of_fit: str,
-    ) -> list[dict[str, Any]]:
+    def normplusshape_modifiers(self,
+                                dataset           : pd.DataFrame,
+                                region            : dict[str, Any],
+                                sample            : dict[str, Any],
+                                systematic_dict   : dict[str, Any],
+                                nominal_data      : np.array,
+                                type_of_fit: str) -> list[dict[str, Any]]:
         """Build a NormPlusShape modifier for one systematic on one sample.
 
         Histograms the up/down systematic variations, divides by the nominal to obtain variation ratios, and (for unbinned channels) attaches paths to the pre-computed density-ratio arrays.
@@ -187,84 +171,56 @@ class WorkspaceBuilder:
         list of dict
             A single-element list containing the modifier dictionary with keys ``"name"``, ``"type": "normplusshape"``, and ``"data"``.
         """
-        syst_name = systematic_dict["Name"]
-
-        channel_name = region["Name"]
-        sample_name = sample["Name"]
-        sample_path = sample["SamplePath"]
+        syst_name                      = systematic_dict["Name"]
+        
+        channel_name    = region["Name"]
+        sample_name     = sample["Name"]
+        sample_path     = sample["SamplePath"]
         region_variable = region["Variable"]
-        region_binning = region["Binning"]
+        region_binning  = region["Binning"]
 
         variation_data = {}
 
         for direction in ["Up", "Dn"]:
 
-            key_syst = syst_name + "_" + direction
+            key_syst            = syst_name + '_' + direction
 
-            weights = dataset[key_syst][sample_name]["weights"].to_numpy()
+            weights             = dataset[key_syst][sample_name]["weights"].to_numpy()
 
-            feature_var = np.clip(
-                dataset[key_syst][sample_name][region_variable],
-                np.amin(region_binning),
-                np.amax(region_binning),
-            )
+            feature_var         = np.clip(dataset[key_syst][sample_name][region_variable],
+                                                          np.amin(region_binning), np.amax(region_binning))
 
-            syst_var_data, _ = np.histogram(
-                feature_var, weights=weights, bins=region_binning
-            )
+            syst_var_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
 
             variation_data[direction] = syst_var_data / nominal_data
 
         if type_of_fit == "binned":
 
-            modifiers = [
-                {
-                    "name": syst_name,
-                    "type": "normplusshape",
-                    "data": {
-                        "hi_data": list(variation_data["Up"]),
-                        "lo_data": list(variation_data["Dn"]),
-                    },
-                }
-            ]
+            modifiers = [{"name": syst_name,
+                          "type": "normplusshape",
+                          "data": {"hi_data": list(variation_data["Up"]),
+                                   "lo_data": list(variation_data["Dn"])}}]
         elif type_of_fit == "unbinned":
 
-            idx = self.config.get_sample_index_unbinned_regions(
-                channel_name, sample_name
-            )
-            syst_idx = self.config.get_syst_index_unbinned_regions(
-                channel_name, sample_name, syst_name
-            )
-
-            variation_ratio_up = region["TrainedModels"][idx]["Systematics"][
-                syst_idx
-            ].get("RatiosUp", None)
-            variation_ratio_dn = region["TrainedModels"][idx]["Systematics"][
-                syst_idx
-            ].get("RatiosDn", None)
-            modifiers = [
-                {
-                    "name": syst_name,
-                    "type": "normplusshape",
-                    "data": {
-                        "hi_data": list(variation_data["Up"]),
-                        "hi_ratio": variation_ratio_up,
-                        "lo_data": list(variation_data["Dn"]),
-                        "lo_ratio": variation_ratio_dn,
-                    },
-                }
-            ]
+            idx      = self.config.get_sample_index_unbinned_regions(channel_name, sample_name)
+            syst_idx = self.config.get_syst_index_unbinned_regions(channel_name, sample_name, syst_name)
+            variation_ratio_up         = region["TrainedModels"][idx]["Systematics"][syst_idx].get("RatiosUp", None)
+            variation_ratio_dn         = region["TrainedModels"][idx]["Systematics"][syst_idx].get("RatiosDn", None)
+            modifiers = [{"name": syst_name,
+                          "type": "normplusshape",
+                          "data": {"hi_data": list(variation_data["Up"]),
+                                   "hi_ratio": variation_ratio_up,
+                                   "lo_data": list(variation_data["Dn"]),
+                                   "lo_ratio": variation_ratio_dn}
+                         }]
 
         return modifiers
 
-    def sys_modifiers(
-        self,
-        dataset: pd.DataFrame,
-        region: dict[str, Any],
-        sample: dict[str, Any],
-        nominal_data: np.array,
-        type_of_fit: str = "binned",
-    ) -> list[dict[str, Any]]:
+    def sys_modifiers(self, dataset: pd.DataFrame,
+                      region: dict[str, Any],
+                      sample: dict[str, Any],
+                      nominal_data: np.array,
+                      type_of_fit: str = "binned") -> list[dict[str, Any]]:
         """Collect all systematic modifiers for a sample in a region.
 
         Loops over every systematic in the configuration, checks region/sample applicability, and delegates to :meth:`normplusshape_modifiers` for ``NormPlusShape`` types.
@@ -308,18 +264,14 @@ class WorkspaceBuilder:
                 else:
                     if systematic_dict["Type"] == "NormPlusShape":
                         modifiers += self.normplusshape_modifiers(
-                            dataset,
-                            region,
-                            sample,
-                            systematic_dict,
-                            nominal_data,
-                            type_of_fit,
+                            dataset, region, sample, systematic_dict, nominal_data, type_of_fit
                         )
                     else:
                         raise NotImplementedError(
                             "not supporting other systematic types yet"
                         )
         return modifiers
+
 
     def channels(self) -> List[Dict[str, Any]]:
         """Build the ``"channels"`` list for the workspace.
@@ -336,26 +288,24 @@ class WorkspaceBuilder:
             channel = {}
             channel_name = region["Name"]
             channel_type = region["Type"]
-            channel.update({"name": channel_name, "type": channel_type})
-            type_of_fit = channel_type
+            channel.update({"name": channel_name,
+                            "type": channel_type})
+            type_of_fit  = channel_type
 
             if type_of_fit == "unbinned":
                 region_weights: str = region.get("AsimovWeights", None)
                 if region_weights is not None:
-                    channel.update({"weights": region_weights})
-
-            region_binning = region.get("Binning", None)
-            region_variable = region.get("Variable", None)
-
-            region_filters = region["Filter"]
+                    channel.update({"weights" : region_weights})
+                
+            region_binning      = region.get("Binning", None)
+            region_variable     = region.get("Variable", None)
+                
+            region_filters      = region["Filter"]
 
             # Extract variable names used in the Filter expression
             # so the dataset loader reads the columns needed for df.query()
-            filter_variables = [
-                tok
-                for tok in re.split(r"[<>=!&|()\s]+", region_filters)
-                if tok and not tok.replace(".", "", 1).lstrip("-").isdigit()
-            ]
+            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
 
             if region_variable is None:
                 # For unbinned regions with no explicit Variable, use the first
@@ -372,64 +322,43 @@ class WorkspaceBuilder:
             for sample_dict in self.config_dict["Samples"]:
 
                 current_sample = {}
-
-                sample_name = sample_dict["Name"]
+                
+                sample_name     = sample_dict["Name"]
                 current_sample.update({"name": sample_name})
 
-                sample_path = sample_dict["SamplePath"]
-                branches_to_load_sample = branches_to_load.copy()
+                sample_path     = sample_dict["SamplePath"]
+                branches_to_load_sample  = branches_to_load.copy()
 
-                datasets = nsbi_common_utils.datasets.datasets(
-                    self.config_path, branches_to_load=branches_to_load_sample
-                )
-                datasets_incl = datasets.load_datasets_from_config(
-                    load_systematics=True
-                )
-                dataset_region_dict = datasets.filter_region_by_type(
-                    datasets_incl, region=channel_name
-                )
+                datasets            = nsbi_common_utils.datasets.datasets(self.config_path,
+                                                                    branches_to_load =  branches_to_load_sample)
+                datasets_incl       = datasets.load_datasets_from_config(load_systematics = True)
+                dataset_region_dict = datasets.filter_region_by_type(datasets_incl, 
+                                                                     region = channel_name)
 
-                dataset_nominal_sample = dataset_region_dict["Nominal"][
-                    sample_name
-                ].copy()
+                dataset_nominal_sample = dataset_region_dict["Nominal"][sample_name].copy()
 
                 if region_binning is None:
                     feature_arr_tmp = dataset_nominal_sample[region_variable]
-                    region_binning = np.linspace(
-                        np.amin(feature_arr_tmp), np.amax(feature_arr_tmp), num=2
-                    )  # Dummy binning for a single event yield calculation in unbinned region
-                    region["Binning"] = region_binning
+                    region_binning = np.linspace(np.amin(feature_arr_tmp), np.amax(feature_arr_tmp), num=2) # Dummy binning for a single event yield calculation in unbinned region
+                    region["Binning"] =  region_binning
 
-                feature_var = np.clip(
-                    dataset_nominal_sample[region_variable],
-                    np.amin(region_binning),
-                    np.amax(region_binning),
-                )
+                feature_var         = np.clip(dataset_nominal_sample[region_variable],
+                                              np.amin(region_binning), np.amax(region_binning))
 
-                weights = dataset_region_dict["Nominal"][sample_name][
-                    "weights"
-                ].to_numpy()
+                weights = dataset_region_dict["Nominal"][sample_name]["weights"].to_numpy()
 
-                sample_data, _ = np.histogram(
-                    feature_var, weights=weights, bins=region_binning
-                )
+                sample_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
 
                 current_sample.update({"data": list(sample_data)})
 
                 if type_of_fit == "unbinned":
 
-                    idx = self.config.get_sample_index_unbinned_regions(
-                        channel_name, sample_name
-                    )
+                    idx = self.config.get_sample_index_unbinned_regions(channel_name, sample_name)
 
-                    nominal_ratios = region["TrainedModels"][idx]["Nominal"].get(
-                        "Ratios", None
-                    )
+                    nominal_ratios         = region["TrainedModels"][idx]["Nominal"].get("Ratios", None)
                     if nominal_ratios is None:
                         # Load the model and evaluate ratios - TODO
-                        nominal_model = region["TrainedModels"][idx]["Nominal"].get(
-                            "Models", None
-                        )
+                        nominal_model = region["TrainedModels"][idx]["Nominal"].get("Models", None)
 
                     current_sample.update({"ratios": nominal_ratios})
                     # current_sample.update({"weights": weights})
@@ -450,21 +379,17 @@ class WorkspaceBuilder:
                 modifiers += vandermonde_modifier_list
 
                 # check if systematics affect sample in region, add modifiers as needed
-                sys_modifier_list = self.sys_modifiers(
-                    dataset_region_dict,
-                    region,
-                    sample_dict,
-                    sample_data,
-                    type_of_fit=type_of_fit,
-                )
+                sys_modifier_list = self.sys_modifiers(dataset_region_dict, region, sample_dict, sample_data, type_of_fit = type_of_fit)
                 modifiers += sys_modifier_list
 
                 current_sample.update({"modifiers": modifiers})
 
                 samples.append(current_sample)
 
+
             channel.update({"samples": samples})
             channels.append(channel)
+
 
         return channels
 
@@ -524,9 +449,8 @@ class WorkspaceBuilder:
             parameters_list.append(parameter)
 
         if self.ParametersToFit:
-            parameters_list = [
-                p for p in parameters_list if p["name"] in self.ParametersToFit
-            ]
+            parameters_list = [p for p in parameters_list if p["name"] in self.ParametersToFit]
+
 
         parameters = {"parameters": parameters_list}
         config_dict.update(parameters)
@@ -536,6 +460,7 @@ class WorkspaceBuilder:
         measurement.update({"config": config_dict})
         measurements.append(measurement)
         return measurements
+
 
     def build(self) -> Dict[str, Any]:
         """Construct the full workspace dictionary.
@@ -675,7 +600,7 @@ class WorkspaceBuilder:
             return json.load(f)
 
 
-def define_stat_function(kls_dict):
+def compute_vandermonde_coeffs(kls_dict):
     stat_coeff = {}
 
     kls = list(kls_dict.keys())
