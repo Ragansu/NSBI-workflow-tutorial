@@ -8,15 +8,14 @@ import nsbi_common_utils
 from nsbi_common_utils import configuration, datasets
 import logging
 
-logging.basicConfig(
-    filename="workspace.log",
-    encoding="utf-8",
-    filemode="w",
-    format="{asctime} - {levelname} - {message}",
-    style="{",
-    datefmt="%Y-%m-%d %H:%M",
-    level=logging.WARNING,
-)
+logging.basicConfig(filename="workspace.log",
+                    encoding="utf-8",
+                    filemode="w",
+                    format="{asctime} - {levelname} - {message}",
+                    style="{",
+                    datefmt="%Y-%m-%d %H:%M",
+                    level=logging.WARNING,
+                    )
 
 
 class WorkspaceBuilder:

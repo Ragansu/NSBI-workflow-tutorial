@@ -645,8 +645,6 @@ class sbi_parametric_model:
                 for lf_name, coeffs in self.vandermonde_coeffs_map[sample].items():
                     j = self.index_vandermondeparam_map[lf_name]
                     
-                    # Important: polyval expects coefficients in descending order.
-                    # If your coeffs are [A, B, C], we place them at the end of the row.
                     c_len = len(coeffs)
                     coeffs_matrix[i, j, -c_len:] = coeffs
 
