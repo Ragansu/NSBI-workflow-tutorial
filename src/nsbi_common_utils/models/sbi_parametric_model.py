@@ -196,27 +196,61 @@ class sbi_parametric_model:
             initial_values_vec[count]           = self.initial_values_dict[parameter]
         return jnp.asarray(initial_values_vec)
 
+    def _make_channels(self):
+        """
+        Create internal data structures for channels, samples, and modifiers.
+
+        Parses the workspace to identify all channels, samples, and modifiers. Builds lookup tables for efficient access during NLL evaluation. This method is called during initialization.
+        """
+        channels = {}
+        for channel_dict in self.workspace["channels"]:
+            channel = Channel(
+                name=channel_dict["name"],
+                channel_type=channel_dict.get("type", "binned"),
+            )
+            for sample_dict in channel_dict["samples"]:
+                channel.add_sample(
+                    sample_dict, 
+                    parameters_in_measurement=self.parameters_in_measurement
+                )
+            channels[channel.name] = channel
+        
+        return channels
+
     def _get_norm_factors(self) -> Union[list, Dict[str, list]]:
         """Assume same normfactor across channels for now (TO-DO: Add support for normfactor per channel)"""
-        dict_sample_normfactors         = {sample_name: [] for sample_name in self.all_samples}
-        list_all_norm_factors           = []
-        for channel in self.all_channels[:1]:
-            channel_index = self._index_of_region(channel_name=channel)
-            for sample in self.all_samples:
-                sample_index = self._index_of_sample(channel_name=channel, sample_name=sample)
-                modifier_list = self.workspace["channels"][channel_index]["samples"][sample_index]["modifiers"]
-                for modifier in modifier_list:
-                    if modifier["type"] == "normfactor":
-                        modifier_name = modifier["name"]
-                        if modifier_name not in list_all_norm_factors               : list_all_norm_factors.append(modifier_name)
-                        if modifier_name not in dict_sample_normfactors[sample]     : dict_sample_normfactors[sample].append(modifier_name)
+        dict_sample_normfactors = {sample_name: set() for sample_name in self.all_samples}
 
-        list_all_norm_factors = [p for p in list_all_norm_factors if p in self.param_names]
-        dict_sample_normfactors = {key: val for key, val in dict_sample_normfactors.items()
-                                    if any(p in self.param_names for p in val)
-                                }
+        list_all_norm_factors = set()
+
+        channel = self.channels[0] # Assuming same normfactor across channels for now (TO-DO: Add support for normfactor per channel)
+        
+        for sample in channel.samples.values():
+            sample_set = dict_sample_normfactors.setdefault(sample.name, set())
+
+            for modifier in sample.modifiers:
+                if modifier["type"] == "normfactor":
+                    name = modifier["name"]
+                    list_all_norm_factors.add(name)
+                    sample_set.add(name)
+
+        param_set = set(self.param_names)
+
+        list_all_norm_factors &= param_set  # set intersection
+
+        dict_sample_normfactors = {
+            key: val & param_set
+            for key, val in dict_sample_normfactors.items()
+            if val & param_set
+        }
+
+        list_all_norm_factors = list(list_all_norm_factors)
+        dict_sample_normfactors = {
+            k: list(v) for k, v in dict_sample_normfactors.items()
+        }
 
         return list_all_norm_factors, dict_sample_normfactors
+
 
     def _get_vandermonde_coefficients(self) -> Dict[str, list[float]]:
         """Assume same vandermonde coefficients across channels for now 
