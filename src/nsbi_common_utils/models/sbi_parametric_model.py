@@ -94,6 +94,7 @@ class sbi_parametric_model:
         
         self.weight_arrays_unbinned                     = self._get_asimov_weights_array()
 
+        self.observed_array                             = self._get_observed_arrays()
         self._finalize_to_device()
 
         self.expected_hist                              = self._get_expected_hist(param_vec = self.initial_parameter_values)
@@ -381,7 +382,27 @@ class sbi_parametric_model:
                 ratio_expected[sample_name] =   np.append(ratio_expected[sample_name], sample_ratio)
 
         return data_expected, ratio_expected
-    
+
+    def _get_observed_arrays(self):
+        """
+        Get an array of observed event yields
+        """
+        data_list = []
+
+        for channel_name in self.channels_binned:
+            channel_index = self._index_of_region(channel_name=channel_name)
+            channel_data = np.array(self.workspace["observations"][channel_index]["data"])
+            
+            data_list.append(channel_data)
+            combined_length = sum(len(arr) for arr in data_list)
+
+        if data_list:
+            data_observed = np.concatenate(data_list)
+        else:
+            data_observed = np.array([])
+        
+        return data_observed
+
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
         for sample, params_sample in self.norm_sample_map.items():  
@@ -526,8 +547,8 @@ class sbi_parametric_model:
             'tot_up_unbinned':  tot_up_unbinned_stacked,
             'tot_dn_unbinned':  tot_dn_unbinned_stacked,
             'norm_matrix':      jnp.array(norm_matrix),
-            'expected_hist':    self.expected_hist,
-            'expected_rate':    self.expected_rate_unbinned,
+            'observed_hist':    self.observed_array,
+            'observed_rate':    jnp.sum(self.weight_arrays_unbinned),
             'weights':          self.weight_arrays_unbinned,
         }
 
@@ -565,7 +586,7 @@ class sbi_parametric_model:
             nu_binned  = jnp.sum(norm_mods[:, None] * data['yield'] * hist_vars_binned,
                                  axis=0)
             llr_binned = -2.0 * jnp.sum(
-                data['expected_hist'] * jnp.log(nu_binned) - nu_binned
+                data['observed_hist'] * jnp.log(nu_binned) - nu_binned
             )
 
             nu_unbinned = jnp.sum(
@@ -573,7 +594,7 @@ class sbi_parametric_model:
                 axis=0
             )
             llr_rate = -2.0 * jnp.sum(
-                data['expected_rate'] * jnp.log(nu_unbinned) - nu_unbinned
+                data['observed_rate'] * jnp.log(nu_unbinned) - nu_unbinned
             )
 
             dnu_dx = jnp.sum(
