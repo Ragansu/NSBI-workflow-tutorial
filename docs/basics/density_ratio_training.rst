@@ -1,13 +1,13 @@
-Density-Ratio Training
+Density Ratio Training
 ======================
 
-Density-ratio estimation is the core machine-learning step in the SBI workflow. The goal is to learn the ratio :math:`p_A(x) / p_B(x)` between two hypotheses directly from simulated data, without estimating either density individually. This is done by training a binary classifier to distinguish events drawn from each hypothesis — the classifier score is then converted to a density ratio.
+Density ratio estimation is the core machine-learning step in the SBI workflow. The goal is to learn the ratio :math:`p_A(x) / p_B(x)` between two hypotheses directly from simulated data, without estimating either density individually. This is done by training a binary classifier to distinguish events drawn from each hypothesis — the classifier score is then converted to a density ratio.
 
 
 How it works
 ------------
 
-The ``density_ratio_trainer`` provides an end-to-end interface for training density-ratio networks. Given a dataset containing events from both hypotheses (with per-event weights and binary labels), the trainer handles feature scaling, network training, optional post-hoc calibration, and a suite of diagnostic checks.
+The ``density_ratio_trainer`` provides an end-to-end interface for training density ratio networks. Given a dataset containing events from both hypotheses (with per-event weights and binary labels), the trainer handles feature scaling, network training, optional post-hoc calibration, and a suite of diagnostic checks.
 
 A typical training call looks like:
 
@@ -54,7 +54,7 @@ In practice, many of the inputs to the trainer — training features, which proc
    # Training features and which to standardise
    features, features_scaling = config.get_training_features()
 
-   # Which processes get their own density-ratio network
+   # Which processes get their own density ratio network
    basis_samples = config.get_basis_samples()        # e.g. ["htautau", "ztautau"]
 
    # The denominator process in the density ratio
@@ -124,4 +124,4 @@ The shared utilities in ``nsbi_common_utils.training.utils`` and the callbacks/d
 Where it fits in the pipeline
 -----------------------------
 
-Density-ratio training happens after data preprocessing and preselection (Stages 2/2b), and before model evaluation and workspace construction (Stage 3b). The trained models produce per-event density-ratio arrays that are assembled into the statistical model by the workspace builder.
+Density ratio training happens after data preprocessing and preselection (Stages 2/2b), and before model evaluation and workspace construction (Stage 3b). The trained models produce per-event density ratio arrays that are assembled into the statistical model by the workspace builder.
