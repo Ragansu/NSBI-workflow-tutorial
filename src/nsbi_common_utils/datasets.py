@@ -409,7 +409,41 @@ class datasets:
 
         return dataset
     
-    def prepare_basis_training_dataset(self, 
+    @staticmethod
+    def split_by_fold(dataset_dict, fold_index, num_folds, mode="train"):
+        """Split each sample DataFrame by the pre-assigned ``fold_index`` column.
+
+        Parameters
+        ----------
+        dataset_dict : dict[str, DataFrame]
+            Sample-name to DataFrame mapping (e.g. the ``"Nominal"`` dict).
+        fold_index : int
+            Which fold to hold out for evaluation.
+        num_folds : int
+            Total number of folds (must match the value used during preprocessing).
+        mode : ``"train"`` or ``"eval"``
+            ``"train"`` returns events **not** in ``fold_index``;
+            ``"eval"`` returns only events in ``fold_index``.
+
+        Returns
+        -------
+        dict[str, DataFrame]
+            Same structure with rows filtered according to fold membership.
+        """
+        out = {}
+        for sample_name, df in dataset_dict.items():
+            if "fold_index" not in df.columns:
+                raise KeyError(
+                    f"Column 'fold_index' not found in sample '{sample_name}'. "
+                    "Run data_preprocessing with num_folds > 1 first."
+                )
+            if mode == "train":
+                out[sample_name] = df[df["fold_index"] != fold_index].copy()
+            else:
+                out[sample_name] = df[df["fold_index"] == fold_index].copy()
+        return out
+
+    def prepare_basis_training_dataset(self,
                                        dataset_numerator, 
                                        processes_numerator, 
                                        dataset_denominator, 

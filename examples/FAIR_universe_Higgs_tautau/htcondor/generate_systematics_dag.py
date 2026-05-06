@@ -1,6 +1,12 @@
-import yaml, sys, os
+import yaml, sys, os, argparse
 
-config_path = sys.argv[1]
+parser = argparse.ArgumentParser()
+parser.add_argument("config_path")
+parser.add_argument("--mem", default="16GB")
+parser.add_argument("--disk", default="32GB")
+args = parser.parse_args()
+
+config_path = args.config_path
 with open(config_path) as f:
     config_all = yaml.safe_load(f)
 
@@ -13,6 +19,7 @@ with open(nsbi_config_path) as f:
 job_config_path = os.path.basename(config_path)
 basis_processes = [s["Name"] for s in nsbi_config["Samples"] if s.get("UseAsBasis")]
 n_ensemble = config_all["systematic_uncertainty"].get("num_ensemble_members_training", 1)
+num_folds = config_all.get("data_preprocessing", {}).get("num_folds", 1)
 
 lines = []
 for dict_syst in nsbi_config["Systematics"]:
@@ -23,14 +30,23 @@ for dict_syst in nsbi_config["Systematics"]:
         if process not in dict_syst["Samples"]:
             continue
         for direction in ["Up", "Dn"]:
-            for idx in range(n_ensemble):
-                node = f"syst_{process}_{syst}_{direction}_{idx}"
-                lines.append(f"JOB {node} examples/FAIR_universe_Higgs_tautau/htcondor/job_systematics_training.sub")
-                lines.append(f'VARS {node} PROCESS="{process}" SYSTEMATIC="{syst}" DIRECTION="{direction}" ENSEMBLE_INDEX="{idx}" CONFIG="{job_config_path}" CPUS="8" MEM="16GB" GPUS="1" DISK="32GB"')
-                lines.append(f'RETRY {node} 3')
-                lines.append("")
+            if num_folds > 1:
+                for fold in range(num_folds):
+                    for idx in range(n_ensemble):
+                        node = f"syst_{process}_{syst}_{direction}_fold{fold}_{idx}"
+                        lines.append(f"JOB {node} examples/FAIR_universe_Higgs_tautau/htcondor/job_systematics_training.sub")
+                        lines.append(f'VARS {node} PROCESS="{process}" SYSTEMATIC="{syst}" DIRECTION="{direction}" ENSEMBLE_INDEX="{idx}" FOLD_ARGS="--fold_index {fold}" FOLD_SUFFIX="_fold{fold}" CONFIG="{job_config_path}" CPUS="8" MEM="{args.mem}" GPUS="1" DISK="{args.disk}"')
+                        lines.append(f'RETRY {node} 3')
+                        lines.append("")
+            else:
+                for idx in range(n_ensemble):
+                    node = f"syst_{process}_{syst}_{direction}_{idx}"
+                    lines.append(f"JOB {node} examples/FAIR_universe_Higgs_tautau/htcondor/job_systematics_training.sub")
+                    lines.append(f'VARS {node} PROCESS="{process}" SYSTEMATIC="{syst}" DIRECTION="{direction}" ENSEMBLE_INDEX="{idx}" FOLD_ARGS="" FOLD_SUFFIX="" CONFIG="{job_config_path}" CPUS="8" MEM="{args.mem}" GPUS="1" DISK="{args.disk}"')
+                    lines.append(f'RETRY {node} 3')
+                    lines.append("")
 
-print(f"Generated {len(lines)//4} jobs")
+print(f"Generated {len([l for l in lines if l.startswith('JOB')])} jobs (num_folds={num_folds})")
 
 with open("examples/FAIR_universe_Higgs_tautau/htcondor/train_systematics.dag", "w") as f:
     f.write("\n".join(lines))
