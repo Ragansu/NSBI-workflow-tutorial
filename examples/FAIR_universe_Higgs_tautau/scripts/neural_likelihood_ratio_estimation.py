@@ -4,6 +4,7 @@ import argparse
 import warnings
 import logging
 import numpy as np
+import uproot
 import yaml
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -24,6 +25,8 @@ def parse_args():
                         help='Ensemble member index.')
     parser.add_argument('--process', type=str, default=None,
                         help='Basis point process to train (e.g. htautau, ztautau, ttbar).')
+    parser.add_argument('--fold_index', type=int, default=None,
+                        help='K-fold index: train on all folds except this one.')
     return parser.parse_args()
 
 def main():
@@ -45,7 +48,15 @@ def main():
 
     logger.info("Initializing datasets")
     branches_to_load = features + ['presel_score'] # Can be defined independently of config when using just the APIs
-    
+
+    # Check if fold_index exists in the data (assigned during data_preprocessing)
+    # If it does, load it so we can do k-fold splitting
+    fit_config_nsbi = nsbi_common_utils.configuration.ConfigManager(file_path_string=nsbi_fit_config_path)
+    _sample0 = fit_config_nsbi.config["Samples"][0]
+    with uproot.open(f"{_sample0['SamplePath']}:{_sample0['Tree']}") as _tree:
+        if "fold_index" in _tree.keys() and "fold_index" not in branches_to_load:
+            branches_to_load.append("fold_index")
+
     # datasets library helps with preparation of data, reads metadata from fit configuration file
     datasets_helper = nsbi_common_utils.datasets.datasets(
         config_path=nsbi_fit_config_path,
@@ -129,24 +140,40 @@ def main():
             settings["ensemble_index"] = int(ensemble_index)
             ensemble_index_label = str(ensemble_index)
         else:
-            settings["ensemble_index"] = ensemble_index 
+            settings["ensemble_index"] = ensemble_index
             ensemble_index_label = ''
 
-        print(f"ensemble index is {ensemble_index_label}")
+        # K-fold: if fold_index is given, train on all folds except this one
+        # num_folds is inferred from the data (set during data_preprocessing)
+        fold_index = args.fold_index
+        first_sample = next(iter(dataset_SR_nominal.values()))
+        has_folds = "fold_index" in first_sample.columns
+        num_folds = int(first_sample["fold_index"].max()) + 1 if has_folds else 1
+        fold_label = f'_fold{fold_index}' if fold_index is not None else ''
+
+        if fold_index is not None and num_folds > 1:
+            logger.info(f"K-fold mode: training on all folds except fold {fold_index} (of {num_folds})")
+            dataset_SR_train = nsbi_common_utils.datasets.datasets.split_by_fold(
+                dataset_SR_nominal, fold_index, num_folds, mode="train"
+            )
+        else:
+            dataset_SR_train = dataset_SR_nominal
+
+        print(f"ensemble index is {ensemble_index_label}, fold: {fold_label}")
 
         # Prepare dataset to be passed to training
         dataset_mix_model = datasets_helper.prepare_basis_training_dataset(
-            dataset_SR_nominal, 
-            [process_type], 
-            dataset_SR_nominal, 
-            ref_processes, 
+            dataset_SR_train,
+            [process_type],
+            dataset_SR_train,
+            ref_processes,
             denominatorisreferencehypothesis=False
         )
 
         output_name = f'{process_type}'
 
-        path_to_figures[process_type] = os.path.join(training_output_path, f'output_figures_{process_type}{ensemble_index_label}/')
-        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}{ensemble_index_label}/')
+        path_to_figures[process_type] = os.path.join(training_output_path, f'output_figures_{process_type}{fold_label}{ensemble_index_label}/')
+        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}{fold_label}{ensemble_index_label}/')
         
         # setup the training of density ratios using density_ratio_trainer API
         NN_training_mix_model[process_type] = nsbi_common_utils.training.density_ratio_trainer(

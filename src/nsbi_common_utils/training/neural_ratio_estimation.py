@@ -26,10 +26,6 @@ from torch.utils.data import Subset
 
 import nsbi_common_utils
 
-from pathlib import Path
-from typing import Union, Dict
-from joblib import dump, load
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
 from sklearn.compose import ColumnTransformer
@@ -178,7 +174,8 @@ class density_ratio_trainer:
                     plot_scaled_features=False, 
                     load_trained_models = False,
                     recalibrate_output=False,
-                    num_workers=0):
+                    num_workers=0,
+                    use_best_checkpoint_model=True):
         """
         Train a density-ratio neural network.
 
@@ -450,7 +447,10 @@ class density_ratio_trainer:
                 map_location=device
                 )
 
-            self.model_NN = best_model
+            if use_best_checkpoint_model:
+                self.model_NN = best_model
+            else:
+                self.model_NN = model
         
             logger.info("Finished Training")
                 

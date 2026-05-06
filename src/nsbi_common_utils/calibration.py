@@ -1,6 +1,7 @@
 #################################################
-### Histogram-based calibration strategy. 
-### Base part of the code copied from https://github.com/smsharma/mining-for-substructure-lens
+### Isotonic and Histogram-based calibration strategies. 
+### Base part of the code for Histogram-based calibration 
+### copied from https://github.com/smsharma/mining-for-substructure-lens
 ### New weighted quantiles method, and small changes
 #################################################
 
