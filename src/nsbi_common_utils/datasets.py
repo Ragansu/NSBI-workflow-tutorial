@@ -49,7 +49,6 @@ class datasets:
         file_path = sample_dict["SamplePath"]
         tree_name = sample_dict["Tree"]
         
-        
         # Determine which branches to load (include weight branch if specified)
         weight_branch = sample_dict.get("Weight")
         branches = self.branches_to_load.copy()
@@ -86,10 +85,7 @@ class datasets:
 
             # Extract metadata for the "sample" making up the model
             sample_name = sample_dict["Name"]
-            is_data = sample_dict.get("Data", False)
-            if is_data:
-                continue  # Skip data for now; we'll load it separately as the "observation"
-            
+
             df = self.extract_data_from_sampledict(sample_dict) 
             dict_datasets["Nominal"][sample_name] = df
 
@@ -116,20 +112,6 @@ class datasets:
                             dict_datasets[region_key][sample_name] = df
 
         return dict_datasets
-
-    def load_observations_from_config(self) -> Dict:
-        """
-        Load observation according to the config structure.
-
-        """  
-        sample_dict = next(
-            sample for sample in self.config_helper.config.get("Samples", [])
-            if sample.get("Data", False)
-        )
-
-        df = self.extract_data_from_sampledict(sample_dict) 
-        
-        return df
 
     def _load_dataframe_from_root(
         self, 

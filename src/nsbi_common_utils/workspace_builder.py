@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from collections.abc import Callable as CABC
 import pathlib
-from typing import Union, Dict, Any, List
+from typing import Union, Dict, Any, List, Tuple
 import nsbi_common_utils
 from nsbi_common_utils import configuration, datasets
 import logging
@@ -229,7 +229,7 @@ class WorkspaceBuilder:
         return modifiers
         
 
-    def channels(self) -> List[Dict[str, Any]]:
+    def channels_and_observations(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build the ``"channels"`` list for the workspace.
 
         For every region in the configuration, loads datasets from ROOT files, computes nominal histograms, attaches density-ratio file paths (for unbinned regions), and collects all applicable normfactor and systematic modifiers per sample.
@@ -240,6 +240,7 @@ class WorkspaceBuilder:
             Each dict represents one channel with keys ``"name"``, ``"type"`` (``"binned"``/``"unbinned"``), ``"samples"``, and optionally ``"weights"`` (path to Asimov weight file for unbinned channels).
         """
         channels = []
+        observations = []
         for region in self.config_dict["Regions"]:
             channel = {}
             channel_name = region["Name"]
@@ -275,22 +276,21 @@ class WorkspaceBuilder:
                     branches_to_load.append(v)
                 
             samples = []
+            branches_to_load_sample  = branches_to_load.copy()
+
+            datasets            = nsbi_common_utils.datasets.datasets(self.config_path,
+                                                                branches_to_load =  branches_to_load_sample)
+            datasets_incl       = datasets.load_datasets_from_config(load_systematics = True)
+            dataset_region_dict = datasets.filter_region_by_type(datasets_incl, 
+                                                                     region = channel_name)
             for sample_dict in self.config_dict["Samples"]:
 
                 current_sample = {}
                 
                 sample_name     = sample_dict["Name"]
+                is_data         = sample_dict.get("Data", False)
                 current_sample.update({"name": sample_name})
                 
-                sample_path     = sample_dict["SamplePath"]
-                branches_to_load_sample  = branches_to_load.copy()
-
-                datasets            = nsbi_common_utils.datasets.datasets(self.config_path,
-                                                                    branches_to_load =  branches_to_load_sample)
-                datasets_incl       = datasets.load_datasets_from_config(load_systematics = True)
-                dataset_region_dict = datasets.filter_region_by_type(datasets_incl, 
-                                                                     region = channel_name)
-
                 dataset_nominal_sample = dataset_region_dict["Nominal"][sample_name].copy()
                 
                 if region_binning is None:
@@ -304,7 +304,7 @@ class WorkspaceBuilder:
                 weights = dataset_region_dict["Nominal"][sample_name]["weights"].to_numpy()
                     
                 sample_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
-
+                
                 current_sample.update({"data": list(sample_data)})
 
                 if type_of_fit == "unbinned":
@@ -318,6 +318,13 @@ class WorkspaceBuilder:
 
                     current_sample.update({"ratios": nominal_ratios})
                     # current_sample.update({"weights": weights})
+
+                if is_data:
+                    observation = {
+                        "name": channel_name,
+                        "data": list(sample_data),
+                    }
+                    observations.append(observation)
 
                 modifiers = []
 
@@ -408,87 +415,19 @@ class WorkspaceBuilder:
         """
         ws: Dict[str, Any] = {}  # the workspace
 
-        # channels
-        channels = self.channels()
-        ws.update({"channels": channels})
-
         # measurements
         measurements = self.measurements()
         ws.update({"measurements": measurements})
 
-        # build observations
-        observations = self.observations()
+        # channels and observations
+        channels, observations = self.channels_and_observations()
+        ws.update({"channels": channels})
         ws.update({"observations": observations})
 
         # workspace version
         ws.update({"version": "1.0.0"})
 
         return ws
-
-    def observations(self) -> List[Dict[str, Any]]:
-        """Build the ``"observations"`` list for the workspace.
-
-        Loads observed data from ROOT files as specified in the ``Observations`` section of the config, applies region filters, and histograms to produce observed counts per channel.
-
-        Returns
-        -------
-        list of dict
-            Each dict has keys ``"name"`` and ``"data"`` (list of observed counts per bin).
-        """
-        observations = []
-        for region in self.config_dict["Regions"]:
-            region_name = region["Name"]
-            
-            print(f"Processing observation for region {region_name}...")
-                        
-            region_binning = region.get("Binning", None)
-            region_variable = region.get("Variable", None)
-            region_filters = region["Filter"]
-            filter_variables = [
-                tok
-                for tok in re.split(r"[<>=!&|()\s]+", region_filters)
-                if tok and not tok.replace(".", "", 1).lstrip("-").isdigit()
-            ]
-            branches_to_load = [region_variable]
-            for v in filter_variables:
-                if v not in branches_to_load:
-                    branches_to_load.append(v)
-
-            dataset_obs = nsbi_common_utils.datasets.datasets(
-                self.config_path, branches_to_load=branches_to_load
-            )
-
-            dataframe_obs = dataset_obs.load_observations_from_config()
-            region_filters = dataset_obs.config_helper.get_channel_filters(channel_name=region_name)
-
-            dataset_obs_region = dataframe_obs.query(region_filters).copy()
-            
-            if region_binning is None:
-                feature_arr_tmp = dataset_obs_region[region_variable]
-                region_binning = np.linspace(
-                    np.amin(feature_arr_tmp), np.amax(feature_arr_tmp), num=2
-                )  # Dummy binning for a single event yield calculation in unbinned region
-                region["Binning"] = region_binning
-
-            feature_var = np.clip(
-                dataset_obs_region[region_variable],
-                np.amin(region_binning),
-                np.amax(region_binning),
-            )
-
-            weights = dataset_obs_region["weights"].to_numpy()
-
-            sample_data, _ = np.histogram(
-                feature_var, weights=weights, bins=region_binning
-            )
-
-            observation = {
-                "name": region_name,
-                "data": list(sample_data),
-            }
-            observations.append(observation)
-
-        return observations
 
     def dump_workspace(self, ws: dict, outpath: str = "workspace.json"):
         """
