@@ -1,28 +1,35 @@
-#################################################
-### Isotonic and Histogram-based calibration strategies. 
-### Base part of the code for Histogram-based calibration 
-### copied from https://github.com/smsharma/mining-for-substructure-lens
-### New weighted quantiles method, and small changes
-#################################################
+# Isotonic and Histogram-based calibration strategies. 
+# Base part of the code for Histogram-based calibration copied from https://github.com/smsharma/mining-for-substructure-lens
+# New weighted quantiles method added, and small changes
 
 import numpy as np
 from sklearn.isotonic import IsotonicRegression
 
 class IsotonicCalibrator:
-    def __init__(self, score_predicted, truth_labels, weights):
+    """Isotonic-regression calibrator that operates in ratio space: fits a monotonic map from the uncalibrated density ratio to the per-event probability."""
+
+    def __init__(self, ratio_predicted, truth_labels, weights):
 
         self.regressor = IsotonicRegression(out_of_bounds='clip')
-        self.regressor.fit(score_predicted, truth_labels, sample_weight=weights)
+        self.regressor.fit(ratio_predicted, truth_labels, sample_weight=weights)
 
-    def cali_pred(self, score_uncalibrated):
+    def cali_pred(self, ratio_uncalibrated):
 
-        calib_score = self.regressor.predict(score_uncalibrated)
-        return calib_score
+        calib_score = self.regressor.predict(ratio_uncalibrated)
+        calib_score = np.clip(calib_score, 1e-9, 1.0 - 1e-9)
+        return calib_score / (1.0 - calib_score)
         
 
 class HistogramCalibrator:
     
-    def __init__(self, calibration_data_num, calibration_data_den, w_num, w_den, mode="dynamic", nbins=100, histrange=None, method="direct"):
+    def __init__(self, 
+                calibration_data_num, 
+                calibration_data_den, 
+                w_num, w_den, 
+                mode="dynamic", 
+                nbins=100, 
+                histrange=None, 
+                method="direct"):
 
         self.range, self.edges = self._find_binning(
             calibration_data_num, calibration_data_den, mode, nbins, histrange,
@@ -51,12 +58,11 @@ class HistogramCalibrator:
         num = self.hist_num[indices]
         den = self.hist_den[indices]
         cal_pred = num/den
-        
+
         if self.method == "direct":
-            score  = cal_pred / ( 1 + cal_pred )
-            return score
-        else:
             return cal_pred
+        else:
+            return cal_pred / (1.0 - cal_pred)
 
     def _find_binning(self, data_num, data_den, mode, nbins, histrange, w_num = None, w_den = None):
         data = np.hstack((data_num, data_den)).flatten()
@@ -92,12 +98,6 @@ class HistogramCalibrator:
         err = err/(i**2)
         
         return histo, err
-
-    # def _find_bins(self, data):
-    #     indices = np.digitize(data, self.edges)
-    #     #indices = np.searchsorted(self.edges, data)
-    #     indices = np.clip(indices - 1, 0, len(self.edges) - 2)
-    #     return indices
 
     def _find_bins(self, data: np.ndarray):
         idx = np.searchsorted(self.edges, data, side="right") - 1

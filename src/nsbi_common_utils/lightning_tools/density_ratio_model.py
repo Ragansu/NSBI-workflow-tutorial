@@ -42,12 +42,11 @@ class DensityRatioLightning(pl.LightningModule):
             input_dim_ = n_neurons
         
         self.mlp = nn.Sequential(*layers)
+        self.out = nn.Linear(input_dim_, 1)
 
         if use_log_loss:
-            self.out = nn.Linear(input_dim_, 1)
             self.from_logits = True
         else:
-            self.out = nn.Linear(input_dim_, 1)
             self.from_logits = False
 
     def forward(self, x):

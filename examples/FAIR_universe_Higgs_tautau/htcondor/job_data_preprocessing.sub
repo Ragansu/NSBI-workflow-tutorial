@@ -24,9 +24,6 @@ when_to_transfer_output = ON_EXIT
 
 requirements = (Target.HasCHTCStaging == true)
 
-# gpus_minimum_capability = 7.0
-
-# +WantGPULab = true
 +WantFlocking           = true
 +is_resumable           = true
 +want_campus_pools      = true

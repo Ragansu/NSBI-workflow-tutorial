@@ -38,22 +38,16 @@ def parse_args():
                         help='Path to the YAML configuration file')
     return parser.parse_args()
 
-def _aggregate_ensemble(score_pred, ratio_pred, loaded_indices, aggregation_type):
-    """Aggregate ensemble predictions into a single ratio array."""
+def _aggregate_ensemble(ratio_pred, loaded_indices, aggregation_type):
+    """Aggregate ensemble predictions (density ratios) into a single ratio array via mean or median across ensemble members. Uses nan-skipping variants so a single pathological member (e.g. a log-loss training that saturated float32 in test_normalization and emits NaN/Inf for some events) does not poison the aggregate; median is also robust to up to ~half the members producing Inf."""
     if not loaded_indices:
         raise RuntimeError("No ensemble members were loaded — cannot aggregate.")
-    if aggregation_type == 'median_ratio':
-        return np.median(ratio_pred[loaded_indices], axis=0)
-    elif aggregation_type == 'mean_ratio':
-        return np.mean(ratio_pred[loaded_indices], axis=0)
-    elif aggregation_type == 'median_score':
-        s = np.median(score_pred[loaded_indices], axis=0)
-        return s / (1.0 - s)
-    elif aggregation_type == 'mean_score':
-        s = np.mean(score_pred[loaded_indices], axis=0)
-        return s / (1.0 - s)
+    if aggregation_type == 'median':
+        return np.nanmedian(ratio_pred[loaded_indices], axis=0)
+    elif aggregation_type == 'mean':
+        return np.nanmean(ratio_pred[loaded_indices], axis=0)
     else:
-        raise ValueError(f"Unknown aggregation_type: {aggregation_type}")
+        raise ValueError(f"Unknown aggregation_type: {aggregation_type}; expected 'mean' or 'median'")
 
 def main():
     print(f"Running Main2")
@@ -128,12 +122,12 @@ def main():
     logger.info(f"Trained models path: {trained_models_path}")
 
     # TODO: add support for use_log_loss
-    use_log_loss = config_workflow_nominal["use_log_loss"]
+    use_log_loss = config_workflow_nominal.get("use_log_loss", False)
 
     ensemble_members    = config_workflow_nominal.get("num_ensemble_members_evaluation", 1)
     print(f"ensemble_members = {ensemble_members}")
 
-    aggregation_type    = config_workflow_nominal.get("ensemble_aggregation_type", "mean_ratio")
+    aggregation_type    = config_workflow_nominal.get("ensemble_aggregation_type", "mean")
     print(f"aggregation_type = {aggregation_type}")
 
     # K-fold settings — infer from the data
@@ -161,7 +155,6 @@ def main():
                 n_fold_events = fold_data.shape[0]
                 logger.info(f"Fold {fold_idx}: {n_fold_events} eval events for {process_type}")
 
-                score_pred = np.ones((ensemble_members, n_fold_events))
                 ratio_pred = np.ones((ensemble_members, n_fold_events))
                 loaded_indices = []
 
@@ -178,19 +171,17 @@ def main():
                         continue
 
                     scaler, model_NN = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
-                    score_pred[ensemble_index] = nsbi_common_utils.training.predict_with_model(fold_data[features], scaler, model_NN)
-                    ratio_pred[ensemble_index] = nsbi_common_utils.training.convert_score_to_ratio(score_pred[ensemble_index])
+                    ratio_pred[ensemble_index] = nsbi_common_utils.training.predict_with_model(fold_data[features], scaler, model_NN, use_log_loss=use_log_loss)
                     loaded_indices.append(ensemble_index)
 
                 # Aggregate ensemble for this fold
-                fold_ratio = _aggregate_ensemble(score_pred, ratio_pred, loaded_indices, aggregation_type)
+                fold_ratio = _aggregate_ensemble(ratio_pred, loaded_indices, aggregation_type)
                 ratio_per_event[fold_mask] = fold_ratio
 
             ratio_ensemble = ratio_per_event
 
         else:
             # Original non-kfold path
-            score_pred = np.ones((ensemble_members, dataset_Asimov_SR.shape[0]))
             ratio_pred = np.ones((ensemble_members, dataset_Asimov_SR.shape[0]))
             loaded_indices = []
 
@@ -206,11 +197,10 @@ def main():
                 logger.info(f"Reading saved models from {path_to_saved_model}")
 
                 scaler, model_NN = nsbi_common_utils.training.load_trained_model(path_to_saved_model, path_to_saved_scaler)
-                score_pred[ensemble_index] = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], scaler, model_NN)
-                ratio_pred[ensemble_index] = nsbi_common_utils.training.convert_score_to_ratio(score_pred[ensemble_index])
+                ratio_pred[ensemble_index] = nsbi_common_utils.training.predict_with_model(dataset_Asimov_SR[features], scaler, model_NN, use_log_loss = use_log_loss)
                 loaded_indices.append(ensemble_index)
 
-            ratio_ensemble = _aggregate_ensemble(score_pred, ratio_pred, loaded_indices, aggregation_type)
+            ratio_ensemble = _aggregate_ensemble(ratio_pred, loaded_indices, aggregation_type)
 
         saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"
         os.makedirs(path_to_saving_evaluated_ratios, exist_ok=True)
@@ -232,8 +222,9 @@ def main():
 
     calibration_flag        = config_workflow_systematics["training_settings"].get("calibration", False)
     syst_ensemble_members   = config_workflow_systematics.get("num_ensemble_members_evaluation", 1)
-    syst_aggregation_type   = config_workflow_systematics.get("ensemble_aggregation_type", "mean_ratio")
+    syst_aggregation_type   = config_workflow_systematics.get("ensemble_aggregation_type", "mean")
 
+    use_log_loss = config_workflow_systematics.get("use_log_loss", False)
     # K-fold settings for systematics
     # Systematics use the same fold assignment as nominal
     syst_num_folds = num_folds
@@ -261,7 +252,6 @@ def main():
                         fold_data = dataset_Asimov_SR[fold_mask]
                         n_fold = fold_data.shape[0]
 
-                        score_pred_all = np.ones((syst_ensemble_members, n_fold))
                         ratio_pred_all = np.ones((syst_ensemble_members, n_fold))
                         loaded_indices = []
 
@@ -287,9 +277,8 @@ def main():
                                     with open(path_to_calibrator_model, 'rb') as file_calibration:
                                         calibration_model = pickle.load(file_calibration)
 
-                            score_pred_all[ensemble_index] = nsbi_common_utils.training.predict_with_model(
-                                fold_data[features], scaler, model_NN, calibration_model=calibration_model)
-                            ratio_pred_all[ensemble_index] = nsbi_common_utils.training.convert_score_to_ratio(score_pred_all[ensemble_index])
+                            ratio_pred_all[ensemble_index] = nsbi_common_utils.training.predict_with_model(
+                                fold_data[features], scaler, model_NN, calibration_model=calibration_model, use_log_loss = use_log_loss)
                             loaded_indices.append(ensemble_index)
 
                         if not loaded_indices:
@@ -297,13 +286,12 @@ def main():
                             continue
 
                         ratio_per_event[fold_mask] = _aggregate_ensemble(
-                            score_pred_all, ratio_pred_all, loaded_indices, syst_aggregation_type)
+                            ratio_pred_all, loaded_indices, syst_aggregation_type)
 
                     ratio_ensemble = ratio_per_event
 
                 else:
                     # Original non-kfold path
-                    score_pred_all = np.ones((syst_ensemble_members, dataset_Asimov_SR.shape[0]))
                     ratio_pred_all = np.ones((syst_ensemble_members, dataset_Asimov_SR.shape[0]))
                     loaded_indices = []
 
@@ -328,16 +316,15 @@ def main():
                                 with open(path_to_calibrator_model, 'rb') as file_calibration:
                                     calibration_model = pickle.load(file_calibration)
 
-                        score_pred_all[ensemble_index] = nsbi_common_utils.training.predict_with_model(
+                        ratio_pred_all[ensemble_index] = nsbi_common_utils.training.predict_with_model(
                             dataset_Asimov_SR[features], scaler, model_NN, calibration_model=calibration_model)
-                        ratio_pred_all[ensemble_index] = nsbi_common_utils.training.convert_score_to_ratio(score_pred_all[ensemble_index])
                         loaded_indices.append(ensemble_index)
 
                     if not loaded_indices:
                         logger.error(f"No ensemble members loaded for {output_name_base}, skipping")
                         continue
 
-                    ratio_ensemble = _aggregate_ensemble(score_pred_all, ratio_pred_all, loaded_indices, syst_aggregation_type)
+                    ratio_ensemble = _aggregate_ensemble(ratio_pred_all, loaded_indices, syst_aggregation_type)
 
                 saved_ratio_path = f"{path_to_saving_evaluated_ratios}ratio_{process_type}.npy"
                 os.makedirs(path_to_saving_evaluated_ratios, exist_ok=True)
