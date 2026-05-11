@@ -90,9 +90,26 @@ def main():
     basis_processes = fit_config_nsbi.get_basis_samples()
     logger.info(f"Basis processes: {basis_processes}")
 
-    # Basis points making up the reference hypothesis -- this can in principle be not restricted to basis points
-    ref_processes = fit_config_nsbi.get_reference_samples()
+    # Reference-sample selection and per-sample priors are a training/workflow choice and live in config.pipeline.yaml under `reference_priors`. The dict's keys define which samples are in the reference; per-sample value semantics are documented in prepare_basis_training_dataset. A spec of 0 (or False) explicitly excludes that sample (handy for toggling without deleting the line).
+    reference_priors_raw = config_workflow.get("reference_priors", None)
+    if not reference_priors_raw:
+        raise KeyError("config.pipeline.yaml: neural_likelihood_ratio_estimation.reference_priors is required. List the samples to include in the reference mixture and their per-sample priors.")
+
+    reference_priors = {}
+    excluded_samples = []
+    for _name, _spec in reference_priors_raw.items():
+        if _spec == 0 or _spec is False:
+            excluded_samples.append(_name)
+            continue
+        reference_priors[_name] = _spec
+    if not reference_priors:
+        raise ValueError(f"reference_priors has no active samples (all entries are 0/False): {reference_priors_raw}")
+    if excluded_samples:
+        logger.info(f"Reference samples explicitly excluded (spec=0): {excluded_samples}")
+
+    ref_processes = list(reference_priors.keys())
     logger.info(f"Reference processes: {ref_processes}")
+    logger.info(f"Resolved reference_priors: {reference_priors}")
 
     NN_training_mix_model = {}
     use_log_loss = config_workflow["use_log_loss"]
@@ -167,7 +184,8 @@ def main():
             [process_type],
             dataset_SR_train,
             ref_processes,
-            denominatorisreferencehypothesis=False
+            denominatorisreferencehypothesis=False,
+            reference_priors=reference_priors,
         )
 
         output_name = f'{process_type}'
