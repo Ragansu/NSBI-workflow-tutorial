@@ -1,42 +1,42 @@
 # profiles/chtc/config.yaml
 # --------------------------
-# Snakemake profile for CHTC HTCondor submission.
+# Snakemake profile for CHTC HTCondor submission via the
+# `snakemake-executor-plugin-htcondor` plugin.
 #
 # Activate with:  snakemake --profile profiles/chtc
 # Or set env var: export SNAKEMAKE_PROFILE=profiles/chtc
 
-# -- Cluster submission command
-# Snakemake expands {rule}, {resources.*}, {log} etc. before calling the script.
-cluster: >-
-  python profiles/chtc/htcondor_submit.py
-  --job-name  {rule}
-  --cpus      {resources.cpus}
-  --mem-mb    {resources.mem_mb}
-  --gpus      {resources.gpus}
-  --disk-mb   {resources.disk_mb}
-  --log-base  logs/{rule}
-
-# How Snakemake polls condor_q to determine job status
-cluster-status: "python profiles/chtc/htcondor_status.py"
+executor: htcondor
 
 # Maximum simultaneously submitted jobs
 jobs: 50
 
-# Polling interval (seconds)
+# Polling interval (seconds) before checking job status
 latency-wait: 60
 
-# Retry a job up to 2 times on failure before giving up
-retries: 2
-
-# Default resources used when a rule doesn't specify them
-default-resources:
-  cpus:    1
-  mem_mb:  4096     # 4 GB
-  gpus:    0
-  disk_mb: 4096     # 4 GB
-
-# Always print shell commands to the log for debugging
+# Print shell commands to the log for debugging
 printshellcmds: true
 
-# Keep incomplete output files on failure (useful for debugging)
-keep-incomplete: false
+# Where the plugin writes its own per-job $(ClusterId).{out,err,log} files
+htcondor-jobdir: logs
+
+# Paths visible to both AP and EP — skip transferring them as inputs
+htcondor-shared-fs-prefixes: "/staging,/projects"
+
+# Defaults shared across every rule; rule-level `resources:` merge on top.
+# universe + container_image are mandatory: the whole workflow runs inside the same Apptainer image.
+# The five CHTC `classad_*` ClassAds are required for jobs to flock onto campus/OSG pools.
+default-resources:
+  universe:                  "container"
+  container_image:           "file:///staging/jsandesara/nsbi-env-gpu.sif"
+  # Run snakemake from inside the container instead of letting the plugin transfer the AP's pixi-env Python (which isn't relocatable). The wrapper just `exec snakemake "$@"` — snakemake is bundled in the .sif via pixi.
+  job_wrapper: "profiles/chtc/job_wrapper.sh"
+  # `1`/`0` instead of `True`/`False`: Snakemake's resources-block validator only accepts int/str/callable, so we use the HTCondor idiom where a non-zero numeric ClassAd value is truthy.
+  classad_WantFlocking:      1
+  classad_is_resumable:      1
+  classad_want_campus_pools: 1
+  classad_want_ospool:       1
+  classad_WantGlidein:       1
+  # Resource floors — rules that need more must override
+  request_memory: "4GB"
+  request_disk:   "4GB"

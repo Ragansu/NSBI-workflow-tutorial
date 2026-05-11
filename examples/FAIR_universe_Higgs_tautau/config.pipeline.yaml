@@ -109,8 +109,8 @@ neural_likelihood_ratio_estimation:
   force_train: false
 
   basis_processes_to_train: ["ttbar", "ztautau", "htautau"]
-  num_ensemble_members_evaluation: 50
-  num_ensemble_members_training: 50
+  num_ensemble_members_evaluation: 1
+  num_ensemble_members_training: 1
 
   ensemble_aggregation_type: "median"
 
