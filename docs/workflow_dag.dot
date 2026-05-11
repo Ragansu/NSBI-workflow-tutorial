@@ -1,0 +1,231 @@
+digraph NSBI_Workflow {
+    rankdir=TB;
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=9];
+    compound=true;
+    bgcolor="white";
+    pad=0.5;
+    nodesep=0.6;
+    ranksep=0.8;
+
+    // ================================================================
+    // STAGE 1: Data Processing
+    // ================================================================
+    subgraph cluster_data {
+        label="Stage 1: Data Processing";
+        style=rounded;
+        color="#3498db";
+        fontcolor="#2c3e50";
+        fontsize=13;
+        penwidth=2;
+
+        data_loader [
+            label="Data Loader\n(download + split)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5e8f0", color="#3498db", penwidth=1.5
+        ];
+        data_preprocessing [
+            label="Data Preprocessing\n(selections + features)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5e8f0", color="#3498db", penwidth=1.5
+        ];
+        data_loader -> data_preprocessing;
+    }
+
+    // ================================================================
+    // STAGE 2: Preselection Network
+    // ================================================================
+    subgraph cluster_presel {
+        label="Stage 2: Preselection Network";
+        style=rounded;
+        color="#9b59b6";
+        fontcolor="#2c3e50";
+        fontsize=13;
+        penwidth=2;
+
+        preselection [
+            label="Preselection NN\n(signal vs background classifier)",
+            shape=box, style="rounded,filled",
+            fillcolor="#e8d5f0", color="#9b59b6", penwidth=1.5
+        ];
+    }
+
+    // ================================================================
+    // STAGE 3: Density Ratio Training
+    // ================================================================
+    subgraph cluster_training {
+        label="Stage 3: Density Ratio Training";
+        style=rounded;
+        color="#e67e22";
+        fontcolor="#2c3e50";
+        fontsize=13;
+        penwidth=2;
+
+        // --- Nominal Ensemble Training ---
+        subgraph cluster_nominal {
+            label=<Nominal Ensemble Training<BR/><FONT POINT-SIZE="9">(SUBDAG: train_ensemble.dag)</FONT>>;
+            style="rounded,dashed";
+            color="#e67e22";
+            fontcolor="#6d4c00";
+            fontsize=11;
+
+            generate_nom [
+                label="SCRIPT PRE\ngenerate_training_dag.py",
+                shape=diamond, style=filled,
+                fillcolor="#fdebd0", color="#e67e22", fontsize=9
+            ];
+
+            subgraph cluster_proc1_nom {
+                label=<Process 1>;
+                style=rounded; color="#d4a574"; fontsize=10;
+                proc1_ens1 [label="Ensemble 1", shape=box, style="rounded,filled", fillcolor="#fdf2e9", color="#e67e22", fontsize=9];
+                proc1_dots [label="···", shape=plaintext, fontsize=14];
+                proc1_ensN [label=<Ensemble N<SUB>ens</SUB>>, shape=box, style="rounded,filled", fillcolor="#fdf2e9", color="#e67e22", fontsize=9];
+            }
+
+            subgraph cluster_proc_nom_dots {
+                label="";
+                style=invis;
+                proc_nom_dots [label="···", shape=plaintext, fontsize=16];
+            }
+
+            subgraph cluster_procN_nom {
+                label=<Process N<SUB>proc</SUB>>;
+                style=rounded; color="#d4a574"; fontsize=10;
+                procN_ens1 [label="Ensemble 1", shape=box, style="rounded,filled", fillcolor="#fdf2e9", color="#e67e22", fontsize=9];
+                procN_dots [label="···", shape=plaintext, fontsize=14];
+                procN_ensN [label=<Ensemble N<SUB>ens</SUB>>, shape=box, style="rounded,filled", fillcolor="#fdf2e9", color="#e67e22", fontsize=9];
+            }
+
+            generate_nom -> proc1_ens1 [style=dashed, color="#e67e22", lhead=cluster_proc1_nom];
+            generate_nom -> procN_ens1 [style=dashed, color="#e67e22", lhead=cluster_procN_nom];
+
+            // Force vertical ordering: Process 1 -> dots -> Process N
+            proc1_ensN -> proc_nom_dots [style=invis];
+            proc_nom_dots -> procN_ens1 [style=invis];
+        }
+
+        // --- Systematic Ensemble Training ---
+        subgraph cluster_syst {
+            label=<Systematic Ensemble Training<BR/><FONT POINT-SIZE="9">(SUBDAG: train_systematics.dag)</FONT>>;
+            style="rounded,dashed";
+            color="#c0392b";
+            fontcolor="#6d1a13";
+            fontsize=11;
+
+            generate_syst [
+                label="SCRIPT PRE\ngenerate_systematics_dag.py",
+                shape=diamond, style=filled,
+                fillcolor="#f5d5d0", color="#c0392b", fontsize=9
+            ];
+
+            subgraph cluster_syst_s1 {
+                label=<Systematic 1 (Up + Dn)>;
+                style=rounded; color="#d98880"; fontsize=10;
+
+                syst_s1_first [label=<Proc 1 &times; Up &times; Ens 1>, shape=box, style="rounded,filled", fillcolor="#fdedec", color="#c0392b", fontsize=8];
+                syst_s1_dots [label=<···  (N<SUB>proc</SUB> &times; 2 &times; N<SUB>ens</SUB>)>, shape=plaintext, fontsize=9];
+                syst_s1_last [label=<Proc N<SUB>proc</SUB> &times; Dn &times; Ens N<SUB>ens</SUB>>, shape=box, style="rounded,filled", fillcolor="#fdedec", color="#c0392b", fontsize=8];
+            }
+
+            syst_mid_dots [label="···", shape=plaintext, fontsize=16];
+
+            subgraph cluster_syst_sK {
+                label=<Systematic N<SUB>syst</SUB> (Up + Dn)>;
+                style=rounded; color="#d98880"; fontsize=10;
+
+                syst_sK_first [label=<Proc 1 &times; Up &times; Ens 1>, shape=box, style="rounded,filled", fillcolor="#fdedec", color="#c0392b", fontsize=8];
+                syst_sK_dots [label=<···  (N<SUB>proc</SUB> &times; 2 &times; N<SUB>ens</SUB>)>, shape=plaintext, fontsize=9];
+                syst_sK_last [label=<Proc N<SUB>proc</SUB> &times; Dn &times; Ens N<SUB>ens</SUB>>, shape=box, style="rounded,filled", fillcolor="#fdedec", color="#c0392b", fontsize=8];
+            }
+
+            generate_syst -> syst_s1_first [style=dashed, color="#c0392b", lhead=cluster_syst_s1];
+            generate_syst -> syst_sK_first [style=dashed, color="#c0392b", lhead=cluster_syst_sK];
+
+            // Force vertical ordering: Systematic 1 -> dots -> Systematic N
+            syst_s1_last -> syst_mid_dots [style=invis];
+            syst_mid_dots -> syst_sK_first [style=invis];
+        }
+
+        // --- Evaluation ---
+        data_nn_eval [
+            label="Data NN Evaluation\n(evaluate all ensembles on data)",
+            shape=box, style="rounded,filled",
+            fillcolor="#fdebd0", color="#e67e22", penwidth=1.5
+        ];
+    }
+
+    // ================================================================
+    // STAGE 4: Statistical Inference
+    // ================================================================
+    subgraph cluster_fit {
+        label="Stage 4: Statistical Inference";
+        style=rounded;
+        color="#27ae60";
+        fontcolor="#2c3e50";
+        fontsize=13;
+        penwidth=2;
+
+        model_building [
+            label="Model Building\n(via `sbi_parametric_model`)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5f0db", color="#27ae60", penwidth=1.5
+        ];
+
+        hypothesis_testing [
+            label="Hypothesis Testing\n(parameter fitting and Neyman Construction)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5f0db", color="#27ae60", penwidth=1.5
+        ];
+
+        model_building -> hypothesis_testing;
+    }
+
+    // ================================================================
+    // Inter-stage edges
+    // ================================================================
+    data_preprocessing -> preselection [ltail=cluster_data, lhead=cluster_presel];
+    preselection -> generate_nom [lhead=cluster_training];
+
+    // Nominal ensemble -> eval (edge from outer cluster)
+    procN_ensN -> data_nn_eval [style=dashed, color="#e67e22",
+        ltail=cluster_nominal,
+        label=<all N<SUB>proc</SUB> &times; N<SUB>ens</SUB> jobs done>, fontsize=8];
+
+    // Syst ensemble -> eval (edge from outer cluster)
+    syst_sK_last -> data_nn_eval [style=dashed, color="#c0392b",
+        ltail=cluster_syst,
+        label=<all N<SUB>proc</SUB> &times; N<SUB>syst</SUB> &times; 2 &times; N<SUB>ens</SUB> jobs done>, fontsize=8];
+
+    data_nn_eval -> model_building [lhead=cluster_fit];
+
+    // ================================================================
+    // Legend
+    // ================================================================
+    subgraph cluster_legend {
+        label="Legend";
+        style=rounded;
+        color="#bdc3c7";
+        fontcolor="#2c3e50";
+        fontsize=11;
+        penwidth=1;
+
+        node [shape=plaintext, fontsize=9];
+        legend [label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4">
+            <TR><TD ALIGN="LEFT"><B>Parallel jobs:</B></TD></TR>
+            <TR><TD ALIGN="LEFT">  Nominal training: N<SUB>proc</SUB> &times; N<SUB>ens</SUB></TD></TR>
+            <TR><TD ALIGN="LEFT">  Systematic training: N<SUB>proc</SUB> &times; N<SUB>syst</SUB> &times; 2 &times; N<SUB>ens</SUB></TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Sequential path:</B></TD></TR>
+            <TR><TD ALIGN="LEFT">  data_loader &rarr; preprocessing &rarr; preselection</TD></TR>
+            <TR><TD ALIGN="LEFT">  &rarr; [parallel training] &rarr; evaluation</TD></TR>
+            <TR><TD ALIGN="LEFT">  &rarr; model building &rarr; hypothesis testing</TD></TR>
+            <TR><TD ALIGN="LEFT"><B>Symbols:</B></TD></TR>
+            <TR><TD ALIGN="LEFT">  &#9671; SCRIPT PRE (generates DAG dynamically)</TD></TR>
+            <TR><TD ALIGN="LEFT">  &#9633; HTCondor job</TD></TR>
+            <TR><TD ALIGN="LEFT">  - - Dependency / triggers</TD></TR>
+            </TABLE>
+        >];
+    }
+}

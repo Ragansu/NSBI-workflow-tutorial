@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="560pt" height="818pt" viewBox="0.00 0.00 560.00 818.00">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(36 781.6)">
+<title>NSBI_Workflow_Overview</title>
+<polygon fill="white" stroke="none" points="-36,36 -36,-781.6 524,-781.6 524,36 -36,36"/>
+<g id="clust1" class="cluster">
+<title>cluster_data</title>
+<path fill="white" stroke="#3498db" stroke-width="2" d="M45,-551.2C45,-551.2 195,-551.2 195,-551.2 201,-551.2 207,-557.2 207,-563.2 207,-563.2 207,-725.6 207,-725.6 207,-731.6 201,-737.6 195,-737.6 195,-737.6 45,-737.6 45,-737.6 39,-737.6 33,-731.6 33,-725.6 33,-725.6 33,-563.2 33,-563.2 33,-557.2 39,-551.2 45,-551.2"/>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-721" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2c3e50">Stage 1: Data Processing</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_presel</title>
+<path fill="white" stroke="#9b59b6" stroke-width="2" d="M30,-442.4C30,-442.4 210,-442.4 210,-442.4 216,-442.4 222,-448.4 222,-454.4 222,-454.4 222,-508 222,-508 222,-514 216,-520 210,-520 210,-520 30,-520 30,-520 24,-520 18,-514 18,-508 18,-508 18,-454.4 18,-454.4 18,-448.4 24,-442.4 30,-442.4"/>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-503.4" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2c3e50">Stage 2: Preselection Network</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_training</title>
+<path fill="white" stroke="#e67e22" stroke-width="2" d="M42,-225.6C42,-225.6 468,-225.6 468,-225.6 474,-225.6 480,-231.6 480,-237.6 480,-237.6 480,-399.2 480,-399.2 480,-405.2 474,-411.2 468,-411.2 468,-411.2 42,-411.2 42,-411.2 36,-411.2 30,-405.2 30,-399.2 30,-399.2 30,-237.6 30,-237.6 30,-231.6 36,-225.6 42,-225.6"/>
+<text xml:space="preserve" text-anchor="middle" x="255" y="-394.6" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2c3e50">Stage 3: Density Ratio Training</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_fit</title>
+<path fill="white" stroke="#27ae60" stroke-width="2" d="M20,-8C20,-8 264,-8 264,-8 270,-8 276,-14 276,-20 276,-20 276,-182.4 276,-182.4 276,-188.4 270,-194.4 264,-194.4 264,-194.4 20,-194.4 20,-194.4 14,-194.4 8,-188.4 8,-182.4 8,-182.4 8,-20 8,-20 8,-14 14,-8 20,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-177.8" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2c3e50">Stage 4: Statistical Inference</text>
+</g>
+<!-- data_loader -->
+<g id="node1" class="node">
+<title>data_loader</title>
+<path fill="#d5e8f0" stroke="#3498db" stroke-width="1.5" d="M163.19,-704.8C163.19,-704.8 76.81,-704.8 76.81,-704.8 70.81,-704.8 64.81,-698.8 64.81,-692.8 64.81,-692.8 64.81,-680 64.81,-680 64.81,-674 70.81,-668 76.81,-668 76.81,-668 163.19,-668 163.19,-668 169.19,-668 175.19,-674 175.19,-680 175.19,-680 175.19,-692.8 175.19,-692.8 175.19,-698.8 169.19,-704.8 163.19,-704.8"/>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-690" font-family="Helvetica,sans-Serif" font-size="12.00">Data Loader</text>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-675.6" font-family="Helvetica,sans-Serif" font-size="12.00">(download + split)</text>
+</g>
+<!-- data_preprocessing -->
+<g id="node2" class="node">
+<title>data_preprocessing</title>
+<path fill="#d5e8f0" stroke="#3498db" stroke-width="1.5" d="M175.19,-596C175.19,-596 64.81,-596 64.81,-596 58.81,-596 52.81,-590 52.81,-584 52.81,-584 52.81,-571.2 52.81,-571.2 52.81,-565.2 58.81,-559.2 64.81,-559.2 64.81,-559.2 175.19,-559.2 175.19,-559.2 181.19,-559.2 187.19,-565.2 187.19,-571.2 187.19,-571.2 187.19,-584 187.19,-584 187.19,-590 181.19,-596 175.19,-596"/>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-581.2" font-family="Helvetica,sans-Serif" font-size="12.00">Data Preprocessing</text>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-566.8" font-family="Helvetica,sans-Serif" font-size="12.00">(selections + features)</text>
+</g>
+<!-- data_loader&#45;&gt;data_preprocessing -->
+<g id="edge1" class="edge">
+<title>data_loader-&gt;data_preprocessing</title>
+<path fill="none" stroke="black" d="M120,-667.28C120,-651 120,-626.79 120,-607.78"/>
+<polygon fill="black" stroke="black" points="123.5,-607.96 120,-597.96 116.5,-607.96 123.5,-607.96"/>
+</g>
+<!-- preselection -->
+<g id="node3" class="node">
+<title>preselection</title>
+<path fill="#e8d5f0" stroke="#9b59b6" stroke-width="1.5" d="M201.37,-487.2C201.37,-487.2 38.63,-487.2 38.63,-487.2 32.63,-487.2 26.63,-481.2 26.63,-475.2 26.63,-475.2 26.63,-462.4 26.63,-462.4 26.63,-456.4 32.63,-450.4 38.63,-450.4 38.63,-450.4 201.37,-450.4 201.37,-450.4 207.37,-450.4 213.37,-456.4 213.37,-462.4 213.37,-462.4 213.37,-475.2 213.37,-475.2 213.37,-481.2 207.37,-487.2 201.37,-487.2"/>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-472.4" font-family="Helvetica,sans-Serif" font-size="12.00">Preselection NN</text>
+<text xml:space="preserve" text-anchor="middle" x="120" y="-458" font-family="Helvetica,sans-Serif" font-size="12.00">(signal vs background classifier)</text>
+</g>
+<!-- data_preprocessing&#45;&gt;preselection -->
+<g id="edge5" class="edge">
+<title>data_preprocessing-&gt;preselection</title>
+<path fill="none" stroke="black" d="M120,-551.2C120,-545.08 120,-538.28 120,-531.28"/>
+<polygon fill="black" stroke="black" points="123.5,-531.51 120,-521.51 116.5,-531.51 123.5,-531.51"/>
+</g>
+<!-- nominal_training -->
+<g id="node4" class="node">
+<title>nominal_training</title>
+<path fill="#fdebd0" stroke="#e67e22" stroke-width="1.5" d="M189.7,-378.4C189.7,-378.4 50.3,-378.4 50.3,-378.4 44.3,-378.4 38.3,-372.4 38.3,-366.4 38.3,-366.4 38.3,-354.4 38.3,-354.4 38.3,-348.4 44.3,-342.4 50.3,-342.4 50.3,-342.4 189.7,-342.4 189.7,-342.4 195.7,-342.4 201.7,-348.4 201.7,-354.4 201.7,-354.4 201.7,-366.4 201.7,-366.4 201.7,-372.4 195.7,-378.4 189.7,-378.4"/>
+<text xml:space="preserve" text-anchor="start" x="46.3" y="-362.6" font-family="Helvetica,sans-Serif" font-size="12.00">Nominal Ensemble Training</text>
+<text xml:space="preserve" text-anchor="start" x="49.63" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00">N</text>
+<text xml:space="preserve" text-anchor="start" x="58.3" y="-350.6" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="12.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="81.64" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00"> × N</text>
+<text xml:space="preserve" text-anchor="start" x="103.65" y="-350.6" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="12.00">ens</text>
+<text xml:space="preserve" text-anchor="start" x="122.99" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00"> parallel jobs</text>
+</g>
+<!-- preselection&#45;&gt;nominal_training -->
+<g id="edge6" class="edge">
+<title>preselection-&gt;nominal_training</title>
+<path fill="none" stroke="black" d="M120,-449.75C120,-442 120,-432.44 120,-422.5"/>
+<polygon fill="black" stroke="black" points="123.5,-422.71 120,-412.71 116.5,-422.71 123.5,-422.71"/>
+</g>
+<!-- data_nn_eval -->
+<g id="node6" class="node">
+<title>data_nn_eval</title>
+<path fill="#fdebd0" stroke="#e67e22" stroke-width="1.5" d="M224.72,-270.4C224.72,-270.4 59.28,-270.4 59.28,-270.4 53.28,-270.4 47.28,-264.4 47.28,-258.4 47.28,-258.4 47.28,-245.6 47.28,-245.6 47.28,-239.6 53.28,-233.6 59.28,-233.6 59.28,-233.6 224.72,-233.6 224.72,-233.6 230.72,-233.6 236.72,-239.6 236.72,-245.6 236.72,-245.6 236.72,-258.4 236.72,-258.4 236.72,-264.4 230.72,-270.4 224.72,-270.4"/>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-255.6" font-family="Helvetica,sans-Serif" font-size="12.00">Data NN Evaluation</text>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-241.2" font-family="Helvetica,sans-Serif" font-size="12.00">(evaluate all ensembles on data)</text>
+</g>
+<!-- nominal_training&#45;&gt;data_nn_eval -->
+<g id="edge2" class="edge">
+<title>nominal_training-&gt;data_nn_eval</title>
+<path fill="none" stroke="black" d="M123.63,-341.83C126.99,-325.6 132.04,-301.19 135.99,-282.06"/>
+<polygon fill="black" stroke="black" points="139.38,-282.94 137.98,-272.43 132.53,-281.52 139.38,-282.94"/>
+</g>
+<!-- syst_training -->
+<g id="node5" class="node">
+<title>syst_training</title>
+<path fill="#fdedec" stroke="#c0392b" stroke-width="1.5" d="M460.04,-378.4C460.04,-378.4 263.96,-378.4 263.96,-378.4 257.96,-378.4 251.96,-372.4 251.96,-366.4 251.96,-366.4 251.96,-354.4 251.96,-354.4 251.96,-348.4 257.96,-342.4 263.96,-342.4 263.96,-342.4 460.04,-342.4 460.04,-342.4 466.04,-342.4 472.04,-348.4 472.04,-354.4 472.04,-354.4 472.04,-366.4 472.04,-366.4 472.04,-372.4 466.04,-378.4 460.04,-378.4"/>
+<text xml:space="preserve" text-anchor="start" x="280.97" y="-362.6" font-family="Helvetica,sans-Serif" font-size="12.00">Systematic Ensemble Training</text>
+<text xml:space="preserve" text-anchor="start" x="259.96" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00">N</text>
+<text xml:space="preserve" text-anchor="start" x="268.63" y="-350.6" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="12.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="291.97" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00"> × N</text>
+<text xml:space="preserve" text-anchor="start" x="313.97" y="-350.6" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="12.00">syst</text>
+<text xml:space="preserve" text-anchor="start" x="335.31" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00"> × 2 × N</text>
+<text xml:space="preserve" text-anchor="start" x="377.32" y="-350.6" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="12.00">ens</text>
+<text xml:space="preserve" text-anchor="start" x="396.67" y="-350.6" font-family="Helvetica,sans-Serif" font-size="12.00"> parallel jobs</text>
+</g>
+<!-- syst_training&#45;&gt;data_nn_eval -->
+<g id="edge3" class="edge">
+<title>syst_training-&gt;data_nn_eval</title>
+<path fill="none" stroke="black" d="M325.67,-341.83C288.51,-323.86 230.59,-295.84 189.74,-276.09"/>
+<polygon fill="black" stroke="black" points="191.38,-272.99 180.85,-271.79 188.33,-279.29 191.38,-272.99"/>
+</g>
+<!-- model_building -->
+<g id="node7" class="node">
+<title>model_building</title>
+<path fill="#d5f0db" stroke="#27ae60" stroke-width="1.5" d="M210.36,-161.6C210.36,-161.6 73.64,-161.6 73.64,-161.6 67.64,-161.6 61.64,-155.6 61.64,-149.6 61.64,-149.6 61.64,-136.8 61.64,-136.8 61.64,-130.8 67.64,-124.8 73.64,-124.8 73.64,-124.8 210.36,-124.8 210.36,-124.8 216.36,-124.8 222.36,-130.8 222.36,-136.8 222.36,-136.8 222.36,-149.6 222.36,-149.6 222.36,-155.6 216.36,-161.6 210.36,-161.6"/>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-146.8" font-family="Helvetica,sans-Serif" font-size="12.00">Model Building</text>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-132.4" font-family="Helvetica,sans-Serif" font-size="12.00">(via sbi_parametric_model)</text>
+</g>
+<!-- data_nn_eval&#45;&gt;model_building -->
+<g id="edge7" class="edge">
+<title>data_nn_eval-&gt;model_building</title>
+<path fill="none" stroke="black" d="M142,-232.88C142,-225.14 142,-215.6 142,-205.68"/>
+<polygon fill="black" stroke="black" points="145.5,-205.91 142,-195.91 138.5,-205.91 145.5,-205.91"/>
+</g>
+<!-- hypothesis_testing -->
+<g id="node8" class="node">
+<title>hypothesis_testing</title>
+<path fill="#d5f0db" stroke="#27ae60" stroke-width="1.5" d="M256.39,-52.8C256.39,-52.8 27.61,-52.8 27.61,-52.8 21.61,-52.8 15.61,-46.8 15.61,-40.8 15.61,-40.8 15.61,-28 15.61,-28 15.61,-22 21.61,-16 27.61,-16 27.61,-16 256.39,-16 256.39,-16 262.39,-16 268.39,-22 268.39,-28 268.39,-28 268.39,-40.8 268.39,-40.8 268.39,-46.8 262.39,-52.8 256.39,-52.8"/>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-38" font-family="Helvetica,sans-Serif" font-size="12.00">Hypothesis Testing</text>
+<text xml:space="preserve" text-anchor="middle" x="142" y="-23.6" font-family="Helvetica,sans-Serif" font-size="12.00">(parameter fitting and Neyman Construction)</text>
+</g>
+<!-- model_building&#45;&gt;hypothesis_testing -->
+<g id="edge4" class="edge">
+<title>model_building-&gt;hypothesis_testing</title>
+<path fill="none" stroke="black" d="M142,-124.08C142,-107.8 142,-83.59 142,-64.58"/>
+<polygon fill="black" stroke="black" points="145.5,-64.76 142,-54.76 138.5,-64.76 145.5,-64.76"/>
+</g>
+</g>
+</svg>

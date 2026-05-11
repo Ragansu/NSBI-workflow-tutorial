@@ -3,10 +3,6 @@ torch.set_float32_matmul_precision("medium")
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
 
 class DensityRatioLightning(pl.LightningModule):
     '''
@@ -46,12 +42,11 @@ class DensityRatioLightning(pl.LightningModule):
             input_dim_ = n_neurons
         
         self.mlp = nn.Sequential(*layers)
+        self.out = nn.Linear(input_dim_, 1)
 
         if use_log_loss:
-            self.out = nn.Linear(input_dim_, 1)
             self.from_logits = True
         else:
-            self.out = nn.Linear(input_dim_, 1)
             self.from_logits = False
 
     def forward(self, x):
@@ -107,7 +102,7 @@ class DensityRatioLightning(pl.LightningModule):
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         #     optimizer,
         #     T_max=100,
-        #     eta_min=1e-11
+        #     eta_min=1e-6
         # )
 
         return {

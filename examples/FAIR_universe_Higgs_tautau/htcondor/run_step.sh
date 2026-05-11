@@ -3,8 +3,7 @@ set -e
 
 STEP=$1
 CONFIG=$2
-ENSEMBLE_INDEX=$3
-PROCESS_TYPE=$4
+shift 2  # remaining args are step-specific (e.g. --process, --ensemble_index, etc.)
 
 WORK_DIR=FAIR_universe_Higgs_tautau
 
@@ -17,8 +16,4 @@ python -c "import sys; print(sys.executable)"
 
 cd $WORK_DIR
 
-if [ "$STEP" = "neural_likelihood_ratio_estimation" ] && [ -n "$ENSEMBLE_INDEX" ]; then
-    python -u scripts/${STEP}.py --config ${CONFIG} --ensemble_index ${ENSEMBLE_INDEX} --process ${PROCESS_TYPE}
-else
-    python -u scripts/${STEP}.py --config ${CONFIG}
-fi
+python -u scripts/${STEP}.py --config ${CONFIG} "$@"

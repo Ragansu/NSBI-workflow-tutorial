@@ -1,0 +1,240 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="884pt" height="755pt" viewBox="0.00 0.00 884.00 755.00">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(36 719.2)">
+<title>Stage3_Detail</title>
+<polygon fill="white" stroke="none" points="-36,36 -36,-719.2 848,-719.2 848,36 -36,36"/>
+<text xml:space="preserve" text-anchor="start" x="295.28" y="-665.8" font-family="Helvetica,sans-Serif" font-size="16.00" fill="#2c3e50">Stage 3: Density Ratio Training</text>
+<text xml:space="preserve" text-anchor="start" x="373.49" y="-655.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#2c3e50">(zoomed view)</text>
+<g id="clust1" class="cluster">
+<title>cluster_nominal</title>
+<path fill="white" stroke="#e67e22" stroke-width="2" stroke-dasharray="5,2" d="M20,-177.2C20,-177.2 328,-177.2 328,-177.2 334,-177.2 340,-183.2 340,-189.2 340,-189.2 340,-567.2 340,-567.2 340,-573.2 334,-579.2 328,-579.2 328,-579.2 20,-579.2 20,-579.2 14,-579.2 8,-573.2 8,-567.2 8,-567.2 8,-189.2 8,-189.2 8,-183.2 14,-177.2 20,-177.2"/>
+<text xml:space="preserve" text-anchor="start" x="100.3" y="-565.4" font-family="Helvetica,sans-Serif" font-size="12.00" fill="#6d4c00">Nominal Ensemble Training</text>
+<text xml:space="preserve" text-anchor="start" x="63.7" y="-556.1" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6d4c00">SUBDAG: train_ensemble.dag (dynamically generated)</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_proc1_nom</title>
+<path fill="white" stroke="#d4a574" stroke-width="2" d="M28,-370.2C28,-370.2 290,-370.2 290,-370.2 296,-370.2 302,-376.2 302,-382.2 302,-382.2 302,-430.2 302,-430.2 302,-436.2 296,-442.2 290,-442.2 290,-442.2 28,-442.2 28,-442.2 22,-442.2 16,-436.2 16,-430.2 16,-430.2 16,-382.2 16,-382.2 16,-376.2 22,-370.2 28,-370.2"/>
+<text xml:space="preserve" text-anchor="start" x="136.77" y="-429.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#6d4c00">Process 1</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_proc_nom_dots</title>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_procN_nom</title>
+<path fill="white" stroke="#d4a574" stroke-width="2" d="M58,-185.2C58,-185.2 320,-185.2 320,-185.2 326,-185.2 332,-191.2 332,-197.2 332,-197.2 332,-245.2 332,-245.2 332,-251.2 326,-257.2 320,-257.2 320,-257.2 58,-257.2 58,-257.2 52,-257.2 46,-251.2 46,-245.2 46,-245.2 46,-197.2 46,-197.2 46,-191.2 52,-185.2 58,-185.2"/>
+<text xml:space="preserve" text-anchor="start" x="156.21" y="-245.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#6d4c00">Process N</text>
+<text xml:space="preserve" text-anchor="start" x="202.33" y="-245.2" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="10.00" fill="#6d4c00">proc</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_syst</title>
+<path fill="white" stroke="#c0392b" stroke-width="2" stroke-dasharray="5,2" d="M364,-177.2C364,-177.2 792,-177.2 792,-177.2 798,-177.2 804,-183.2 804,-189.2 804,-189.2 804,-567.2 804,-567.2 804,-573.2 798,-579.2 792,-579.2 792,-579.2 364,-579.2 364,-579.2 358,-579.2 352,-573.2 352,-567.2 352,-567.2 352,-189.2 352,-189.2 352,-183.2 358,-177.2 364,-177.2"/>
+<text xml:space="preserve" text-anchor="start" x="496.97" y="-565.4" font-family="Helvetica,sans-Serif" font-size="12.00" fill="#6d1a13">Systematic Ensemble Training</text>
+<text xml:space="preserve" text-anchor="start" x="463.7" y="-556.1" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#6d1a13">SUBDAG: train_systematics.dag (dynamically generated)</text>
+</g>
+<g id="clust6" class="cluster">
+<title>cluster_syst_s1</title>
+<path fill="white" stroke="#d98880" stroke-width="2" d="M372,-370.2C372,-370.2 754,-370.2 754,-370.2 760,-370.2 766,-376.2 766,-382.2 766,-382.2 766,-430.2 766,-430.2 766,-436.2 760,-442.2 754,-442.2 754,-442.2 372,-442.2 372,-442.2 366,-442.2 360,-436.2 360,-430.2 360,-430.2 360,-382.2 360,-382.2 360,-376.2 366,-370.2 372,-370.2"/>
+<text xml:space="preserve" text-anchor="start" x="511.18" y="-429.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#6d1a13">Systematic 1 (Up + Dn)</text>
+</g>
+<g id="clust7" class="cluster">
+<title>cluster_syst_sK</title>
+<path fill="white" stroke="#d98880" stroke-width="2" d="M402,-185.2C402,-185.2 784,-185.2 784,-185.2 790,-185.2 796,-191.2 796,-197.2 796,-197.2 796,-245.2 796,-245.2 796,-251.2 790,-257.2 784,-257.2 784,-257.2 402,-257.2 402,-257.2 396,-257.2 390,-251.2 390,-245.2 390,-245.2 390,-197.2 390,-197.2 390,-191.2 396,-185.2 402,-185.2"/>
+<text xml:space="preserve" text-anchor="start" x="531.46" y="-245.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#6d1a13">Systematic N</text>
+<text xml:space="preserve" text-anchor="start" x="590.36" y="-245.2" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="10.00" fill="#6d1a13">syst</text>
+<text xml:space="preserve" text-anchor="start" x="608.14" y="-245.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#6d1a13"> (Up + Dn)</text>
+</g>
+<!-- preselection -->
+<g id="node1" class="node">
+<title>preselection</title>
+<path fill="#f5f5f5" stroke="#95a5a6" stroke-width="1.5" stroke-dasharray="5,2" d="M408.24,-649.2C408.24,-649.2 321.76,-649.2 321.76,-649.2 315.76,-649.2 309.76,-643.2 309.76,-637.2 309.76,-637.2 309.76,-625.2 309.76,-625.2 309.76,-619.2 315.76,-613.2 321.76,-613.2 321.76,-613.2 408.24,-613.2 408.24,-613.2 414.24,-613.2 420.24,-619.2 420.24,-625.2 420.24,-625.2 420.24,-637.2 420.24,-637.2 420.24,-643.2 414.24,-649.2 408.24,-649.2"/>
+<text xml:space="preserve" text-anchor="middle" x="365" y="-634.2" font-family="Helvetica,sans-Serif" font-size="10.00">From Stage 2:</text>
+<text xml:space="preserve" text-anchor="middle" x="365" y="-622.2" font-family="Helvetica,sans-Serif" font-size="10.00">Preselection Network</text>
+</g>
+<!-- generate_nom -->
+<g id="node2" class="node">
+<title>generate_nom</title>
+<polygon fill="#fdebd0" stroke="#e67e22" points="220,-542.2 111.5,-509.2 220,-476.2 328.5,-509.2 220,-542.2"/>
+<text xml:space="preserve" text-anchor="start" x="193" y="-514.6" font-family="Helvetica,sans-Serif" font-size="9.00">SCRIPT PRE</text>
+<text xml:space="preserve" text-anchor="start" x="174.63" y="-506.5" font-family="Helvetica,sans-Serif" font-size="8.00">generate_training_dag.py</text>
+<text xml:space="preserve" text-anchor="start" x="173.75" y="-498.5" font-family="Helvetica,sans-Serif" font-size="8.00">reads config.pipeline.yaml</text>
+</g>
+<!-- preselection&#45;&gt;generate_nom -->
+<g id="edge9" class="edge">
+<title>preselection-&gt;generate_nom</title>
+<path fill="none" stroke="black" d="M343.6,-612.49C334.71,-605.13 323.73,-596.04 312.01,-586.35"/>
+<polygon fill="black" stroke="black" points="314.47,-583.84 304.54,-580.16 310.01,-589.23 314.47,-583.84"/>
+</g>
+<!-- generate_syst -->
+<g id="node10" class="node">
+<title>generate_syst</title>
+<polygon fill="#f5d5d0" stroke="#c0392b" points="512,-542.2 364.59,-509.2 512,-476.2 659.41,-509.2 512,-542.2"/>
+<text xml:space="preserve" text-anchor="start" x="485" y="-514.6" font-family="Helvetica,sans-Serif" font-size="9.00">SCRIPT PRE</text>
+<text xml:space="preserve" text-anchor="start" x="458.86" y="-506.5" font-family="Helvetica,sans-Serif" font-size="8.00">generate_systematics_dag.py</text>
+<text xml:space="preserve" text-anchor="start" x="446.3" y="-498.5" font-family="Helvetica,sans-Serif" font-size="8.00">reads config.pipeline.yaml + fit config</text>
+</g>
+<!-- preselection&#45;&gt;generate_syst -->
+<g id="edge10" class="edge">
+<title>preselection-&gt;generate_syst</title>
+<path fill="none" stroke="black" d="M386.69,-612.49C395.71,-605.13 406.84,-596.04 418.72,-586.35"/>
+<polygon fill="black" stroke="black" points="420.77,-589.19 426.31,-580.15 416.35,-583.77 420.77,-589.19"/>
+</g>
+<!-- proc1_ens1 -->
+<g id="node3" class="node">
+<title>proc1_ens1</title>
+<path fill="#fdf2e9" stroke="#e67e22" d="M75.76,-414.2C75.76,-414.2 36.24,-414.2 36.24,-414.2 30.24,-414.2 24.24,-408.2 24.24,-402.2 24.24,-402.2 24.24,-390.2 24.24,-390.2 24.24,-384.2 30.24,-378.2 36.24,-378.2 36.24,-378.2 75.76,-378.2 75.76,-378.2 81.76,-378.2 87.76,-384.2 87.76,-390.2 87.76,-390.2 87.76,-402.2 87.76,-402.2 87.76,-408.2 81.76,-414.2 75.76,-414.2"/>
+<text xml:space="preserve" text-anchor="middle" x="56" y="-393.5" font-family="Helvetica,sans-Serif" font-size="9.00">Ensemble 1</text>
+</g>
+<!-- generate_nom&#45;&gt;proc1_ens1 -->
+<g id="edge1" class="edge">
+<title>generate_nom-&gt;proc1_ens1</title>
+<path fill="none" stroke="#e67e22" stroke-dasharray="5,2" d="M180.22,-487.83C160.63,-477.23 136.67,-463.44 115.3,-448.76"/>
+<polygon fill="#e67e22" stroke="#e67e22" points="117.42,-445.98 107.24,-443.07 113.39,-451.7 117.42,-445.98"/>
+</g>
+<!-- procN_ens1 -->
+<g id="node7" class="node">
+<title>procN_ens1</title>
+<path fill="#fdf2e9" stroke="#e67e22" d="M105.76,-229.2C105.76,-229.2 66.24,-229.2 66.24,-229.2 60.24,-229.2 54.24,-223.2 54.24,-217.2 54.24,-217.2 54.24,-205.2 54.24,-205.2 54.24,-199.2 60.24,-193.2 66.24,-193.2 66.24,-193.2 105.76,-193.2 105.76,-193.2 111.76,-193.2 117.76,-199.2 117.76,-205.2 117.76,-205.2 117.76,-217.2 117.76,-217.2 117.76,-223.2 111.76,-229.2 105.76,-229.2"/>
+<text xml:space="preserve" text-anchor="middle" x="86" y="-208.5" font-family="Helvetica,sans-Serif" font-size="9.00">Ensemble 1</text>
+</g>
+<!-- generate_nom&#45;&gt;procN_ens1 -->
+<g id="edge2" class="edge">
+<title>generate_nom-&gt;procN_ens1</title>
+<path fill="none" stroke="#e67e22" stroke-dasharray="5,2" d="M262.65,-488.67C281.07,-477.81 300.71,-462.37 311,-442.2 325.54,-413.69 319.9,-400.94 311,-370.2 298.28,-326.26 293.49,-309.41 256,-283.2 214.6,-254.25 188.64,-277.93 146.47,-261.87"/>
+<polygon fill="#e67e22" stroke="#e67e22" points="147.94,-258.7 137.38,-257.82 145.09,-265.09 147.94,-258.7"/>
+</g>
+<!-- proc1_dots -->
+<g id="node4" class="node">
+<title>proc1_dots</title>
+<text xml:space="preserve" text-anchor="middle" x="151" y="-392" font-family="Helvetica,sans-Serif" font-size="14.00">···</text>
+</g>
+<!-- proc1_ensN -->
+<g id="node5" class="node">
+<title>proc1_ensN</title>
+<path fill="#fdf2e9" stroke="#e67e22" d="M281.77,-414.2C281.77,-414.2 226.23,-414.2 226.23,-414.2 220.23,-414.2 214.23,-408.2 214.23,-402.2 214.23,-402.2 214.23,-390.2 214.23,-390.2 214.23,-384.2 220.23,-378.2 226.23,-378.2 226.23,-378.2 281.77,-378.2 281.77,-378.2 287.77,-378.2 293.77,-384.2 293.77,-390.2 293.77,-390.2 293.77,-402.2 293.77,-402.2 293.77,-408.2 287.77,-414.2 281.77,-414.2"/>
+<text xml:space="preserve" text-anchor="start" x="222.23" y="-394.5" font-family="Helvetica,sans-Serif" font-size="9.00">Ensemble N</text>
+<text xml:space="preserve" text-anchor="start" x="271.26" y="-394.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">ens</text>
+</g>
+<!-- proc_nom_dots -->
+<g id="node6" class="node">
+<title>proc_nom_dots</title>
+<text xml:space="preserve" text-anchor="middle" x="212" y="-304.4" font-family="Helvetica,sans-Serif" font-size="16.00">···</text>
+</g>
+<!-- proc1_ensN&#45;&gt;proc_nom_dots -->
+<!-- proc_nom_dots&#45;&gt;procN_ens1 -->
+<!-- procN_dots -->
+<g id="node8" class="node">
+<title>procN_dots</title>
+<text xml:space="preserve" text-anchor="middle" x="181" y="-207" font-family="Helvetica,sans-Serif" font-size="14.00">···</text>
+</g>
+<!-- procN_ensN -->
+<g id="node9" class="node">
+<title>procN_ensN</title>
+<path fill="#fdf2e9" stroke="#e67e22" d="M311.77,-229.2C311.77,-229.2 256.23,-229.2 256.23,-229.2 250.23,-229.2 244.23,-223.2 244.23,-217.2 244.23,-217.2 244.23,-205.2 244.23,-205.2 244.23,-199.2 250.23,-193.2 256.23,-193.2 256.23,-193.2 311.77,-193.2 311.77,-193.2 317.77,-193.2 323.77,-199.2 323.77,-205.2 323.77,-205.2 323.77,-217.2 323.77,-217.2 323.77,-223.2 317.77,-229.2 311.77,-229.2"/>
+<text xml:space="preserve" text-anchor="start" x="252.23" y="-209.5" font-family="Helvetica,sans-Serif" font-size="9.00">Ensemble N</text>
+<text xml:space="preserve" text-anchor="start" x="301.26" y="-209.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">ens</text>
+</g>
+<!-- data_nn_eval -->
+<g id="node18" class="node">
+<title>data_nn_eval</title>
+<path fill="#fdebd0" stroke="#e67e22" stroke-width="2" d="M605.81,-124C605.81,-124 406.19,-124 406.19,-124 400.19,-124 394.19,-118 394.19,-112 394.19,-112 394.19,-99 394.19,-99 394.19,-93 400.19,-87 406.19,-87 406.19,-87 605.81,-87 605.81,-87 611.81,-87 617.81,-93 617.81,-99 617.81,-99 617.81,-112 617.81,-112 617.81,-118 611.81,-124 605.81,-124"/>
+<text xml:space="preserve" text-anchor="start" x="457.7" y="-111.1" font-family="Helvetica,sans-Serif" font-size="11.00">Data NN Evaluation</text>
+<text xml:space="preserve" text-anchor="start" x="408.19" y="-101.9" font-family="Helvetica,sans-Serif" font-size="9.00">Load all trained ONNX models, evaluate on data,</text>
+<text xml:space="preserve" text-anchor="start" x="402.19" y="-92.9" font-family="Helvetica,sans-Serif" font-size="9.00">aggregate ensemble predictions, save density ratios</text>
+</g>
+<!-- procN_ensN&#45;&gt;data_nn_eval -->
+<g id="edge11" class="edge">
+<title>procN_ensN-&gt;data_nn_eval</title>
+<path fill="none" stroke="#e67e22" stroke-dasharray="5,2" d="M340,-184.04C375.79,-167.32 421.79,-145.83 456.29,-129.72"/>
+<polygon fill="#e67e22" stroke="#e67e22" points="457.62,-132.96 465.19,-125.56 454.65,-126.62 457.62,-132.96"/>
+<text xml:space="preserve" text-anchor="start" x="414.88" y="-161" font-family="Helvetica,sans-Serif" font-size="8.00">all nominal</text>
+<text xml:space="preserve" text-anchor="start" x="416.66" y="-151.4" font-family="Helvetica,sans-Serif" font-size="8.00">jobs done</text>
+</g>
+<!-- syst_s1_first -->
+<g id="node11" class="node">
+<title>syst_s1_first</title>
+<path fill="#fdedec" stroke="#c0392b" d="M443.79,-414.2C443.79,-414.2 380.21,-414.2 380.21,-414.2 374.21,-414.2 368.21,-408.2 368.21,-402.2 368.21,-402.2 368.21,-390.2 368.21,-390.2 368.21,-384.2 374.21,-378.2 380.21,-378.2 380.21,-378.2 443.79,-378.2 443.79,-378.2 449.79,-378.2 455.79,-384.2 455.79,-390.2 455.79,-390.2 455.79,-402.2 455.79,-402.2 455.79,-408.2 449.79,-414.2 443.79,-414.2"/>
+<text xml:space="preserve" text-anchor="start" x="376.21" y="-393.8" font-family="Helvetica,sans-Serif" font-size="8.00">Proc 1 × Up × Ens 1</text>
+</g>
+<!-- generate_syst&#45;&gt;syst_s1_first -->
+<g id="edge5" class="edge">
+<title>generate_syst-&gt;syst_s1_first</title>
+<path fill="none" stroke="#c0392b" stroke-dasharray="5,2" d="M487.79,-481.33C479.44,-472.06 469.76,-461.32 460.18,-450.68"/>
+<polygon fill="#c0392b" stroke="#c0392b" points="462.84,-448.41 453.55,-443.32 457.64,-453.09 462.84,-448.41"/>
+</g>
+<!-- syst_sK_first -->
+<g id="node15" class="node">
+<title>syst_sK_first</title>
+<path fill="#fdedec" stroke="#c0392b" d="M473.79,-229.2C473.79,-229.2 410.21,-229.2 410.21,-229.2 404.21,-229.2 398.21,-223.2 398.21,-217.2 398.21,-217.2 398.21,-205.2 398.21,-205.2 398.21,-199.2 404.21,-193.2 410.21,-193.2 410.21,-193.2 473.79,-193.2 473.79,-193.2 479.79,-193.2 485.79,-199.2 485.79,-205.2 485.79,-205.2 485.79,-217.2 485.79,-217.2 485.79,-223.2 479.79,-229.2 473.79,-229.2"/>
+<text xml:space="preserve" text-anchor="start" x="406.21" y="-208.8" font-family="Helvetica,sans-Serif" font-size="8.00">Proc 1 × Up × Ens 1</text>
+</g>
+<!-- generate_syst&#45;&gt;syst_sK_first -->
+<g id="edge6" class="edge">
+<title>generate_syst-&gt;syst_sK_first</title>
+<path fill="none" stroke="#c0392b" stroke-dasharray="5,2" d="M606.31,-496.81C672.98,-486.59 754.08,-469.02 775,-442.2 794.68,-416.97 787.97,-399.45 775,-370.2 751.66,-317.56 731.05,-307.82 679,-283.2 646.51,-267.83 557.61,-271.25 514.78,-260.6"/>
+<polygon fill="#c0392b" stroke="#c0392b" points="516.03,-257.33 505.44,-257.66 513.92,-264.01 516.03,-257.33"/>
+</g>
+<!-- syst_s1_dots -->
+<g id="node12" class="node">
+<title>syst_s1_dots</title>
+<text xml:space="preserve" text-anchor="start" x="499.99" y="-394.5" font-family="Helvetica,sans-Serif" font-size="9.00">···  (N</text>
+<text xml:space="preserve" text-anchor="start" x="529.49" y="-394.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="547" y="-394.5" font-family="Helvetica,sans-Serif" font-size="9.00"> × 2 × N</text>
+<text xml:space="preserve" text-anchor="start" x="578.5" y="-394.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">ens</text>
+<text xml:space="preserve" text-anchor="start" x="593.02" y="-394.5" font-family="Helvetica,sans-Serif" font-size="9.00">)</text>
+</g>
+<!-- syst_s1_last -->
+<g id="node13" class="node">
+<title>syst_s1_last</title>
+<path fill="#fdedec" stroke="#c0392b" d="M746.35,-414.2C746.35,-414.2 651.65,-414.2 651.65,-414.2 645.65,-414.2 639.65,-408.2 639.65,-402.2 639.65,-402.2 639.65,-390.2 639.65,-390.2 639.65,-384.2 645.65,-378.2 651.65,-378.2 651.65,-378.2 746.35,-378.2 746.35,-378.2 752.35,-378.2 758.35,-384.2 758.35,-390.2 758.35,-390.2 758.35,-402.2 758.35,-402.2 758.35,-408.2 752.35,-414.2 746.35,-414.2"/>
+<text xml:space="preserve" text-anchor="start" x="647.65" y="-394.8" font-family="Helvetica,sans-Serif" font-size="8.00">Proc N</text>
+<text xml:space="preserve" text-anchor="start" x="672.1" y="-394.8" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="8.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="687.66" y="-394.8" font-family="Helvetica,sans-Serif" font-size="8.00"> × Dn × Ens N</text>
+<text xml:space="preserve" text-anchor="start" x="737.45" y="-394.8" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="8.00">ens</text>
+</g>
+<!-- syst_mid_dots -->
+<g id="node14" class="node">
+<title>syst_mid_dots</title>
+<text xml:space="preserve" text-anchor="middle" x="634" y="-304.4" font-family="Helvetica,sans-Serif" font-size="16.00">···</text>
+</g>
+<!-- syst_s1_last&#45;&gt;syst_mid_dots -->
+<!-- syst_mid_dots&#45;&gt;syst_sK_first -->
+<!-- syst_sK_dots -->
+<g id="node16" class="node">
+<title>syst_sK_dots</title>
+<text xml:space="preserve" text-anchor="start" x="529.99" y="-209.5" font-family="Helvetica,sans-Serif" font-size="9.00">···  (N</text>
+<text xml:space="preserve" text-anchor="start" x="559.49" y="-209.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="577" y="-209.5" font-family="Helvetica,sans-Serif" font-size="9.00"> × 2 × N</text>
+<text xml:space="preserve" text-anchor="start" x="608.5" y="-209.5" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="9.00">ens</text>
+<text xml:space="preserve" text-anchor="start" x="623.02" y="-209.5" font-family="Helvetica,sans-Serif" font-size="9.00">)</text>
+</g>
+<!-- syst_sK_last -->
+<g id="node17" class="node">
+<title>syst_sK_last</title>
+<path fill="#fdedec" stroke="#c0392b" d="M776.35,-229.2C776.35,-229.2 681.65,-229.2 681.65,-229.2 675.65,-229.2 669.65,-223.2 669.65,-217.2 669.65,-217.2 669.65,-205.2 669.65,-205.2 669.65,-199.2 675.65,-193.2 681.65,-193.2 681.65,-193.2 776.35,-193.2 776.35,-193.2 782.35,-193.2 788.35,-199.2 788.35,-205.2 788.35,-205.2 788.35,-217.2 788.35,-217.2 788.35,-223.2 782.35,-229.2 776.35,-229.2"/>
+<text xml:space="preserve" text-anchor="start" x="677.65" y="-209.8" font-family="Helvetica,sans-Serif" font-size="8.00">Proc N</text>
+<text xml:space="preserve" text-anchor="start" x="702.1" y="-209.8" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="8.00">proc</text>
+<text xml:space="preserve" text-anchor="start" x="717.66" y="-209.8" font-family="Helvetica,sans-Serif" font-size="8.00"> × Dn × Ens N</text>
+<text xml:space="preserve" text-anchor="start" x="767.45" y="-209.8" font-family="Helvetica,sans-Serif" baseline-shift="sub" font-size="8.00">ens</text>
+</g>
+<!-- syst_sK_last&#45;&gt;data_nn_eval -->
+<g id="edge12" class="edge">
+<title>syst_sK_last-&gt;data_nn_eval</title>
+<path fill="none" stroke="#c0392b" stroke-dasharray="5,2" d="M658.04,-177.2C624.81,-161.75 586.02,-143.71 555.93,-129.72"/>
+<polygon fill="#c0392b" stroke="#c0392b" points="557.53,-126.6 546.98,-125.56 554.58,-132.95 557.53,-126.6"/>
+<text xml:space="preserve" text-anchor="start" x="642.6" y="-161" font-family="Helvetica,sans-Serif" font-size="8.00">all syst</text>
+<text xml:space="preserve" text-anchor="start" x="637.47" y="-151.4" font-family="Helvetica,sans-Serif" font-size="8.00">jobs done</text>
+</g>
+<!-- to_stage4 -->
+<g id="node19" class="node">
+<title>to_stage4</title>
+<path fill="#f5f5f5" stroke="#95a5a6" stroke-width="1.5" stroke-dasharray="5,2" d="M545.63,-36C545.63,-36 466.37,-36 466.37,-36 460.37,-36 454.37,-30 454.37,-24 454.37,-24 454.37,-12 454.37,-12 454.37,-6 460.37,0 466.37,0 466.37,0 545.63,0 545.63,0 551.63,0 557.63,-6 557.63,-12 557.63,-12 557.63,-24 557.63,-24 557.63,-30 551.63,-36 545.63,-36"/>
+<text xml:space="preserve" text-anchor="middle" x="506" y="-21" font-family="Helvetica,sans-Serif" font-size="10.00">To Stage 4:</text>
+<text xml:space="preserve" text-anchor="middle" x="506" y="-9" font-family="Helvetica,sans-Serif" font-size="10.00">Statistical Inference</text>
+</g>
+<!-- data_nn_eval&#45;&gt;to_stage4 -->
+<g id="edge13" class="edge">
+<title>data_nn_eval-&gt;to_stage4</title>
+<path fill="none" stroke="black" d="M506,-86.37C506,-75.22 506,-60.69 506,-47.98"/>
+<polygon fill="black" stroke="black" points="509.5,-48.03 506,-38.03 502.5,-48.04 509.5,-48.03"/>
+</g>
+</g>
+</svg>

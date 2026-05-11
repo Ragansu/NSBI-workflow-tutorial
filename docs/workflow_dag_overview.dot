@@ -1,0 +1,121 @@
+digraph NSBI_Workflow_Overview {
+    rankdir=TB;
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=12];
+    edge [fontname="Helvetica", fontsize=10];
+    compound=true;
+    bgcolor="white";
+    pad=0.5;
+    nodesep=0.7;
+    ranksep=1.0;
+
+    // ================================================================
+    // STAGE 1: Data Processing
+    // ================================================================
+    subgraph cluster_data {
+        label="Stage 1: Data Processing";
+        style=rounded;
+        color="#3498db";
+        fontcolor="#2c3e50";
+        fontsize=14;
+        penwidth=2;
+
+        data_loader [
+            label="Data Loader\n(download + split)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5e8f0", color="#3498db", penwidth=1.5
+        ];
+        data_preprocessing [
+            label="Data Preprocessing\n(selections + features)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5e8f0", color="#3498db", penwidth=1.5
+        ];
+        data_loader -> data_preprocessing;
+    }
+
+    // ================================================================
+    // STAGE 2: Preselection Network
+    // ================================================================
+    subgraph cluster_presel {
+        label="Stage 2: Preselection Network";
+        style=rounded;
+        color="#9b59b6";
+        fontcolor="#2c3e50";
+        fontsize=14;
+        penwidth=2;
+
+        preselection [
+            label="Preselection NN\n(signal vs background classifier)",
+            shape=box, style="rounded,filled",
+            fillcolor="#e8d5f0", color="#9b59b6", penwidth=1.5
+        ];
+    }
+
+    // ================================================================
+    // STAGE 3: Density Ratio Training
+    // ================================================================
+    subgraph cluster_training {
+        label="Stage 3: Density Ratio Training";
+        style=rounded;
+        color="#e67e22";
+        fontcolor="#2c3e50";
+        fontsize=14;
+        penwidth=2;
+
+        nominal_training [
+            label=<Nominal Ensemble Training<BR/>N<SUB>proc</SUB> &times; N<SUB>ens</SUB> parallel jobs>,
+            shape=box, style="rounded,filled",
+            fillcolor="#fdebd0", color="#e67e22", penwidth=1.5
+        ];
+
+        syst_training [
+            label=<Systematic Ensemble Training<BR/>N<SUB>proc</SUB> &times; N<SUB>syst</SUB> &times; 2 &times; N<SUB>ens</SUB> parallel jobs>,
+            shape=box, style="rounded,filled",
+            fillcolor="#fdedec", color="#c0392b", penwidth=1.5
+        ];
+
+        data_nn_eval [
+            label="Data NN Evaluation\n(evaluate all ensembles on data)",
+            shape=box, style="rounded,filled",
+            fillcolor="#fdebd0", color="#e67e22", penwidth=1.5
+        ];
+
+        {rank=same; nominal_training; syst_training;}
+
+        nominal_training -> data_nn_eval;
+        syst_training -> data_nn_eval;
+    }
+
+    // ================================================================
+    // STAGE 4: Statistical Inference
+    // ================================================================
+    subgraph cluster_fit {
+        label="Stage 4: Statistical Inference";
+        style=rounded;
+        color="#27ae60";
+        fontcolor="#2c3e50";
+        fontsize=14;
+        penwidth=2;
+
+        model_building [
+            label="Model Building\n(via sbi_parametric_model)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5f0db", color="#27ae60", penwidth=1.5
+        ];
+
+        hypothesis_testing [
+            label="Hypothesis Testing\n(parameter fitting and Neyman Construction)",
+            shape=box, style="rounded,filled",
+            fillcolor="#d5f0db", color="#27ae60", penwidth=1.5
+        ];
+
+        model_building -> hypothesis_testing;
+    }
+
+    // ================================================================
+    // Inter-stage edges
+    // ================================================================
+    data_preprocessing -> preselection [ltail=cluster_data, lhead=cluster_presel];
+    preselection -> nominal_training [lhead=cluster_training];
+    data_nn_eval -> model_building [lhead=cluster_fit];
+}
