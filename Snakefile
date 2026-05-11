@@ -129,9 +129,6 @@ rule data_loader:
     # No `input:` — first stage of the DAG. All assets needed on the EP (src, pyproject, scripts, config) come via the static `htcondor_transfer_input_files` list in `resources:`.
     output:
         done = touch(f"{WORK_DIR}/.done_data_loader"),
-    log:
-        out = "logs/data_loader.out",
-        err = "logs/data_loader.err",
     threads: 8
     resources:
         request_memory = "64GB",
@@ -146,8 +143,7 @@ rule data_loader:
         export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
         python -m pip install --no-deps --user -e .
         cd {params.work_dir}
-        python -u scripts/data_loader.py --config {CONFIG_FILE} \
-            1> ../{log.out} 2> ../{log.err}
+        python -u scripts/data_loader.py --config {CONFIG_FILE}
         """
 
 
@@ -156,9 +152,6 @@ rule data_preprocessing:
         loader_done = f"{WORK_DIR}/.done_data_loader",
     output:
         done = touch(f"{WORK_DIR}/.done_data_preprocessing"),
-    log:
-        out = "logs/data_preprocessing.out",
-        err = "logs/data_preprocessing.err",
     threads: 8
     resources:
         request_memory = "42GB",
@@ -176,8 +169,7 @@ rule data_preprocessing:
         python -m pip install --no-deps --user -e .
         cd {params.work_dir}
         python -u scripts/data_preprocessing.py --config {CONFIG_FILE} \
-            {params.skip} \
-            1> ../{log.out} 2> ../{log.err}
+            {params.skip}
         """
 
 
@@ -190,9 +182,6 @@ rule preselection_network:
         preprocessing_done = f"{WORK_DIR}/.done_data_preprocessing",
     output:
         done = touch(f"{WORK_DIR}/.done_preselection_network"),
-    log:
-        out = "logs/preselection_network.out",
-        err = "logs/preselection_network.err",
     threads: 8
     resources:
         request_memory          = "32GB",
@@ -213,8 +202,7 @@ rule preselection_network:
         python -m pip install --no-deps --user -e .
         cd {params.work_dir}
         python -u scripts/preselection_network.py --config {CONFIG_FILE} \
-            {params.skip} \
-            1> ../{log.out} 2> ../{log.err}
+            {params.skip}
         """
 
 
@@ -235,9 +223,6 @@ rule train_ensemble_fold:
         preselection_done = f"{WORK_DIR}/.done_preselection_network",
     output:
         done = touch(f"{WORK_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}"),
-    log:
-        out = "logs/train_ensemble_{process}_fold{fold}_{ensemble_idx}.out",
-        err = "logs/train_ensemble_{process}_fold{fold}_{ensemble_idx}.err",
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -263,8 +248,7 @@ rule train_ensemble_fold:
             --config {CONFIG_FILE} \
             --process {wildcards.process} \
             --ensemble_index {wildcards.ensemble_idx} \
-            --fold_index {wildcards.fold} \
-            1> ../{log.out} 2> ../{log.err}
+            --fold_index {wildcards.fold}
         """
 
 
@@ -274,9 +258,6 @@ rule train_ensemble_nofold:
         preselection_done = f"{WORK_DIR}/.done_preselection_network",
     output:
         done = touch(f"{WORK_DIR}/.done_train_{{process}}_{{ensemble_idx}}"),
-    log:
-        out = "logs/train_ensemble_{process}_{ensemble_idx}.out",
-        err = "logs/train_ensemble_{process}_{ensemble_idx}.err",
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -300,8 +281,7 @@ rule train_ensemble_nofold:
         python -u scripts/neural_likelihood_ratio_estimation.py \
             --config {CONFIG_FILE} \
             --process {wildcards.process} \
-            --ensemble_index {wildcards.ensemble_idx} \
-            1> ../{log.out} 2> ../{log.err}
+            --ensemble_index {wildcards.ensemble_idx}
         """
 
 
@@ -320,9 +300,6 @@ rule systematic_uncertainty_training_fold:
         preselection_done = f"{WORK_DIR}/.done_preselection_network",
     output:
         done = touch(f"{WORK_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_fold{{fold}}_{{ensemble_idx}}"),
-    log:
-        out = "logs/syst_{process}_{syst}_{direction}_fold{fold}_{ensemble_idx}.out",
-        err = "logs/syst_{process}_{syst}_{direction}_fold{fold}_{ensemble_idx}.err",
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -351,8 +328,7 @@ rule systematic_uncertainty_training_fold:
             --direction {wildcards.direction} \
             --ensemble_index {wildcards.ensemble_idx} \
             --fold_index {wildcards.fold} \
-            --train \
-            1> ../{log.out} 2> ../{log.err}
+            --train
         """
 
 
@@ -362,9 +338,6 @@ rule systematic_uncertainty_training_nofold:
         preselection_done = f"{WORK_DIR}/.done_preselection_network",
     output:
         done = touch(f"{WORK_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_{{ensemble_idx}}"),
-    log:
-        out = "logs/syst_{process}_{syst}_{direction}_{ensemble_idx}.out",
-        err = "logs/syst_{process}_{syst}_{direction}_{ensemble_idx}.err",
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -391,8 +364,7 @@ rule systematic_uncertainty_training_nofold:
             --systematic {wildcards.syst} \
             --direction {wildcards.direction} \
             --ensemble_index {wildcards.ensemble_idx} \
-            --train \
-            1> ../{log.out} 2> ../{log.err}
+            --train
         """
 
 
@@ -407,9 +379,6 @@ rule data_nn_eval:
         systematics_done = syst_sentinels(),
     output:
         done = touch(f"{WORK_DIR}/.done_data_nn_eval"),
-    log:
-        out = "logs/data_nn_eval.out",
-        err = "logs/data_nn_eval.err",
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -428,6 +397,5 @@ rule data_nn_eval:
         export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
         python -m pip install --no-deps --user -e .
         cd {params.work_dir}
-        python -u scripts/data_nn_eval.py --config {CONFIG_FILE} \
-            1> ../{log.out} 2> ../{log.err}
+        python -u scripts/data_nn_eval.py --config {CONFIG_FILE}
         """
