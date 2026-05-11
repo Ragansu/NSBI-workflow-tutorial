@@ -111,7 +111,6 @@ def main():
     logger.info(f"Reference processes: {ref_processes}")
     logger.info(f"Resolved reference_priors: {reference_priors}")
 
-    NN_training_mix_model = {}
     use_log_loss = config_workflow["use_log_loss"]
 
     # Start afresh? Set delete_existing_models=True
@@ -120,15 +119,14 @@ def main():
     if delete_existing:
         logger.warning("delete_existing_models is True. Old models will be removed.")
 
-    path_to_figures = {}
-    path_to_models = {}
-
     process_type_input = args.process
     if process_type_input is not None:
         logger.info(f"Only training process type {process_type_input}")
     else:
         logger.info(f"Train all processes")
     logger.info("Preparing datasets and initializing trainers")
+
+    NN_training_mix_model = {}
 
     for process_type in basis_processes:
         if process_type_input is not None:
@@ -191,8 +189,7 @@ def main():
         output_name = f'{process_type}'
 
         path_to_figures[process_type] = os.path.join(training_output_path, f'output_figures_{process_type}{fold_label}{ensemble_index_label}/')
-        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}{fold_label}{ensemble_index_label}/')
-        
+        path_to_models[process_type] = os.path.join(training_output_path, f'output_model_params_{process_type}{fold_label}{ensemble_index_label}/')        
         # setup the training of density ratios using density_ratio_trainer API
         NN_training_mix_model[process_type] = nsbi_common_utils.training.density_ratio_trainer(
                                                                                                 dataset                 = dataset_mix_model,    # dataframe containing all the relevant features for training
@@ -202,8 +199,8 @@ def main():
                                                                                                 features_scaling        = features_scaling,
                                                                                                 sample_name             = [process_type, 'ref'],
                                                                                                 output_name             = output_name,
-                                                                                                path_to_figures         = path_to_figures[process_type],
-                                                                                                path_to_models          = path_to_models[process_type],
+                                                                                                path_to_figures         = path_to_figures,
+                                                                                                path_to_models          = path_to_models,
                                                                                                 use_log_loss            = use_log_loss,
                                                                                                 delete_existing_models  = delete_existing
                                                                                             )
