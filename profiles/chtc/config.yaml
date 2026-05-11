@@ -8,6 +8,9 @@
 
 executor: htcondor
 
+# Non-shared-FS mode: AP and EP do not share /home. With this set, Snakemake keeps Snakefile/config paths relative and the plugin auto-transfers them to the same relative locations in the EP's HTCondor scratch dir. Without it, paths get resolved to AP-absolute (which breaks the EP-side re-invocation), and `htcondor-shared-fs-prefixes` has no effect.
+shared-fs-usage: none
+
 # Maximum simultaneously submitted jobs
 jobs: 50
 
