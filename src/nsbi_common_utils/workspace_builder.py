@@ -241,6 +241,9 @@ class WorkspaceBuilder:
         """
         channels = []
         observations = []
+
+        trained_models_dict = self.config_dict.get("TrainedModels", None)
+
         for region in self.config_dict["Regions"]:
             channel = {}
             channel_name = region["Name"]
@@ -250,10 +253,15 @@ class WorkspaceBuilder:
             type_of_fit  = channel_type
 
             if type_of_fit == "unbinned":
-                region_weights: str = region.get("AsimovWeights", None)
-                if region_weights is not None:
-                    channel.update({"weights" : region_weights})
-                
+                unbined_region = trained_models_dict[region["Name"]]
+                weights_path = unbined_region.get("Weights", None)
+                for model in unbined_region["Models"]:
+                    model_name = model["Name"]
+                    nominal_ratios_asimov = model.get("Nominal", {}).get(
+                        "Ratios", None
+                    )
+                    ratio_dict = {model_name: nominal_ratios_asimov}
+
             region_binning      = region.get("Binning", None)
             region_variable     = region.get("Variable", None)
                 
@@ -305,26 +313,20 @@ class WorkspaceBuilder:
                     
                 sample_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
                 
-                current_sample.update({"data": list(sample_data)})
-
-                if type_of_fit == "unbinned":
-
-                    idx = self.config.get_sample_index_unbinned_regions(channel_name, sample_name)
-                    
-                    nominal_ratios         = region["TrainedModels"][idx]["Nominal"].get("Ratios", None)
-                    if nominal_ratios is None:
-                        # Load the model and evaluate ratios - TODO
-                        nominal_model         = region["TrainedModels"][idx]["Nominal"].get("Models", None)
-
-                    current_sample.update({"ratios": nominal_ratios})
-                    # current_sample.update({"weights": weights})
-
                 if is_data:
                     observation = {
                         "name": channel_name,
                         "data": list(sample_data),
                     }
+
+                    if type_of_fit == "unbinned":
+                        observation.update({"ratios": ratio_dict,
+                                            "weights": weights_path})
                     observations.append(observation)
+                    continue
+                    
+                current_sample.update({"data": list(sample_data)})
+                
 
                 modifiers = []
 
@@ -346,8 +348,7 @@ class WorkspaceBuilder:
             channel.update({"samples": samples})
             channels.append(channel)
 
-            
-        return channels
+        return channels, observations
 
     def measurements(self) -> List[Dict[str, Any]]:
         """Build the ``"measurements"`` list for the workspace.

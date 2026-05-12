@@ -172,44 +172,31 @@ TrainedModels:
       Models:
           - SampleName: ztautau
             Nominal:
-                RatiosAsimov: ./asimov_density_ratios/ratios_ztautau.npy
-                RatiosObs: ./observed_density_ratios/ratios_ztautau.npy
+                Ratios: ./asimov_density_ratios/ratios_ztautau.npy
             Systematics:
                 - SystName: TES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_ztautau_TES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_ztautau_TES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_ztautau_TES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_ztautau_TES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_ztautau_TES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_ztautau_TES_dn.npy
                 - SystName: JES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_ztautau_JES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_ztautau_JES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_ztautau_JES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_ztautau_JES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_ztautau_JES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_ztautau_JES_dn.npy
           - SampleName: htautau
             Nominal:
-                RatiosAsimov: ./asimov_density_ratios/ratios_htautau.npy
+                Ratios: ./asimov_density_ratios/ratios_htautau.npy
             Systematics:
                 - SystName: TES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_htautau_TES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_htautau_TES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_htautau_TES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_htautau_TES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_htautau_TES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_htautau_TES_dn.npy
                 - SystName: JES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_htautau_JES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_htautau_JES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_htautau_JES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_htautau_JES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_htautau_JES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_htautau_JES_dn.npy
           - SampleName: ttbar
             Nominal:
-                RatiosAsimov: ./asimov_density_ratios/ratios_ttbar.npy
+                Ratios: ./asimov_density_ratios/ratios_ttbar.npy
             Systematics:
                 - SystName: TES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_ttbar_TES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_ttbar_TES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_ttbar_TES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_ttbar_TES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_ttbar_TES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_ttbar_TES_dn.npy
                 - SystName: JES
-                  RatiosUpAsimov: ./asimov_density_ratios/ratios_ttbar_JES_up.npy
-                  RatiosDnAsimov: ./asimov_density_ratios/ratios_ttbar_JES_dn.npy
-                  RatiosUpObs: ./observed_density_ratios/ratios_ttbar_JES_up.npy
-                  RatiosDnObs: ./observed_density_ratios/ratios_ttbar_JES_dn.npy
+                  RatiosUp: ./asimov_density_ratios/ratios_ttbar_JES_up.npy
+                  RatiosDn: ./asimov_density_ratios/ratios_ttbar_JES_dn.npy
