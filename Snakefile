@@ -13,10 +13,12 @@ EXAMPLE_DIR = "FAIR_universe_Higgs_tautau"
 WORK_DIR    = f"examples/{EXAMPLE_DIR}"
 CONFIG_FILE = "config.pipeline.yaml"
 
-_nlre            = config["neural_likelihood_ratio_estimation"]
+# Sentinel files (`.done_*`) used to drive the DAG live on shared FS, not inside the repo. The plugin's `htcondor-shared-fs-prefixes` covers /projects, so the EP-side snakemake writes touch() directly to this path and the AP reads it without HTCondor transfer — no clutter inside the working tree.
+SENTINEL_DIR = "/projects/Physics_Cranmer/sentinels_FAIR_higgs"
+
 _syst_cfg        = config["systematic_uncertainty"]
-BASIS_PROCESSES  = _nlre["basis_processes_to_train"]
-N_ENSEMBLE       = _nlre["num_ensemble_members_training"]
+BASIS_PROCESSES  = config["neural_likelihood_ratio_estimation"]["basis_processes_to_train"]
+N_ENSEMBLE       = config["neural_likelihood_ratio_estimation"]["num_ensemble_members_training"]
 ENSEMBLE_INDICES = list(range(N_ENSEMBLE))
 
 N_ENSEMBLE_SYST  = _syst_cfg.get("num_ensemble_members_training", 1)
@@ -66,6 +68,13 @@ _BASE_GPU_EXCLUDES = [
 ]
 
 
+def base_requirements(extra_excludes=()):
+    """HasCHTCStaging + base machine excludes. Use for rules that don't request a GPU (or don't care about driver version). The machine excludes still apply because some EPs in the pool (vetsigian*, gpulab2003) don't expose /home in a way snakemake-on-EP can write to, which causes apptainer-prefix mkdir failures."""
+    excludes = _BASE_GPU_EXCLUDES + list(extra_excludes)
+    excl_clause = " && ".join(f'(Machine != "{m}")' for m in excludes)
+    return f'(Target.HasCHTCStaging == true) && {excl_clause}'
+
+
 def gpu_requirements(driver_version="12.4", extra_excludes=()):
     """Build a HTCondor requirements expression for a GPU job: driver-version floor + HasCHTCStaging + machine excludes (base + per-rule extras)."""
     excludes = _BASE_GPU_EXCLUDES + list(extra_excludes)
@@ -94,11 +103,11 @@ def train_sentinels():
     """All nominal-training sentinel paths, fanned out over (process, fold, ensemble_idx). Fold dimension is collapsed when NUM_FOLDS == 1."""
     if USE_KFOLD:
         return expand(
-            f"{WORK_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}",
+            f"{SENTINEL_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}",
             process=BASIS_PROCESSES, fold=FOLD_INDICES, ensemble_idx=ENSEMBLE_INDICES,
         )
     return expand(
-        f"{WORK_DIR}/.done_train_{{process}}_{{ensemble_idx}}",
+        f"{SENTINEL_DIR}/.done_train_{{process}}_{{ensemble_idx}}",
         process=BASIS_PROCESSES, ensemble_idx=ENSEMBLE_INDICES,
     )
 
@@ -110,15 +119,15 @@ def syst_sentinels():
         for idx in SYST_ENSEMBLE_INDICES:
             if USE_KFOLD:
                 for fold in FOLD_INDICES:
-                    paths.append(f"{WORK_DIR}/.done_syst_{process}_{syst}_{direction}_fold{fold}_{idx}")
+                    paths.append(f"{SENTINEL_DIR}/.done_syst_{process}_{syst}_{direction}_fold{fold}_{idx}")
             else:
-                paths.append(f"{WORK_DIR}/.done_syst_{process}_{syst}_{direction}_{idx}")
+                paths.append(f"{SENTINEL_DIR}/.done_syst_{process}_{syst}_{direction}_{idx}")
     return paths
 
 
 rule all:
     input:
-        f"{WORK_DIR}/.done_data_nn_eval"
+        f"{SENTINEL_DIR}/.done_parameter_fitting"
 
 
 # =============================================================================
@@ -128,12 +137,12 @@ rule all:
 rule data_loader:
     # No `input:` — first stage of the DAG. All assets needed on the EP (src, pyproject, scripts, config) come via the static `htcondor_transfer_input_files` list in `resources:`.
     output:
-        done = touch(f"{WORK_DIR}/.done_data_loader"),
+        done = touch(f"{SENTINEL_DIR}/.done_data_loader"),
     threads: 8
     resources:
         request_memory = "64GB",
         request_disk   = "64GB",
-        requirements   = "(Target.HasCHTCStaging == true)",
+        requirements   = base_requirements(),
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
         work_dir = WORK_DIR,
@@ -149,15 +158,15 @@ rule data_loader:
 
 rule data_preprocessing:
     input:
-        loader_done = f"{WORK_DIR}/.done_data_loader",
+        loader_done = f"{SENTINEL_DIR}/.done_data_loader",
     output:
-        done = touch(f"{WORK_DIR}/.done_data_preprocessing"),
+        done = touch(f"{SENTINEL_DIR}/.done_data_preprocessing"),
     threads: 8
     resources:
         request_memory = "42GB",
         request_disk   = "42GB",
         request_gpus   = 1,
-        requirements   = "(Target.HasCHTCStaging == true)",
+        requirements   = base_requirements(),
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
         work_dir = WORK_DIR,
@@ -179,9 +188,9 @@ rule data_preprocessing:
 
 rule preselection_network:
     input:
-        preprocessing_done = f"{WORK_DIR}/.done_data_preprocessing",
+        preprocessing_done = f"{SENTINEL_DIR}/.done_data_preprocessing",
     output:
-        done = touch(f"{WORK_DIR}/.done_preselection_network"),
+        done = touch(f"{SENTINEL_DIR}/.done_preselection_network"),
     threads: 8
     resources:
         request_memory          = "32GB",
@@ -191,7 +200,9 @@ rule preselection_network:
         classad_WantGPULab      = _r(True),
         classad_GPUJobLength    = "short",
         requirements            = gpu_requirements(driver_version="12.0"),
-        htcondor_transfer_input_files = COMMON_TRANSFER,
+        htcondor_transfer_input_files  = COMMON_TRANSFER,
+        # Plots written by the script land at `./output/plots/preselection_network/` (per `preselection_network.output.plots_dir` in config.pipeline.yaml). Declare the dir so HTCondor ships it back to the AP.
+        htcondor_transfer_output_files = f"{WORK_DIR}/output/plots/preselection_network",
     params:
         work_dir = WORK_DIR,
         skip     = "--skip" if config.get("skip", False) else "",
@@ -220,9 +231,9 @@ rule preselection_network:
 rule train_ensemble_fold:
     """K-fold variant: one job per (process, fold, ensemble_idx). Only instantiated when NUM_FOLDS > 1; the fold sentinel pattern can't match anything when there's just one fold."""
     input:
-        preselection_done = f"{WORK_DIR}/.done_preselection_network",
+        preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
-        done = touch(f"{WORK_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}"),
+        done = touch(f"{SENTINEL_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}"),
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -255,9 +266,9 @@ rule train_ensemble_fold:
 rule train_ensemble_nofold:
     """Single-fold variant: one job per (process, ensemble_idx). The script omits the `_fold{N}` suffix from model paths when `--fold_index` is not passed, matching the htcondor non-kfold case."""
     input:
-        preselection_done = f"{WORK_DIR}/.done_preselection_network",
+        preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
-        done = touch(f"{WORK_DIR}/.done_train_{{process}}_{{ensemble_idx}}"),
+        done = touch(f"{SENTINEL_DIR}/.done_train_{{process}}_{{ensemble_idx}}"),
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -297,9 +308,9 @@ rule train_ensemble_nofold:
 rule systematic_uncertainty_training_fold:
     """K-fold variant of the systematics training job."""
     input:
-        preselection_done = f"{WORK_DIR}/.done_preselection_network",
+        preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
-        done = touch(f"{WORK_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_fold{{fold}}_{{ensemble_idx}}"),
+        done = touch(f"{SENTINEL_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_fold{{fold}}_{{ensemble_idx}}"),
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -335,9 +346,9 @@ rule systematic_uncertainty_training_fold:
 rule systematic_uncertainty_training_nofold:
     """Single-fold variant of the systematics training job."""
     input:
-        preselection_done = f"{WORK_DIR}/.done_preselection_network",
+        preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
-        done = touch(f"{WORK_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_{{ensemble_idx}}"),
+        done = touch(f"{SENTINEL_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_{{ensemble_idx}}"),
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -378,7 +389,7 @@ rule data_nn_eval:
         ensemble_done    = train_sentinels(),
         systematics_done = syst_sentinels(),
     output:
-        done = touch(f"{WORK_DIR}/.done_data_nn_eval"),
+        done = touch(f"{SENTINEL_DIR}/.done_data_nn_eval"),
     threads: 8
     resources:
         request_memory          = "16GB",
@@ -398,4 +409,43 @@ rule data_nn_eval:
         python -m pip install --no-deps --user -e .
         cd {params.work_dir}
         python -u scripts/data_nn_eval.py --config {CONFIG_FILE}
+        """
+
+
+# =============================================================================
+# Stage 5: Parameter Fitting — final inference step.
+#
+# Replaces: examples/FAIR_universe_Higgs_tautau/htcondor/stage_parameter_fitting.dag
+# Single job; consumes the aggregated density ratios from data_nn_eval and runs
+# the NLL scan / parameter fit defined in config_fit_nsbi.yml + config.pipeline.yaml.
+# Requirements are looser than the training/eval rules (no machine excludes), per
+# the legacy job_parameter_fits.sub, but the GPU floor is higher (capability 8.0).
+# =============================================================================
+
+rule parameter_fitting:
+    input:
+        eval_done = f"{SENTINEL_DIR}/.done_data_nn_eval",
+    output:
+        done = touch(f"{SENTINEL_DIR}/.done_parameter_fitting"),
+    threads: 8
+    resources:
+        request_memory          = "16GB",
+        request_disk            = "64GB",
+        request_gpus            = 1,
+        gpus_minimum_capability = _r(8.0),
+        classad_WantGPULab      = _r(True),
+        classad_GPUJobLength    = "short",
+        requirements            = "(GPUs_DriverVersion >= 12.0) && (Target.HasCHTCStaging == true)",
+        htcondor_transfer_input_files  = COMMON_TRANSFER,
+        # The script writes NLL-scan plots to `./output/plots/parameter_fitting/` (relative to WORK_DIR, per `parameter_fitting.output.plots_dir` in config.pipeline.yaml). Declare the directory here so HTCondor ships it back to the AP — without this, the plots only exist in EP scratch and are discarded.
+        htcondor_transfer_output_files = f"{WORK_DIR}/output/plots/parameter_fitting",
+    params:
+        work_dir = WORK_DIR,
+    shell:
+        """
+        set -e
+        export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0
+        python -m pip install --no-deps --user -e .
+        cd {params.work_dir}
+        python -u scripts/parameter_fitting.py --config {CONFIG_FILE}
         """
