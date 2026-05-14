@@ -45,10 +45,10 @@ class datasets:
     def extract_data_from_sampledict(self, sample_dict: Dict) -> pd.DataFrame:
         
         # Extract metadata for the "sample" making up the model
-        sample_name = sample_dict["Name"]
-        file_path = sample_dict["SamplePath"]
-        tree_name = sample_dict["Tree"]
-        
+        sample_name = sample_dict.get("Name") or sample_dict.get("SampleName")
+        file_path = sample_dict.get("Path") or sample_dict.get("SamplePath")
+        tree_name = sample_dict.get("Tree")
+
         # Determine which branches to load (include weight branch if specified)
         weight_branch = sample_dict.get("Weight")
         branches = self.branches_to_load.copy()

@@ -80,9 +80,14 @@ class sbi_parametric_model:
 
         self.index_normparam_map                        = self._make_map_index_norm()
 
-        self.yield_array_dict, _                        = self._get_nominal_expected_arrays( type_of_fit = "binned" )
-        self.unbinned_total_dict, \
-            self.ratios_array_dict                      = self._get_nominal_expected_arrays( type_of_fit = "unbinned" )
+        self.yield_array_dict                           = self._get_nominal_expected_arrays( type_of_fit = "binned" )
+        self.unbinned_total_dict                        = self._get_nominal_expected_arrays( type_of_fit = "unbinned" )
+
+        observed_arrays                                 = self._get_observed_arrays()
+        self.observed_hist                              = observed_arrays["data_observed"]
+        self.observed_rate                              = jnp.sum(observed_arrays["weights_observed"])
+        self.weight_arrays_unbinned                     = observed_arrays["weights_observed"]
+        self.ratios_array_dict                          = observed_arrays["ratio_observed"]
 
         self.combined_var_up_binned, \
             self.combined_var_dn_binned                 = self._get_systematic_data( type_of_fit="binned" )
@@ -92,13 +97,9 @@ class sbi_parametric_model:
                 self.combined_tot_up_unbinned, \
                     self.combined_tot_dn_unbinned       = self._get_systematic_data( type_of_fit="unbinned" )
         
-        self.weight_arrays_unbinned                     = self._get_asimov_weights_array()
 
-        self.observed_array                             = self._get_observed_arrays()
+
         self._finalize_to_device()
-
-        self.expected_hist                              = self._get_expected_hist(param_vec = self.initial_parameter_values)
-        self.expected_rate_unbinned                     = self._get_expected_rate_unbinned(param_vec = self.initial_parameter_values)
 
         # Stack per-process dicts into arrays for vectorized NLL
         self._build_stacked_data()
@@ -119,49 +120,6 @@ class sbi_parametric_model:
         """
         return self.list_parameters, self.initial_parameter_values
         
-    def _get_expected_hist(self, param_vec):
-        """
-        Optimized function for NLL computations
-        """
-        param_vec_interpolation = param_vec[ self.num_unconstrained_param : ]
-        norm_modifiers          = {}
-        hist_vars_binned        = {}
-
-        norm_modifiers     = self._calculate_norm_variations(param_vec)
-
-        for process in self.all_samples:
-            
-            if self.has_normplusshape:
-
-                hist_vars_binned[process]   = _calculate_combined_var(  param_vec_interpolation, 
-                                                                            self.combined_var_up_binned[process],
-                                                                            self.combined_var_dn_binned[process]    )
-
-            else:
-                hist_vars_binned[process] = jnp.ones_like( self.yield_array_dict[process] )
-
-        data_expected = self._calculate_parameterized_yields(  self.yield_array_dict, 
-                                                                        hist_vars_binned, 
-                                                                        norm_modifiers )
-
-        return data_expected
-
-    def _get_expected_rate_unbinned(self, param_vec):
-        """Compute the total expected rate in unbinned channels at ``param_vec``. Used as Asimov observed rate."""
-        param_vec_interpolation = param_vec[ self.num_unconstrained_param : ]
-        norm_modifiers = self._calculate_norm_variations(param_vec)
-
-        hist_vars_unbinned = {}
-        for process in self.all_samples:
-            if self.has_normplusshape:
-                hist_vars_unbinned[process] = _calculate_combined_var(  param_vec_interpolation,
-                                                                        self.combined_tot_up_unbinned[process],
-                                                                        self.combined_tot_dn_unbinned[process]    )
-            else:
-                hist_vars_unbinned[process] = jnp.ones_like( self.unbinned_total_dict[process] )
-
-        return self._calculate_parameterized_yields(self.unbinned_total_dict, hist_vars_unbinned, norm_modifiers)
-
     def _make_map_index_norm(self):
         """
         Maps the index of parameter in the parameter vector to norm factor
@@ -356,7 +314,6 @@ class sbi_parametric_model:
         Get an array of expected event yields or ratios
         """
         data_expected   = {sample_name : np.array([]) for sample_name in self.all_samples}
-        ratio_expected  = {sample_name : np.array([]) for sample_name in self.all_samples}
 
         if type_of_fit == "binned":
             channels_list       =   self.channels_binned
@@ -370,39 +327,65 @@ class sbi_parametric_model:
                 channel_index           = self._index_of_region(channel_name = channel_name)
                 sample_index            = self._index_of_sample(channel_name = channel_name,
                                                                     sample_name  = sample_name)
-            
-                if type_of_fit == "binned":
-                    sample_data             = np.array(self.workspace["channels"][channel_index]["samples"][sample_index]["data"])
-                    sample_ratio            = np.array([])
-                elif type_of_fit == "unbinned":
-                    sample_data             = np.array(self.workspace["channels"][channel_index]["samples"][sample_index]["data"])
-                    sample_ratio            = np.load(self.workspace["channels"][channel_index]["samples"][sample_index]["ratios"])
+                sample_data             = np.array(self.workspace["channels"][channel_index]["samples"][sample_index]["data"])
 
                 data_expected[sample_name]  =   np.append(data_expected[sample_name], sample_data)
-                ratio_expected[sample_name] =   np.append(ratio_expected[sample_name], sample_ratio)
 
-        return data_expected, ratio_expected
+        return data_expected
 
-    def _get_observed_arrays(self):
+    def _get_observed_arrays(self,type_of_fit:str = "binned"):
         """
         Get an array of observed event yields
         """
         data_list = []
+        
+        data_list = []
+        ratio_observed = {sample: [] for sample in self.all_samples}
+        weights_observed = np.array([])
 
-        for channel_name in self.channels_binned:
+        for channel_name in self.all_channels:
+
             channel_index = self._index_of_region(channel_name=channel_name)
-            channel_data = np.array(self.workspace["observations"][channel_index]["data"])
-            
-            data_list.append(channel_data)
-            combined_length = sum(len(arr) for arr in data_list)
+
+            # ---- collect channel data ----
+            channel_data = np.array(
+                self.workspace["observations"][channel_index]["data"]
+            )
+
+            if type_of_fit == "binned":
+                data_list.append(channel_data)
+
+            else: # unbinned
+                weights = np.load(self.workspace["channels"][channel_index]["weights"])
+                weights_observed        = np.append(weights_observed, weights)
+
+                # ---- collect ratios for ALL samples in this channel ----
+                ratios_path = self.workspace["observations"][channel_index]["samples"]["ratios"]
+
+                # assuming file contains dict-like structure OR per-sample mapping
+                sample_ratios = np.load(ratios_path, allow_pickle=True).item()
+
+                for sample_name in self.all_samples:
+                    ratio_observed[sample_name].append(sample_ratios[sample_name])
+
+        # ---- final combined results ----
+        ratio_observed = {
+            k: np.concatenate(v) if len(v) > 0 else np.array([])
+            for k, v in ratio_observed.items()
+        }
 
         if data_list:
             data_observed = np.concatenate(data_list)
         else:
             data_observed = np.array([])
         
-        return data_observed
 
+        return {
+            "data_observed": data_observed,
+            "ratio_observed": ratio_observed,
+            "weights_observed": weights_observed
+        }
+    
     def _calculate_norm_variations(self, param_vec):
         norm_var = {sample_name: 1.0 for sample_name in self.all_samples}
         for sample, params_sample in self.norm_sample_map.items():  
@@ -507,6 +490,8 @@ class sbi_parametric_model:
         self.combined_var_dn_binned     = tree_map(jnp.asarray, self.combined_var_dn_binned)
 
         self.weight_arrays_unbinned     = jnp.asarray(self.weight_arrays_unbinned)
+        self.observed_rate              = jnp.sum(self.weight_arrays_unbinned)
+
         
     def _build_stacked_data(self):
         """Stack per-process dicts into arrays and bundle into a single pytree for JIT."""
@@ -547,8 +532,8 @@ class sbi_parametric_model:
             'tot_up_unbinned':  tot_up_unbinned_stacked,
             'tot_dn_unbinned':  tot_dn_unbinned_stacked,
             'norm_matrix':      jnp.array(norm_matrix),
-            'observed_hist':    self.observed_array,
-            'observed_rate':    jnp.sum(self.weight_arrays_unbinned),
+            'observed_hist':    self.observed_hist,
+            'observed_rate':    self.observed_rate,
             'weights':          self.weight_arrays_unbinned,
         }
 

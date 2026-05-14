@@ -252,16 +252,6 @@ class WorkspaceBuilder:
                             "type": channel_type})
             type_of_fit  = channel_type
 
-            if type_of_fit == "unbinned":
-                unbined_region = trained_models_dict[region["Name"]]
-                weights_path = unbined_region.get("Weights", None)
-                for model in unbined_region["Models"]:
-                    model_name = model["Name"]
-                    nominal_ratios_asimov = model.get("Nominal", {}).get(
-                        "Ratios", None
-                    )
-                    ratio_dict = {model_name: nominal_ratios_asimov}
-
             region_binning      = region.get("Binning", None)
             region_variable     = region.get("Variable", None)
                 
@@ -319,7 +309,19 @@ class WorkspaceBuilder:
                         "data": list(sample_data),
                     }
 
+
                     if type_of_fit == "unbinned":
+                        unblinded_region = trained_models_dict[region["Name"]]
+
+                        logging.info(f"Unbinned region {region['Name']} has trained models for samples {[m['Name'] for m in unblinded_region['Models']]}")
+
+                        weights_path = unblinded_region.get("Weights")
+
+                        ratio_dict = {
+                            model["Name"]: model.get("Nominal", {}).get("Ratios")
+                            for model in unblinded_region.get("Models", [])
+                        }
+
                         observation.update({"ratios": ratio_dict,
                                             "weights": weights_path})
                     observations.append(observation)
