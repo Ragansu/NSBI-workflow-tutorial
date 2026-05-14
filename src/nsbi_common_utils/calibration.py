@@ -1,9 +1,12 @@
-# Isotonic and Histogram-based calibration strategies. 
+# Isotonic, Histogram, and Platt-scaling calibration strategies for NSBI density ratios. The histogram and Platt calibrators both bin/fit in log(r) (LLR) space — heavy-tailed ratios get proper resolution in log space rather than being squeezed at the extremes of [0,1] in score space or [0, r_max] in linear ratio space. All three public APIs are ratio-in / ratio-out.
 # Base part of the code for Histogram-based calibration copied from https://github.com/smsharma/mining-for-substructure-lens
-# New weighted quantiles method added, and small changes
+# New weighted quantiles method added, log-space binning, and Platt scaling.
 
 import numpy as np
+from scipy.optimize import minimize
 from sklearn.isotonic import IsotonicRegression
+
+LOG_EPS = 1e-30  # floor for ratios before taking log, gives log floor of ~-69 (safe in float64).
 
 class IsotonicCalibrator:
     """Isotonic-regression calibrator that operates in ratio space: fits a monotonic map from the uncalibrated density ratio to the per-event probability."""
@@ -21,40 +24,49 @@ class IsotonicCalibrator:
         
 
 class HistogramCalibrator:
-    
-    def __init__(self, 
-                calibration_data_num, 
-                calibration_data_den, 
-                w_num, w_den, 
-                mode="dynamic", 
-                nbins=100, 
-                histrange=None, 
+    """Histogram-based calibrator that bins in log(r) (LLR) space.
+
+    Inputs and outputs are density ratios; the log transform is internal. Binning in log space spreads the heavy tails of ratios (events with r >> 1 or r << 1) across many bins instead of squeezing them all into the last bin in [0, r_max], which is what kills resolution exactly where the bias-driving events live. The math is otherwise unchanged: with method="direct", the per-bin density ratio `hist_num / hist_den` IS the calibrated ratio; with method="indirect" (the legacy "calibrating score directly" branch), the same expression gives a calibrated score and we map back to a ratio via s/(1-s).
+    """
+
+    def __init__(self,
+                calibration_data_num,
+                calibration_data_den,
+                w_num, w_den,
+                mode="dynamic",
+                nbins=100,
+                histrange=None,
                 method="direct"):
 
+        # Transform to log(r) once at the boundary; everything internal is in LLR space.
+        log_num = np.log(np.clip(calibration_data_num, LOG_EPS, None))
+        log_den = np.log(np.clip(calibration_data_den, LOG_EPS, None))
+
         self.range, self.edges = self._find_binning(
-            calibration_data_num, calibration_data_den, mode, nbins, histrange,
+            log_num, log_den, mode, nbins, histrange,
             w_num=w_num if mode == "dynamic" else None,
             w_den=w_den if mode == "dynamic" else None,
         )
 
-        self.hist_num, self.num_err = self._fill_histogram(calibration_data_num, w_num)
-        
+        self.hist_num, self.num_err = self._fill_histogram(log_num, w_num)
+
         self.method = method
-        
+
         if self.method == "direct":
-            self.hist_den, self.den_err = self._fill_histogram(calibration_data_den, w_den)
+            self.hist_den, self.den_err = self._fill_histogram(log_den, w_den)
         else:
-            print("calibrating score directly")
-            h1, e1 = self._fill_histogram(calibration_data_num, w_num)
-            h2, e2 = self._fill_histogram(calibration_data_den, w_den)
+            print("calibrating score directly (in log-ratio space)")
+            h1, e1 = self._fill_histogram(log_num, w_num)
+            h2, e2 = self._fill_histogram(log_den, w_den)
             self.hist_den = h1 + h2
             self.den_err  = e1 + e2
-            
+
     def return_hist(self):
         return self.hist_num, self.hist_den, self.num_err, self.den_err, self.quant_binning
-        
+
     def cali_pred(self, data):
-        indices = self._find_bins(data)
+        log_data = np.log(np.clip(data, LOG_EPS, None))
+        indices = self._find_bins(log_data)
         num = self.hist_num[indices]
         den = self.hist_den[indices]
         cal_pred = num/den
@@ -105,7 +117,7 @@ class HistogramCalibrator:
         return idx
     
     def weighted_quantile(self, data, quantiles, sample_weight=None):
-        
+
         values = np.array(data)
         quantiles = np.array(quantiles)
         if sample_weight is None:
@@ -121,3 +133,37 @@ class HistogramCalibrator:
         weighted_quantiles /= weighted_quantiles[-1]
 
         return np.interp(quantiles, weighted_quantiles, values)
+
+
+class PlattScalingCalibrator:
+    """Two-parameter Platt / temperature-scaling calibrator in log-ratio space.
+
+    Fits `log r_cal = a · log r_raw + b` by minimising the weighted binary cross-entropy on the training labels. Useful when histogram/isotonic struggle: the affine transform handles tail saturation (`a < 1` deflates over-confidence in the tail) and asymmetric over/under-prediction (`b != 0`). Two parameters means low variance — no overfitting on small calibration sets, no degenerate fits at saturated 0/1 scores.
+
+    Use as a drop-in replacement for IsotonicCalibrator / HistogramCalibrator: same `cali_pred(ratio) -> ratio` contract.
+    """
+
+    def __init__(self, ratio_predicted, truth_labels, weights, max_logr=80.0):
+        # max_logr clips logr to ±max_logr to keep the optimisation from chasing infinite NN outputs. Default ±80 is comfortably inside float64's exp range (~709).
+        self.max_logr = float(max_logr)
+        L = np.clip(np.log(np.clip(np.asarray(ratio_predicted, dtype=float), LOG_EPS, None)), -self.max_logr, self.max_logr)
+        y = np.asarray(truth_labels, dtype=float)
+        w = np.asarray(weights, dtype=float)
+
+        def neg_log_likelihood(params):
+            a, b = params
+            L_cal = np.clip(a * L + b, -self.max_logr, self.max_logr)
+            # Numerically stable BCE in logit space: -log sigmoid(L_cal) = log1p(exp(-L_cal)); -log(1 - sigmoid(L_cal)) = log1p(exp(L_cal)).
+            loss_pos = np.log1p(np.exp(-L_cal))
+            loss_neg = np.log1p(np.exp( L_cal))
+            return float(np.sum(w * (y * loss_pos + (1.0 - y) * loss_neg)))
+
+        result = minimize(neg_log_likelihood, x0=[1.0, 0.0], method="Nelder-Mead", options={"xatol": 1e-6, "fatol": 1e-6})
+        if not result.success:
+            print(f"PlattScalingCalibrator: optimiser did not converge cleanly ({result.message}); using last iterate (a={result.x[0]:.4f}, b={result.x[1]:.4f}).")
+        self.a, self.b = float(result.x[0]), float(result.x[1])
+
+    def cali_pred(self, ratio_uncalibrated):
+        L = np.clip(np.log(np.clip(np.asarray(ratio_uncalibrated, dtype=float), LOG_EPS, None)), -self.max_logr, self.max_logr)
+        L_cal = np.clip(self.a * L + self.b, -self.max_logr, self.max_logr)
+        return np.exp(L_cal)

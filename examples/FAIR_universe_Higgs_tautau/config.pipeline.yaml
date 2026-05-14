@@ -123,7 +123,7 @@ neural_likelihood_ratio_estimation:
   reference_priors:
     htautau: null         # auto-yield -> preserves current htautau contribution
     ttbar:   null         # auto-yield -> preserves current ttbar contribution
-    ztautau: {cap: 100}   # adds ztautau into the reference with M_ztautau = 100
+    ztautau: 0   # adds ztautau into the reference with M_ztautau = 100
 
   # Some default hyper-parameters -- Quality tested for SBI
   common_training_params: &common_params
@@ -132,11 +132,11 @@ neural_likelihood_ratio_estimation:
     number_of_epochs: 100
     batch_size: 1024
     learning_rate: 0.0001
-    scalerType: "MinMax"
+    scalerType: "StandardScaler"
     
     calibration: false
     recalibrate_output: false
-    type_of_calibration: "histogram"
+    type_of_calibration: "platt"
     num_bins_cal: 20
     
     callback: true
@@ -186,11 +186,11 @@ systematic_uncertainty:
     number_of_epochs: 100
     batch_size: 10000
     learning_rate: 0.0001
-    scalerType: "MinMax"
+    scalerType: "StandardScaler"
     
     calibration: true
     recalibrate_output: false
-    type_of_calibration: "histogram"
+    type_of_calibration: "platt"
     num_bins_cal: 20
 
     callback: true
