@@ -27,7 +27,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
 from sklearn.compose import ColumnTransformer
 
-from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator
+from nsbi_common_utils.calibration import HistogramCalibrator, IsotonicCalibrator, PlattScalingCalibrator
 from nsbi_common_utils.plotting import plot_loss, plot_all_features, plot_all_features, plot_reweighted, plot_calibration_curve, plot_calibration_curve_ratio, plot_overfit_side_by_side
 
 import logging
@@ -557,8 +557,11 @@ class density_ratio_trainer:
                 elif type_of_calibration == "isotonic":
                     self.histogram_calibrator =  IsotonicCalibrator(train_data_ratio, label_train, weight_train)
 
+                elif type_of_calibration == "platt":
+                    self.histogram_calibrator =  PlattScalingCalibrator(train_data_ratio, label_train, weight_train)
+
                 else:
-                    raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
+                    raise Exception(f"Type of calibration not recognized - choose between isotonic, histogram, or platt")
 
                 file_calib = open(path_to_calibrated_object, 'wb')
 
@@ -575,8 +578,11 @@ class density_ratio_trainer:
                     elif type_of_calibration == "isotonic":
                         self.histogram_calibrator =  IsotonicCalibrator(train_data_ratio, label_train, weight_train)
 
+                    elif type_of_calibration == "platt":
+                        self.histogram_calibrator =  PlattScalingCalibrator(train_data_ratio, label_train, weight_train)
+
                     else:
-                        raise Exception(f"Type of calibration not recognized - choose between isotonic and histogram")
+                        raise Exception(f"Type of calibration not recognized - choose between isotonic, histogram, or platt")
 
                     file_calib = open(path_to_calibrated_object, 'wb')
 
