@@ -42,7 +42,7 @@ class datasets:
             if branch not in self.branches_all:
                 self.branches_all.append(branch)
 
-    def extract_data_from_sampledict(self, sample_dict: Dict) -> pd.DataFrame:
+    def _extract_data_from_sampledict(self, sample_dict: Dict) -> pd.DataFrame:
         
         # Extract metadata for the "sample" making up the model
         sample_name = sample_dict.get("Name") or sample_dict.get("SampleName")
@@ -86,7 +86,7 @@ class datasets:
             # Extract metadata for the "sample" making up the model
             sample_name = sample_dict["Name"]
 
-            df = self.extract_data_from_sampledict(sample_dict) 
+            df = self._extract_data_from_sampledict(sample_dict) 
             dict_datasets["Nominal"][sample_name] = df
 
         # 2. Load systematic variations for constrained systematics (if load_systematics=True)
@@ -108,7 +108,7 @@ class datasets:
                         for sample_dict in syst_dict.get(direction, []):
 
                             sample_name = sample_dict["SampleName"]
-                            df = self.extract_data_from_sampledict(sample_dict)
+                            df = self._extract_data_from_sampledict(sample_dict)
                             dict_datasets[region_key][sample_name] = df
 
         return dict_datasets
