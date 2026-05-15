@@ -333,7 +333,7 @@ class sbi_parametric_model:
 
         return data_expected
 
-    def _get_observed_arrays(self,type_of_fit:str = "binned"):
+    def _get_observed_arrays(self):
         """
         Get an array of observed event yields
         """
@@ -341,6 +341,11 @@ class sbi_parametric_model:
         
         data_list = []
         ratio_observed = {sample: [] for sample in self.all_samples}
+        
+        # print("All channels in workspace:", self.all_channels)
+        # print("Samples in workspace:", self.all_samples)
+        # print("keys in ratio dict of first channel:", self.workspace["observations"][0]["ratios"].keys())
+        
         weights_observed = np.array([])
 
         for channel_name in self.all_channels:
@@ -351,22 +356,29 @@ class sbi_parametric_model:
             channel_data = np.array(
                 self.workspace["observations"][channel_index]["data"]
             )
+            
+            type_of_fit = self.workspace["channels"][channel_index].get("type")
 
             if type_of_fit == "binned":
                 data_list.append(channel_data)
 
             else: # unbinned
-                weights = np.load(self.workspace["channels"][channel_index]["weights"])
-                weights_observed        = np.append(weights_observed, weights)
+                weights_path = self.workspace["observations"][channel_index]["weights"]
+                weights = np.load(weights_path)
+                weights_observed = np.append(weights_observed, weights)
 
                 # ---- collect ratios for ALL samples in this channel ----
-                ratios_path = self.workspace["observations"][channel_index]["samples"]["ratios"]
-
-                # assuming file contains dict-like structure OR per-sample mapping
-                sample_ratios = np.load(ratios_path, allow_pickle=True).item()
+                # 2. FIX: "ratios" contains a dictionary of paths per sample name
+                ratios_dict = self.workspace["observations"][channel_index]["ratios"]
 
                 for sample_name in self.all_samples:
-                    ratio_observed[sample_name].append(sample_ratios[sample_name])
+                    # Get the specific path for this sample (e.g., "signal" or "background")
+                    sample_ratio_path = ratios_dict[sample_name]
+                    sample_ratio_data = np.load(sample_ratio_path, allow_pickle=True)
+                    
+                    print(f"Loaded ratio data for sample '{sample_name}' in channel '{channel_name}': shape {sample_ratio_data.shape}")
+
+                    ratio_observed[sample_name].append(sample_ratio_data)
 
         # ---- final combined results ----
         ratio_observed = {
@@ -378,6 +390,8 @@ class sbi_parametric_model:
             data_observed = np.concatenate(data_list)
         else:
             data_observed = np.array([])
+            
+        
         
 
         return {
@@ -593,10 +607,23 @@ class sbi_parametric_model:
             llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
 
             llr_constraints = jnp.sum(param_syst ** 2)
+            llr_unbinned    = -2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
+            llr_total = llr_binned + llr_rate + llr_unbinned + llr_constraints
+            
+            # jax.debug.print("nu_binned is {y}", y=nu_binned)
+            # jax.debug.print("nu_unbinned is {y}", y=nu_unbinned)
+            # jax.debug.print("observed_hist is {y}", y=data['observed_hist']) 
+            # jax.debug.print("observed_rate is {y}", y=data['observed_rate'])           
+            # jax.debug.print("llr_binned is {y}", y=llr_binned)
+            # jax.debug.print("llr_rate is {y}", y=llr_rate)
+            # jax.debug.print("llr_pe is {y}", y=llr_pe)
+            # jax.debug.print("llr_unbinned is {y}", y=llr_unbinned)
+            # jax.debug.print("llr_constraints is {y}", y=llr_constraints)
+            # jax.debug.print("llr_total is {y}", y=llr_total)
 
             return (llr_binned
                     + llr_rate
-                    - 2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
+                    + llr_unbinned
                     + llr_constraints)
 
         jit_nll          = jax.jit(_nll_pure)
