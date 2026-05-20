@@ -1,6 +1,6 @@
 # Tutorial for NSBI workshop in Munich
 
-The data used in the tutorial can be downloaded using this link: https://cernbox.cern.ch/s/72xgUi4D4JjnFMc . Once downloaded, change the `BASE_DIR` in each notebook to point to the relevant path.
+The data used in the tutorial can be downloaded using this link: https://cernbox.cern.ch/s/72xgUi4D4JjnFMc. Once downloaded, change the `BASE_DIR` in each notebook to point to the relevant path.
 
 Installation
 ---
