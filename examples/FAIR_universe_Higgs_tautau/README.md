@@ -5,7 +5,7 @@ The tabular dataset used in this demonstration is hosted on Zenodo (https://zeno
 
 ## Download saved models and processed data 
 
-If you need access to pre-trained ensemble neural networks and preprocessed data, to avoid running each notebook in sequence but rather pick and choose any of them, pull the files in `saved_datasets/` directory using `git lfs pull`.
+If you need access to pre-trained ensemble neural networks and preprocessed data, to avoid running each notebook in sequence but rather pick and choose any of them, download the directory from [LINK TBA]().
 
 ## Running a HTCondor workflow with DAGMan
 
