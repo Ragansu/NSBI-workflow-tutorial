@@ -688,13 +688,22 @@ class sbi_parametric_model:
                 * ratio_vars,
                 axis=0
             )
-            llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
+
+            safe_dnu_dx = jnp.where(dnu_dx > 0, jnp.log(dnu_dx), -1)
+
+            llr_pe = safe_dnu_dx - jnp.log(nu_unbinned)
+
 
             llr_constraints = jnp.sum(param_syst ** 2)
             llr_unbinned    = -2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
             llr_total = llr_binned + llr_rate + llr_unbinned + llr_constraints
             
             # jax.debug.print("nu_binned is {y}", y=nu_binned)
+            # jax.debug.print("hist_vars_binned is {y}", y=hist_vars_binned)
+            # jax.debug.print("norm_mods is {y}", y=norm_mods)
+            # jax.debug.print("Final norm_mods is {y}", y=final_norm_mods)
+
+            # jax.debug.print("unbinned_total is {y}", y=data['unbinned_total'])
             # jax.debug.print("nu_unbinned is {y}", y=nu_unbinned)
             # jax.debug.print("observed_hist is {y}", y=data['observed_hist']) 
             # jax.debug.print("observed_rate is {y}", y=data['observed_rate'])           
@@ -702,6 +711,8 @@ class sbi_parametric_model:
             # jax.debug.print("llr_rate is {y}", y=llr_rate)
             # jax.debug.print("llr_pe is {y}", y=llr_pe)
             # jax.debug.print("llr_unbinned is {y}", y=llr_unbinned)
+            
+            # jax.debug.print("llr_unbinned_nw is {y}", y=llr_unbinned_nw)
             # jax.debug.print("llr_constraints is {y}", y=llr_constraints)
             # jax.debug.print("llr_total is {y}", y=llr_total)
 
