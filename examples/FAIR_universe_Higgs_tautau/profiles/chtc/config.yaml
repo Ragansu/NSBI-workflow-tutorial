@@ -1,14 +1,5 @@
-# profiles/chtc/config.yaml
-# --------------------------
-# Snakemake profile for CHTC HTCondor submission via the
-# `snakemake-executor-plugin-htcondor` plugin.
-#
-# Activate with:  snakemake --profile profiles/chtc
-# Or set env var: export SNAKEMAKE_PROFILE=profiles/chtc
-
 executor: htcondor
 
-# Non-shared-FS mode: AP and EP do not share /home. With this set, Snakemake keeps Snakefile/config paths relative and the plugin auto-transfers them to the same relative locations in the EP's HTCondor scratch dir. Without it, paths get resolved to AP-absolute (which breaks the EP-side re-invocation), and `htcondor-shared-fs-prefixes` has no effect.
 shared-fs-usage: none
 
 # Maximum simultaneously submitted jobs
@@ -33,7 +24,7 @@ default-resources:
   universe:                  "container"
   container_image:           "file:///staging/jsandesara/nsbi-env-gpu.sif"
   # Run snakemake from inside the container instead of letting the plugin transfer the AP's pixi-env Python (which isn't relocatable). The wrapper just `exec snakemake "$@"` — snakemake is bundled in the .sif via pixi.
-  job_wrapper: "profiles/chtc/job_wrapper.sh"
+  job_wrapper: "examples/FAIR_universe_Higgs_tautau/profiles/chtc/job_wrapper.sh"
   # `1`/`0` instead of `True`/`False`: Snakemake's resources-block validator only accepts int/str/callable, so we use the HTCondor idiom where a non-zero numeric ClassAd value is truthy.
   classad_WantFlocking:      1
   classad_is_resumable:      1

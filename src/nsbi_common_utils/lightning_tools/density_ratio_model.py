@@ -16,7 +16,8 @@ class DensityRatioLightning(pl.LightningModule):
                 use_log_loss    = False,
                 activation      = "swish", 
                 callback_factor = 0.01, 
-                callback_patience = 30):
+                callback_patience = 30,
+                use_cosine_anneal_scheduler = False):
         
         super().__init__()
 
@@ -94,16 +95,19 @@ class DensityRatioLightning(pl.LightningModule):
 
         optimizer = torch.optim.NAdam(self.parameters(), lr=self.lr)
 
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer,
-            step_size=self.hparams.callback_patience,   
-            gamma=self.hparams.callback_factor        
-        )
-        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        #     optimizer,
-        #     T_max=100,
-        #     eta_min=1e-6
-        # )
+        if self.hparams.use_cosine_anneal_scheduler:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=100,
+                eta_min=1e-6
+            )
+
+        else:
+            scheduler = torch.optim.lr_scheduler.StepLR(
+                optimizer,
+                step_size=self.hparams.callback_patience,   
+                gamma=self.hparams.callback_factor        
+            )
 
         return {
             "optimizer": optimizer,

@@ -1,12 +1,13 @@
-# Isotonic, Histogram, and Platt-scaling calibration strategies for NSBI density ratios. The histogram and Platt calibrators both bin/fit in log(r) (LLR) space — heavy-tailed ratios get proper resolution in log space rather than being squeezed at the extremes of [0,1] in score space or [0, r_max] in linear ratio space. All three public APIs are ratio-in / ratio-out.
+# Isotonic, Histogram, and Platt-scaling calibration strategies for NSBI density ratios. HistogramCalibrator bins in linear ratio space; PlattScalingCalibrator fits in log-ratio space internally (the BCE objective requires it) but exposes a ratio-in / ratio-out API. All three public APIs are ratio-in / ratio-out.
 # Base part of the code for Histogram-based calibration copied from https://github.com/smsharma/mining-for-substructure-lens
-# New weighted quantiles method added, log-space binning, and Platt scaling.
+# New weighted quantiles method added, and Platt scaling.
 
 import numpy as np
 from scipy.optimize import minimize
 from sklearn.isotonic import IsotonicRegression
 
 LOG_EPS = 1e-30  # floor for ratios before taking log, gives log floor of ~-69 (safe in float64).
+
 
 class IsotonicCalibrator:
     """Isotonic-regression calibrator that operates in ratio space: fits a monotonic map from the uncalibrated density ratio to the per-event probability."""
@@ -21,12 +22,12 @@ class IsotonicCalibrator:
         calib_score = self.regressor.predict(ratio_uncalibrated)
         calib_score = np.clip(calib_score, 1e-9, 1.0 - 1e-9)
         return calib_score / (1.0 - calib_score)
-        
+
 
 class HistogramCalibrator:
-    """Histogram-based calibrator that bins in log(r) (LLR) space.
+    """Histogram-based calibrator that bins in linear ratio space.
 
-    Inputs and outputs are density ratios; the log transform is internal. Binning in log space spreads the heavy tails of ratios (events with r >> 1 or r << 1) across many bins instead of squeezing them all into the last bin in [0, r_max], which is what kills resolution exactly where the bias-driving events live. The math is otherwise unchanged: with method="direct", the per-bin density ratio `hist_num / hist_den` IS the calibrated ratio; with method="indirect" (the legacy "calibrating score directly" branch), the same expression gives a calibrated score and we map back to a ratio via s/(1-s).
+    Inputs and outputs are density ratios. With method="direct", the per-bin density ratio `hist_num / hist_den` IS the calibrated ratio; with method="indirect" (the legacy "calibrating score directly" branch), the same expression gives a calibrated score and we map back to a ratio via s/(1-s).
     """
 
     def __init__(self,
@@ -38,26 +39,22 @@ class HistogramCalibrator:
                 histrange=None,
                 method="direct"):
 
-        # Transform to log(r) once at the boundary; everything internal is in LLR space.
-        log_num = np.log(np.clip(calibration_data_num, LOG_EPS, None))
-        log_den = np.log(np.clip(calibration_data_den, LOG_EPS, None))
-
         self.range, self.edges = self._find_binning(
-            log_num, log_den, mode, nbins, histrange,
+            calibration_data_num, calibration_data_den, mode, nbins, histrange,
             w_num=w_num if mode == "dynamic" else None,
             w_den=w_den if mode == "dynamic" else None,
         )
 
-        self.hist_num, self.num_err = self._fill_histogram(log_num, w_num)
+        self.hist_num, self.num_err = self._fill_histogram(calibration_data_num, w_num)
 
         self.method = method
 
         if self.method == "direct":
-            self.hist_den, self.den_err = self._fill_histogram(log_den, w_den)
+            self.hist_den, self.den_err = self._fill_histogram(calibration_data_den, w_den)
         else:
-            print("calibrating score directly (in log-ratio space)")
-            h1, e1 = self._fill_histogram(log_num, w_num)
-            h2, e2 = self._fill_histogram(log_den, w_den)
+            print("calibrating score directly")
+            h1, e1 = self._fill_histogram(calibration_data_num, w_num)
+            h2, e2 = self._fill_histogram(calibration_data_den, w_den)
             self.hist_den = h1 + h2
             self.den_err  = e1 + e2
 
@@ -65,8 +62,7 @@ class HistogramCalibrator:
         return self.hist_num, self.hist_den, self.num_err, self.den_err, self.quant_binning
 
     def cali_pred(self, data):
-        log_data = np.log(np.clip(data, LOG_EPS, None))
-        indices = self._find_bins(log_data)
+        indices = self._find_bins(data)
         num = self.hist_num[indices]
         den = self.hist_den[indices]
         cal_pred = num/den
@@ -94,10 +90,10 @@ class HistogramCalibrator:
         elif mode == "dynamic_unweighted":
             percentages = 100.0 * np.linspace(0.0, 1.0, nbins+1)
             edges = np.percentile(data, percentages)
-            
+
         else:
             raise RuntimeError("Unknown mode {}".format(mode))
-        
+
         self.quant_binning = edges
         return (hmin, hmax), edges
 
@@ -105,17 +101,17 @@ class HistogramCalibrator:
         histo, _ = np.histogram(data, bins=self.edges, range=self.range, weights=weights)
         i = np.sum(histo)
         histo = histo / i
-        
+
         err,_ = np.histogram(data, bins=self.edges, range=self.range, weights=weights**2)
         err = err/(i**2)
-        
+
         return histo, err
 
     def _find_bins(self, data: np.ndarray):
         idx = np.searchsorted(self.edges, data, side="right") - 1
         idx = np.clip(idx, 0, len(self.edges) - 2)
         return idx
-    
+
     def weighted_quantile(self, data, quantiles, sample_weight=None):
 
         values = np.array(data)
