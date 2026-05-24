@@ -1,0 +1,511 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/jaysandesara/NSBI-workflow-tutorial/main/src/nsbi_common_utils/schemas/config.json",
+    "title": "nsbi_common_utils config schema",
+    "description": "full schema for the nsbi_common_utils fit configuration file",
+    "type": "object",
+    "required": ["General", "Samples", "NormFactors", "Regions"],
+    "properties": {
+        "General": {
+            "title": "General",
+            "description": "general settings",
+            "$ref": "#/definitions/general"
+        },
+        "Samples": {
+            "title": "Samples",
+            "description": "list of samples",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "description": "a sample",
+                "$ref": "#/definitions/sample"
+            },
+            "uniqueItems": true
+        },
+        "NormFactors": {
+            "title": "NormFactors",
+            "description": "list of normalization factors",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "description": "a normalization factor",
+                "$ref": "#/definitions/normfactor"
+            },
+            "uniqueItems": true
+        },
+        "Systematics": {
+            "title": "Systematics",
+            "description": "list of systematics",
+            "type": "array",
+            "minItems": 0,
+            "items": {
+                "description": "a systematic uncertainty",
+                "$ref": "#/definitions/systematic"
+            },
+            "uniqueItems": true
+        },
+        "TrainingFeatures": {
+            "title": "TrainingFeatures",
+            "description": "list of input features used during neural ratio / preselection training",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "description": "name of a training feature (column in the input dataset)",
+                "type": "string"
+            },
+            "uniqueItems": true
+        },
+        "TrainingFeaturesToStandardize": {
+            "title": "TrainingFeaturesToStandardize",
+            "description": "subset of training features that should be standardized (zero mean, unit variance) before being passed to the network",
+            "type": "array",
+            "minItems": 0,
+            "items": {
+                "description": "name of a training feature to standardize",
+                "type": "string"
+            },
+            "uniqueItems": true
+        },
+        "Regions": {
+            "title": "Regions",
+            "description": "list of regions (analysis channels), each either binned or unbinned (NSBI)",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "description": "a region",
+                "$ref": "#/definitions/region"
+            },
+            "uniqueItems": true
+        }
+    },
+    "definitions": {
+        "general": {
+            "title": "General settings",
+            "$$target": "#/definitions/general",
+            "description": "general settings, including the measurement definition",
+            "type": "object",
+            "required": ["Measurement"],
+            "properties": {
+                "Measurement": {
+                    "description": "measurement definition (name, parameters to fit, POI)",
+                    "$ref": "#/definitions/measurement"
+                }
+            },
+            "additionalProperties": false
+        },
+        "measurement": {
+            "title": "Measurement",
+            "$$target": "#/definitions/measurement",
+            "description": "measurement definition: name, parameters to fit, and parameter of interest",
+            "type": "object",
+            "required": ["Name"],
+            "properties": {
+                "Name": {
+                    "description": "name of the measurement",
+                    "type": "string"
+                },
+                "ParametersToFit": {
+                    "description": "list of parameter names (NormFactors and/or Systematics) to float in the fit; remaining parameters are held constant",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "name of a parameter to fit",
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "POI": {
+                    "description": "name of the parameter of interest, defaults to empty string",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "sample": {
+            "title": "Sample",
+            "$$target": "#/definitions/sample",
+            "description": "a sample of a specific physics process",
+            "type": "object",
+            "required": ["Name", "Tree", "SamplePath"],
+            "properties": {
+                "Name": {
+                    "description": "name of the sample",
+                    "type": "string"
+                },
+                "Tree": {
+                    "description": "name of the ROOT tree to read for this sample",
+                    "type": "string"
+                },
+                "SamplePath": {
+                    "description": "path(s) to input file(s) for this sample",
+                    "$ref": "#/definitions/samplepath_setting"
+                },
+                "Weight": {
+                    "description": "name of the per-event weight branch / weight expression to apply",
+                    "type": "string"
+                },
+                "Filter": {
+                    "description": "selection criteria to apply (override for region setting)",
+                    "type": "string"
+                },
+                "UseAsReference": {
+                    "description": "whether this sample is used as the reference (denominator) sample in density ratio estimation",
+                    "type": "boolean"
+                },
+                "UseAsBasis": {
+                    "description": "whether this sample is part of the basis used to construct the mixture model likelihood",
+                    "type": "boolean"
+                },
+                "Data": {
+                    "description": "if it is a data sample",
+                    "type": "boolean"
+                },
+                "Regions": {
+                    "description": "region(s) that contain the sample, defaults to all regions",
+                    "$ref": "#/definitions/regions_setting"
+                }
+            },
+            "additionalProperties": false
+        },
+        "normfactor": {
+            "title": "NormFactor",
+            "$$target": "#/definitions/normfactor",
+            "description": "a normalization factor affecting one or more samples",
+            "type": "object",
+            "required": ["Name"],
+            "properties": {
+                "Name": {
+                    "description": "name of the normalization factor",
+                    "type": "string"
+                },
+                "Regions": {
+                    "description": "region(s) that contain the normfactor, defaults to all regions",
+                    "$ref": "#/definitions/regions_setting"
+                },
+                "Samples": {
+                    "description": "affected sample(s), defaults to all samples",
+                    "$ref": "#/definitions/samples_setting"
+                },
+                "Nominal": {
+                    "description": "nominal (initial) value of the normfactor",
+                    "type": "number"
+                },
+                "Bounds": {
+                    "description": "lower and upper bound for the normfactor in the fit",
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "description": "bound",
+                        "type": "number"
+                    },
+                    "uniqueItems": true
+                }
+            },
+            "additionalProperties": false
+        },
+        "systematic": {
+            "title": "Systematic",
+            "$$target": "#/definitions/systematic",
+            "description": "a systematic uncertainty with up/down variations defined per affected sample",
+            "type": "object",
+            "required": ["Name", "Type", "Up", "Dn"],
+            "properties": {
+                "Name": {
+                    "description": "name of the systematic uncertainty",
+                    "type": "string"
+                },
+                "Type": {
+                    "description": "type of systematic uncertainty",
+                    "type": "string",
+                    "enum": ["Normalization", "NormPlusShape"]
+                },
+                "Nominal": {
+                    "description": "nominal (initial) value of the nuisance parameter",
+                    "type": "number"
+                },
+                "Bounds": {
+                    "description": "lower and upper bound for the nuisance parameter in the fit",
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "description": "bound",
+                        "type": "number"
+                    },
+                    "uniqueItems": true
+                },
+                "Regions": {
+                    "description": "region(s) that contain the systematic, defaults to all regions",
+                    "$ref": "#/definitions/regions_setting"
+                },
+                "Samples": {
+                    "description": "affected sample(s), defaults to all samples",
+                    "$ref": "#/definitions/samples_setting"
+                },
+                "Up": {
+                    "description": "list of per-sample \"up\" variation templates",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "a per-sample \"up\" template entry",
+                        "$ref": "#/definitions/syst_template_setting"
+                    },
+                    "uniqueItems": true
+                },
+                "Dn": {
+                    "description": "list of per-sample \"down\" variation templates",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "a per-sample \"down\" template entry",
+                        "$ref": "#/definitions/syst_template_setting"
+                    },
+                    "uniqueItems": true
+                },
+                "ModifierName": {
+                    "description": "name of modifier in workspace, defaults to value set by Name",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "syst_template_setting": {
+            "title": "Systematic template",
+            "$$target": "#/definitions/syst_template_setting",
+            "description": "a per-sample systematic variation template (one entry per affected sample, for either Up or Dn)",
+            "type": "object",
+            "required": ["SampleName", "Path", "Tree"],
+            "properties": {
+                "SampleName": {
+                    "description": "name of the sample this template applies to (must match a Sample defined in Samples)",
+                    "type": "string"
+                },
+                "Path": {
+                    "description": "path to the input file containing the varied dataset for this sample",
+                    "type": "string"
+                },
+                "Tree": {
+                    "description": "name of the ROOT tree containing the varied events",
+                    "type": "string"
+                },
+                "Weight": {
+                    "description": "weight branch / weight expression to apply for the varied events",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "region": {
+            "title": "Region",
+            "$$target": "#/definitions/region",
+            "description": "a region of phase space, either binned or unbinned (NSBI / density-ratio based)",
+            "$$description": [
+                "binned regions require Variable and Binning;",
+                "unbinned regions typically have Variable=null and Binning=null and define TrainedModels"
+            ],
+            "type": "object",
+            "required": ["Name", "Type"],
+            "properties": {
+                "Name": {
+                    "description": "name of the region",
+                    "type": "string"
+                },
+                "Type": {
+                    "description": "type of region: \"binned\" for histogram-based fits, \"unbinned\" for NSBI / density-ratio based fits",
+                    "type": "string",
+                    "enum": ["binned", "unbinned"]
+                },
+                "Filter": {
+                    "description": "selection criteria defining the region (e.g. \"presel_score>=-1.0 & presel_score<=4.5\")",
+                    "type": "string"
+                },
+                "Variable": {
+                    "description": "variable to bin in for binned regions; may be null for unbinned regions",
+                    "type": ["string", "null"]
+                },
+                "Binning": {
+                    "description": "bin edges for binned regions; may be null for unbinned regions",
+                    "type": ["array", "null"],
+                    "minItems": 2,
+                    "items": {
+                        "description": "bin edge",
+                        "type": "number"
+                    },
+                    "uniqueItems": true
+                },
+                "AsimovWeights": {
+                    "description": "path to a .npy file containing per-event Asimov weights, used for unbinned regions",
+                    "type": "string"
+                },
+                "TrainedModels": {
+                    "description": "trained density-ratio model and ratio file paths per sample, used for unbinned regions",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "trained-model entry for one sample",
+                        "$ref": "#/definitions/trained_model_entry"
+                    },
+                    "uniqueItems": true
+                },
+                "RegionPath": {
+                    "description": "(part of) path to file containing the region",
+                    "type": "string"
+                }
+            },
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"Type": {"const": "binned"}}
+                    },
+                    "then": {
+                        "required": ["Variable", "Binning"],
+                        "properties": {
+                            "Variable": {"type": "string"},
+                            "Binning": {
+                                "type": "array",
+                                "minItems": 2,
+                                "items": {"type": "number"},
+                                "uniqueItems": true
+                            }
+                        }
+                    }
+                }
+            ],
+            "additionalProperties": false
+        },
+        "trained_model_entry": {
+            "title": "TrainedModels entry",
+            "$$target": "#/definitions/trained_model_entry",
+            "description": "trained density-ratio models and pre-computed ratio arrays for a single sample in an unbinned region",
+            "type": "object",
+            "required": ["SampleName", "Nominal"],
+            "properties": {
+                "SampleName": {
+                    "description": "name of the sample these trained models / ratios correspond to",
+                    "type": "string"
+                },
+                "Nominal": {
+                    "description": "nominal (un-varied) trained model and ratio paths",
+                    "type": "object",
+                    "properties": {
+                        "Models": {
+                            "description": "path to the directory containing the trained nominal model parameters",
+                            "type": "string"
+                        },
+                        "Ratios": {
+                            "description": "path to a .npy file containing pre-computed nominal density ratios",
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "Systematics": {
+                    "description": "list of trained models / ratios for systematic variations of this sample",
+                    "type": "array",
+                    "minItems": 0,
+                    "items": {
+                        "description": "trained-model entry for one systematic on this sample",
+                        "$ref": "#/definitions/trained_model_systematic"
+                    },
+                    "uniqueItems": true
+                }
+            },
+            "additionalProperties": false
+        },
+        "trained_model_systematic": {
+            "title": "TrainedModels systematic entry",
+            "$$target": "#/definitions/trained_model_systematic",
+            "description": "trained density-ratio models and pre-computed ratio arrays for one systematic variation of a sample",
+            "type": "object",
+            "required": ["SystName"],
+            "properties": {
+                "SystName": {
+                    "description": "name of the systematic (must match a Systematic defined in Systematics)",
+                    "type": "string"
+                },
+                "ModelsUp": {
+                    "description": "path to the directory containing the trained model parameters for the \"up\" variation",
+                    "type": "string"
+                },
+                "ModelsDn": {
+                    "description": "path to the directory containing the trained model parameters for the \"down\" variation",
+                    "type": "string"
+                },
+                "RatiosUp": {
+                    "description": "path to a .npy file containing pre-computed density ratios for the \"up\" variation",
+                    "type": "string"
+                },
+                "RatiosDn": {
+                    "description": "path to a .npy file containing pre-computed density ratios for the \"down\" variation",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "samples_setting": {
+            "title": "Sample setting",
+            "$$target": "#/definitions/samples_setting",
+            "description": "name(s) of affected sample(s)",
+            "oneOf": [
+                {
+                    "description": "single affected sample",
+                    "type": "string"
+                },
+                {
+                    "description": "multiple affected samples",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "single affected sample",
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                }
+            ]
+        },
+        "samplepath_setting": {
+            "title": "SamplePath setting",
+            "$$target": "#/definitions/samplepath_setting",
+            "description": "path(s) to input file(s) for a sample",
+            "oneOf": [
+                {
+                    "description": "path to single file",
+                    "type": "string"
+                },
+                {
+                    "description": "list of paths",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "path to single file",
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                }
+            ]
+        },
+        "regions_setting": {
+            "title": "Regions setting",
+            "$$target": "#/definitions/regions_setting",
+            "description": "name(s) of region(s)",
+            "oneOf": [
+                {
+                    "description": "single region",
+                    "type": "string"
+                },
+                {
+                    "description": "list of regions",
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "description": "single region",
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                }
+            ]
+        }
+    },
+    "additionalProperties": false
+}
