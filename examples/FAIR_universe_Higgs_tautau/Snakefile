@@ -1,9 +1,3 @@
-# =============================================================================
-# Snakemake workflow: NSBI examples/FAIR Universe Higgs tautau
-# Translated from DAGMan pipeline; mirrors the fan-out logic in
-# examples/FAIR_universe_Higgs_tautau/htcondor/generate_{training,systematics}_dag.py
-# =============================================================================
-
 import os
 import yaml
 
@@ -24,17 +18,16 @@ ENSEMBLE_INDICES = list(range(N_ENSEMBLE))
 N_ENSEMBLE_SYST  = _syst_cfg.get("num_ensemble_members_training", 1)
 SYST_ENSEMBLE_INDICES = list(range(N_ENSEMBLE_SYST))
 
-# K-fold cross-validation: num_folds lives under data_preprocessing in the pipeline config (set to 1 to disable). The fan-out below matches generate_training_dag.py and generate_systematics_dag.py: emit one job per (process, fold, ensemble_idx) for nominal training, and one per (process, systematic, direction, fold, ensemble_idx) for systematics. When NUM_FOLDS == 1 the fold dimension is dropped from sentinel filenames and `--fold_index` is omitted on the command line, matching what the training scripts expect to produce model paths without a `_fold{N}` suffix.
+# K-fold cross-validation: num_folds (set to 1 to disable). 
 NUM_FOLDS    = int(config.get("data_preprocessing", {}).get("num_folds", 1))
 FOLD_INDICES = list(range(NUM_FOLDS))
 USE_KFOLD    = NUM_FOLDS > 1
 
-# Read the NSBI fit config once to enumerate valid (process, systematic, direction) combos for the systematics fan-out — same filter logic as generate_systematics_dag.py.
 _nsbi_fit_config_path = os.path.join(WORK_DIR, _syst_cfg["nsbi_fit_config"])
 with open(_nsbi_fit_config_path) as _fh:
     _nsbi_fit_config = yaml.safe_load(_fh)
 
-SYST_COMBOS = []  # list of (process, syst_name, direction) tuples
+SYST_COMBOS = [] 
 for _dict_syst in _nsbi_fit_config.get("Systematics", []) or []:
     if _dict_syst.get("Type") != "NormPlusShape":
         continue
@@ -45,7 +38,6 @@ for _dict_syst in _nsbi_fit_config.get("Systematics", []) or []:
         for _direction in ["Up", "Dn"]:
             SYST_COMBOS.append((_process, _syst_name, _direction))
 
-# Constrain wildcards so the two `train_ensemble_*` rules disambiguate cleanly (and likewise the two `systematic_uncertainty_training_*` rules). `fold` is digits only; `process`/`syst`/`direction` are alphanumeric tokens; `ensemble_idx` is digits.
 wildcard_constraints:
     process      = r"[A-Za-z][A-Za-z0-9]*",
     syst         = r"[A-Za-z][A-Za-z0-9]*",
@@ -53,13 +45,6 @@ wildcard_constraints:
     fold         = r"\d+",
     ensemble_idx = r"\d+",
 
-
-# =============================================================================
-# HTCondor requirements helpers (consumed by per-rule `resources:` blocks).
-# The plugin reads `resources.requirements` and emits it verbatim into the
-# submit description. Machine excludes vary per rule, driver-version floor
-# bumps up for newer-CUDA jobs.
-# =============================================================================
 
 _BASE_GPU_EXCLUDES = [
     "vetsigian0001.chtc.wisc.edu",
@@ -87,7 +72,7 @@ def _r(v):
     return lambda *_args, **_kwargs: v
 
 
-# Static files that every rule needs on the EP. These are workflow assets (source, configs, scripts) — NOT DAG dependency edges. They live in `htcondor_transfer_input_files` so the plugin ships them to the EP; the `input:` directive of each rule lists only the upstream sentinels that form the actual DAG. Files under /staging or /projects are excluded by the profile's `htcondor-shared-fs-prefixes` and don't need to be listed here.
+# Static files that every rule needs on the EP. 
 COMMON_TRANSFER = ",".join([
     "src",
     "pyproject.toml",
@@ -135,13 +120,12 @@ rule all:
 # =============================================================================
 
 rule data_loader:
-    # No `input:` — first stage of the DAG. All assets needed on the EP (src, pyproject, scripts, config) come via the static `htcondor_transfer_input_files` list in `resources:`.
     output:
         done = touch(f"{SENTINEL_DIR}/.done_data_loader"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory = "64GB",
-        request_disk   = "64GB",
+        request_memory = "100GB",
+        request_disk   = "100GB",
         requirements   = base_requirements(),
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
@@ -161,10 +145,10 @@ rule data_preprocessing:
         loader_done = f"{SENTINEL_DIR}/.done_data_loader",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_data_preprocessing"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory = "42GB",
-        request_disk   = "42GB",
+        request_memory = "64GB",
+        request_disk   = "64GB",
         request_gpus   = 1,
         requirements   = base_requirements(),
         htcondor_transfer_input_files = COMMON_TRANSFER,
@@ -191,14 +175,14 @@ rule preselection_network:
         preprocessing_done = f"{SENTINEL_DIR}/.done_data_preprocessing",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_preselection_network"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "32GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.0),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.0"),
         htcondor_transfer_input_files  = COMMON_TRANSFER,
         # Plots written by the script land at `./output/plots/preselection_network/` (per `preselection_network.output.plots_dir` in config.pipeline.yaml). Declare the dir so HTCondor ships it back to the AP.
@@ -219,13 +203,6 @@ rule preselection_network:
 
 # =============================================================================
 # Stage 3a: Density Ratio Training — parallel ensemble fan-out
-#
-# Replaces: generate_training_dag.py + SUBDAG EXTERNAL train_ensemble.dag
-#
-# Snakemake reads BASIS_PROCESSES, N_ENSEMBLE, and NUM_FOLDS from config at
-# parse time and instantiates one job per (process, fold, ensemble_idx) when
-# k-fold is on, or per (process, ensemble_idx) otherwise — mirroring the
-# JOB/VARS pairs emitted by generate_training_dag.py.
 # =============================================================================
 
 rule train_ensemble_fold:
@@ -234,17 +211,16 @@ rule train_ensemble_fold:
         preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_train_{{process}}_fold{{fold}}_{{ensemble_idx}}"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.0),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu", "dsigpu4001.chtc.wisc.edu"]),
-        # Replaces legacy `periodic_hold` (2.5 h cap) + `periodic_release` retry loop. The plugin does not expose those primitives; `allowed_job_duration` kills the job at the deadline and `max_retries` re-submits up to N times.
-        allowed_job_duration    = 9000,
+        allowed_job_duration    = 90000,
         max_retries             = 3,
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
@@ -269,14 +245,14 @@ rule train_ensemble_nofold:
         preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_train_{{process}}_{{ensemble_idx}}"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.0),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu", "dsigpu4001.chtc.wisc.edu"]),
         allowed_job_duration    = 9000,
         max_retries             = 3,
@@ -297,12 +273,7 @@ rule train_ensemble_nofold:
 
 
 # =============================================================================
-# Stage 3b: Systematic Uncertainty Training — parallel fan-out over
-# (process, systematic, direction, fold, ensemble_idx).
-#
-# Replaces: generate_systematics_dag.py + SUBDAG EXTERNAL train_systematics.dag.
-# SYST_COMBOS is built at parse time from the NSBI fit config (same filter
-# logic: NormPlusShape systematics, restricted to listed Samples).
+# Stage 3b: Systematic Uncertainty Training
 # =============================================================================
 
 rule systematic_uncertainty_training_fold:
@@ -311,16 +282,15 @@ rule systematic_uncertainty_training_fold:
         preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_fold{{fold}}_{{ensemble_idx}}"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.5),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu"]),
-        # Legacy `.sub` used a 1 h periodic_hold with 4 retries; plugin equivalent below.
         allowed_job_duration    = 3600,
         max_retries             = 3,
         htcondor_transfer_input_files = COMMON_TRANSFER,
@@ -349,14 +319,14 @@ rule systematic_uncertainty_training_nofold:
         preselection_done = f"{SENTINEL_DIR}/.done_preselection_network",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_syst_{{process}}_{{syst}}_{{direction}}_{{ensemble_idx}}"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.5),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu"]),
         allowed_job_duration    = 3600,
         max_retries             = 3,
@@ -385,19 +355,18 @@ rule systematic_uncertainty_training_nofold:
 
 rule data_nn_eval:
     input:
-        # train_sentinels() and syst_sentinels() compute the full fan-out lists at parse time; their shape depends on NUM_FOLDS and on SYST_COMBOS (derived from the NSBI fit config). data_nn_eval cannot start until every individual training job lands.
         ensemble_done    = train_sentinels(),
         systematics_done = syst_sentinels(),
     output:
         done = touch(f"{SENTINEL_DIR}/.done_data_nn_eval"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
-        request_disk            = "32GB",
+        request_memory          = "64GB",
+        request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(7.5),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.6", extra_excludes=["gpulab2001.chtc.wisc.edu", "dsigpu4001.chtc.wisc.edu"]),
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
@@ -414,12 +383,6 @@ rule data_nn_eval:
 
 # =============================================================================
 # Stage 5: Parameter Fitting — final inference step.
-#
-# Replaces: examples/FAIR_universe_Higgs_tautau/htcondor/stage_parameter_fitting.dag
-# Single job; consumes the aggregated density ratios from data_nn_eval and runs
-# the NLL scan / parameter fit defined in config_fit_nsbi.yml + config.pipeline.yaml.
-# Requirements are looser than the training/eval rules (no machine excludes), per
-# the legacy job_parameter_fits.sub, but the GPU floor is higher (capability 8.0).
 # =============================================================================
 
 rule parameter_fitting:
@@ -427,17 +390,16 @@ rule parameter_fitting:
         eval_done = f"{SENTINEL_DIR}/.done_data_nn_eval",
     output:
         done = touch(f"{SENTINEL_DIR}/.done_parameter_fitting"),
-    threads: 8
+    threads: 2
     resources:
-        request_memory          = "16GB",
+        request_memory          = "64GB",
         request_disk            = "64GB",
         request_gpus            = 1,
         gpus_minimum_capability = _r(8.0),
         classad_WantGPULab      = _r(True),
-        classad_GPUJobLength    = "short",
+        classad_GPUJobLength    = "medium",
         requirements            = "(GPUs_DriverVersion >= 12.0) && (Target.HasCHTCStaging == true)",
         htcondor_transfer_input_files  = COMMON_TRANSFER,
-        # The script writes NLL-scan plots to `./output/plots/parameter_fitting/` (relative to WORK_DIR, per `parameter_fitting.output.plots_dir` in config.pipeline.yaml). Declare the directory here so HTCondor ships it back to the AP — without this, the plots only exist in EP scratch and are discarded.
         htcondor_transfer_output_files = f"{WORK_DIR}/output/plots/parameter_fitting",
     params:
         work_dir = WORK_DIR,

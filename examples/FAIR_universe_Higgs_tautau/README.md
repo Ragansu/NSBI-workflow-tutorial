@@ -7,99 +7,21 @@ The tabular dataset used in this demonstration is hosted on Zenodo (https://zeno
 
 If you need access to pre-trained ensemble neural networks and preprocessed data, to avoid running each notebook in sequence but rather pick and choose any of them, download the directory from [LINK TBA]().
 
-## Running a HTCondor workflow with DAGMan
+## Running the pipeline with Snakemake on HTCondor
 
-If you have access to HTCondor resources, check out the `htcondor/` directory for DAGMan workflow that can be modified to your setup. Here is a preview of the full DAG:
+The whole pipeline is one [Snakemake](https://snakemake.readthedocs.io/) workflow. From the repository root:
 
-```mermaid
-flowchart TD
-    classDef stageLabel fill:#2c3e6b,stroke:#1a2a4a,color:#fff,font-weight:bold,font-size:14px
-    classDef job fill:#16213e,stroke:#3d5a99,color:#e0e0e0,font-size:13px
-    classDef parallel fill:#1a3a5c,stroke:#4a7ab5,color:#e0e0e0,font-size:12px
-    classDef pre fill:#7d5a1e,stroke:#c47d0e,color:#fff,font-size:12px
-    classDef eval fill:#1e5e3e,stroke:#27ae60,color:#fff,font-weight:bold
-    classDef fit fill:#4a235a,stroke:#8e44ad,color:#fff,font-weight:bold
-
-    %% ─── STAGE 1 & 2 ───
-    J1["Dataset Loader"]
-    J2["Preprocessing Script"]
-    J1 -->|"Load data"| J2
-
-    J3["Preselection Network"]
-    J2 -->|"Apply feature engineering / processing"| J3
-
-    %% ─── STAGE 3 ───
-    DRT["Density Ratio Training"]
-    J3 -->|"Extract Signal Region"| DRT
-
-    PRE_NOM["Generate Parallel Training DAG"]
-    PRE_SYS["Generate Parallel Training DAG"]
-
-    DRT -->|"Submit parallel training jobs"| PRE_NOM
-    DRT -->|"Submit parallel training jobs"| PRE_SYS
-
-    subgraph NOMINAL["Nominal Density Ratios"]
-        direction LR
-        subgraph P3["Process M"]
-            N1["Ensemble member 0"]
-            N2["Ensemble member 1"]
-            ND["···"]
-            NN2["Ensemble member N"]
-        end
-        subgraph P2["Process 2"]
-            Z1["Ensemble member 0"]
-            Z2["Ensemble member 1"]
-            ZD["···"]
-            ZN["Ensemble member N"]
-        end
-        subgraph P1["Process 1"]
-            T1["Ensemble member 0"]
-            T2["Ensemble member 1"]
-            TD["···"]
-            TN["Ensemble member N"]
-        end
-    end
-
-    subgraph SYSTEMATICS["Systematic Variation Ratios"]
-        direction LR
-        subgraph SP3["Process M"]
-            SN1["NP 1 Up"]
-            SN2["NP 1 Down"]
-            SND["···"]
-            SNN["NP K Up / Down"]
-        end
-        subgraph SP2["Process 2"]
-            SZ1["NP 1 Up"]
-            SZ2["NP 1 Down"]
-            SZD["···"]
-            SZN["NP K Up / Down"]
-        end
-        subgraph SP1["Process 1"]
-            S1["NP 1 Up"]
-            S2["NP 1 Down"]
-            SD["···"]
-            SN["NP K Up / Down"]
-        end
-    end
-
-    PRE_NOM --> NOMINAL
-    PRE_SYS --> SYSTEMATICS
-
-    EVAL["Neural Network Evaluation — Ensemble Aggregation"]
-    NOMINAL -->|"Predicted ratios"| EVAL
-    SYSTEMATICS -->|"Predicted ratios"| EVAL
-
-    STAT["Statistical Model"]
-    EVAL -->|"Aggregated density ratios"| STAT
-
-    FIT["Parameter Fitting"]
-    STAT -->|"Model for hypothesis test"| FIT
-
-    class J1,J2,J3 job
-    class DRT stageLabel
-    class T1,T2,TD,TN,Z1,Z2,ZD,ZN,N1,N2,ND,NN2 parallel
-    class S1,S2,SD,SN,SZ1,SZ2,SZD,SZN,SN1,SN2,SND,SNN parallel
-    class PRE_NOM,PRE_SYS pre
-    class EVAL eval
-    class FIT,STAT fit
+```bash
+snakemake --snakefile examples/FAIR_universe_Higgs_tautau/Snakefile \
+          --profile  examples/FAIR_universe_Higgs_tautau/profiles/chtc
 ```
+
+That submits every required job to HTCondor (via the `snakemake-executor-plugin-htcondor`), waits for completion, and produces the final `parameter_fitting` outputs. Re-running the same command after a failure resumes from where it stopped — sentinels under `/projects/.../sentinels_FAIR_higgs/` track which (process, fold, ensemble) jobs are done.
+
+To target a different cluster, copy `profiles/chtc/` to `profiles/<your-cluster>/`, change `executor:` to the appropriate snakemake plugin (`slurm`, `cluster-generic`, etc.) in `config.yaml`, and adjust `default-resources`.
+
+See [`docs/basics/workflow.rst`](../../docs/basics/workflow.rst) for the full reference (rule structure, partial reruns, troubleshooting).
+
+### Workflow chart
+
+![NSBI workflow](../../docs/_images/toolkit_workflow_AGCstyle.png)

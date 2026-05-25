@@ -2,14 +2,14 @@
 data_loader:
   data:
     url: "https://zenodo.org/records/15131565/files/FAIR_Universe_HiggsML_data.zip"
-    train_size: 0.6
+    train_size: 0.75
     processes:
       - htautau
       - ztautau
       - ttbar
 
   preprocess:
-    seed: 42
+    seed: 54
     selections: >
       DER_mass_transverse_met_lep <= 250.0 and
       DER_mass_vis <= 500.0 and
@@ -35,7 +35,7 @@ data_loader:
 # Data processing settings - these are specific to the example
 data_preprocessing:
   fit_config_path: "./config_fit_nsbi.yml"
-  num_folds: 1                # k-fold cross-validation: set to 1 to disable
+  num_folds: 10                # k-fold cross-validation: set to 1 to disable
   features:
       - PRI_lep_pt
       - PRI_lep_eta
@@ -75,7 +75,7 @@ preselection_network:
   
   training:
     test_size: 0.2
-    random_state: 42
+    random_state: 64
     batch_size: 4096
     epochs: 50
     learning_rate: 0.00001
@@ -121,11 +121,11 @@ neural_likelihood_ratio_estimation:
   #   (d) 0  (or false) -> exclude this sample from the reference (handy for toggling without deleting the line)
   # The fraction of class weight assigned to sample c is T_c / sum(T_d); the corresponding max ratio is M_c = sum(T_d)/T_c.
   reference_priors:
-    htautau: 1         
-    ttbar:   1        
-    ztautau: 0.25    
+    htautau: null       
+    ttbar:   null        
+    ztautau: 0    
 
-  # Some default hyper-parameters -- Quality tested for SBI
+  # Some default hyper-parameters - quality tested for SBI
   common_training_params: &common_params
     hidden_layers: 4
     neurons: 1000
