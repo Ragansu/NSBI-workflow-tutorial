@@ -291,7 +291,7 @@ rule systematic_uncertainty_training_fold:
         classad_WantGPULab      = _r(True),
         classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu"]),
-        allowed_job_duration    = 3600,
+        allowed_job_duration    = 9000,
         max_retries             = 3,
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:
@@ -328,7 +328,7 @@ rule systematic_uncertainty_training_nofold:
         classad_WantGPULab      = _r(True),
         classad_GPUJobLength    = "medium",
         requirements            = gpu_requirements(driver_version="12.4", extra_excludes=["gpulab2001.chtc.wisc.edu"]),
-        allowed_job_duration    = 3600,
+        allowed_job_duration    = 9000,
         max_retries             = 3,
         htcondor_transfer_input_files = COMMON_TRANSFER,
     params:

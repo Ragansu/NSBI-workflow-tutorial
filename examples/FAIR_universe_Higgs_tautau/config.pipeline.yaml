@@ -35,7 +35,7 @@ data_loader:
 # Data processing settings - these are specific to the example
 data_preprocessing:
   fit_config_path: "./config_fit_nsbi.yml"
-  num_folds: 10                # k-fold cross-validation: set to 1 to disable
+  num_folds: 1                # k-fold cross-validation: set to 1 to disable
   features:
       - PRI_lep_pt
       - PRI_lep_eta
@@ -119,7 +119,6 @@ neural_likelihood_ratio_estimation:
   #   (b) <positive number> -> use as the relative prior weight directly (any unit; only ratios matter)
   #   (c) {cap: M}     -> auto-solve the prior so this sample's per-event density ratio is bounded at M
   #   (d) 0  (or false) -> exclude this sample from the reference (handy for toggling without deleting the line)
-  # The fraction of class weight assigned to sample c is T_c / sum(T_d); the corresponding max ratio is M_c = sum(T_d)/T_c.
   reference_priors:
     htautau: null       
     ttbar:   null        
@@ -130,7 +129,7 @@ neural_likelihood_ratio_estimation:
     hidden_layers: 4
     neurons: 1000
     number_of_epochs: 100
-    batch_size: 1024
+    batch_size: 512
     learning_rate: 0.0001
     scalerType: "MinMax"
     

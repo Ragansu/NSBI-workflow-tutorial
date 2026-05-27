@@ -1,11 +1,17 @@
 Running the Workflow
 ====================
 
-The full NSBI pipeline can be executed step-by-step on a single machine, or orchestrated as a parallel DAG on a cluster via `Snakemake <https://snakemake.readthedocs.io/>`_. Snakemake is infrastructure-agnostic — the same workflow definition runs on HTC (HTCondor), HPC (SLURM), Kubernetes, or a personal laptop just by swapping the executor profile.
+There are three equivalent ways to run the NSBI pipeline, all driven by the same configuration file and the same underlying ``nsbi_common_utils`` library:
+
+1. **Notebooks** — step through the analysis interactively, one stage per notebook. Best for learning the method, inspecting intermediate outputs, and developing.
+2. **Scripts** — run each stage as a command-line script. Same logic as the notebooks, scriptable and headless. Best for reproducible single-machine runs.
+3. **Snakemake** — orchestrate the scripts as a parallel DAG on a cluster. Best for production: it fans out the embarrassingly-parallel training jobs (per process, ensemble member, k-fold split, systematic) and submits them to your batch system. Infrastructure-agnostic — the same ``Snakefile`` runs on HTC (HTCondor), HPC (SLURM), Kubernetes, or a laptop, by swapping the executor profile.
+
+The notebooks and scripts are one-to-one: ``N_<stage>.ipynb`` mirrors ``scripts/<stage>.py``, and Snakemake simply calls the scripts. Pick whichever entry point suits your task — they produce the same artifacts.
 
 Below is an example workflow using the FAIR Universe :math:`H\to \tau\tau` dataset.
 
-All pipeline scripts are driven by a single configuration file, ``config.pipeline.yaml``, located at the root of each example directory (e.g. ``examples/FAIR_universe_Higgs_tautau/config.pipeline.yaml``). This file defines dataset paths, training hyperparameters, ensemble sizes, systematic variations, and fit settings. Inspect the example config to understand the available options.
+All three paths are driven by a single configuration file, ``config.pipeline.yaml``, located at the root of each example directory (e.g. ``examples/FAIR_universe_Higgs_tautau/config.pipeline.yaml``). This file defines dataset paths, training hyperparameters, ensemble sizes, systematic variations, and fit settings. Inspect the example config to understand the available options.
 
 Pipeline overview
 -----------------
@@ -15,10 +21,34 @@ Pipeline overview
    :align: center
    :width: 100%
 
+Interactive execution (notebooks)
+---------------------------------
+
+Each pipeline stage has a numbered notebook in the example directory. Run them in order — each reads ``config.pipeline.yaml`` and the outputs of the previous stage:
+
+.. code-block:: text
+
+   1_data_loader.ipynb                       # download + balance + write per-process ROOT files
+   2_data_preprocessing.ipynb                # feature engineering, write processed ntuples
+   3_preselection_network.ipynb             # train the signal/control-region classifier
+   4_neural_likelihood_ratio_estimation.ipynb  # train nominal density-ratio ensembles
+   5_systematic_uncertainty_training.ipynb   # train systematic-variation networks
+   6_evaluate_networks.ipynb                 # evaluate all models on the Asimov dataset
+   7_parameter_fitting_with_systematics.ipynb  # build the workspace and run the fit
+
+Launch Jupyter from the example directory so the relative ``config.pipeline.yaml`` path resolves:
+
+.. code-block:: bash
+
+   cd examples/FAIR_universe_Higgs_tautau
+   jupyter lab            # or: jupyter notebook
+
+The notebooks default to small settings (single ensemble member, single fold) for interactive speed. To reproduce a full production run, train large ensembles via the scripts or Snakemake instead — the notebooks read the same config, so the only practical limit is interactive runtime.
+
 Local (sequential) execution
 -----------------------------
 
-From the example directory
+For a headless, scriptable run of the same stages, use the command-line scripts. From the example directory
 (``examples/FAIR_universe_Higgs_tautau/``):
 
 .. code-block:: bash
@@ -57,6 +87,42 @@ A single ``Snakefile`` at the root of each example directory defines all pipelin
              --profile  examples/FAIR_universe_Higgs_tautau/profiles/chtc
 
 That single command builds the full DAG (parameter_fitting at the leaf, all training and preprocessing as dependencies), submits each rule's jobs to HTCondor via the `snakemake-executor-plugin-htcondor <https://github.com/snakemake/snakemake-executor-plugin-htcondor>`_, and waits for completion.
+
+.. warning::
+
+   The provided ``profiles/chtc/`` profile, the ``Snakefile`` resource blocks, and the paths in ``config.pipeline.yaml`` are written for the `CHTC <https://chtc.cs.wisc.edu/>`_ pool at UW-Madison and a specific user account. **They will not run as-is on another system.** Before launching, you must edit them for your site — see *Adapting to your cluster* below for the exact files and fields to change.
+
+Submitting and monitoring
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A practical CLI workflow for launching and watching a run:
+
+.. code-block:: bash
+
+   # 1. Preview what would run, without submitting anything.
+   #    --list-target-rules / -n give a dry-run summary of the DAG.
+   snakemake --snakefile examples/FAIR_universe_Higgs_tautau/Snakefile \
+             --profile  examples/FAIR_universe_Higgs_tautau/profiles/chtc \
+             -n
+
+   # 2. Launch. Run inside tmux/screen (or nohup) so it survives disconnects;
+   #    a long campaign can run for hours.
+   tmux new -s nsbi
+   snakemake --snakefile examples/FAIR_universe_Higgs_tautau/Snakefile \
+             --profile  examples/FAIR_universe_Higgs_tautau/profiles/chtc \
+             > run.log 2>&1
+
+The number of jobs submitted concurrently is set by ``jobs:`` in the profile (``profiles/chtc/config.yaml``); raise it to fill more cluster slots, lower it to be gentle on the scheduler.
+
+Monitor progress from another shell:
+
+.. code-block:: bash
+
+   tail -f run.log                              # snakemake driver output
+   condor_q                                     # jobs in the batch queue
+   ls <sentinel_dir>/.done_* | wc -l            # completed stages (sentinel count)
+
+If the driver process is killed (disconnect, node policy, time limit), the submitted jobs keep running on the cluster and write their sentinels independently. Just re-run the same ``snakemake`` command — it reads the sentinels and resubmits only what's missing (see *Resuming and partial reruns* below). For unattended long runs, wrap the command in a restart loop so it relaunches automatically after a driver kill.
 
 File layout
 ^^^^^^^^^^^
@@ -131,8 +197,25 @@ Sentinels make resumption trivial — Snakemake skips any rule whose output sent
 Adapting to your cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Snakefile itself is portable. To target a different cluster, copy ``profiles/chtc/`` to ``profiles/<your-cluster>/``, change ``executor:`` to the appropriate plugin (``slurm``, ``cluster-generic``, ``kubernetes``, or just remove for local execution), and adjust ``default-resources``. Per-rule resource blocks (memory, threads, GPU requests) carry over unchanged.
+The rule *logic* is portable, but the site-specific values are not. Before running anywhere other than CHTC, edit the following. **None of these will work unchanged on your system.**
 
-Available executors are listed at https://snakemake.github.io/snakemake-plugin-catalog/.
+**1. The profile —** ``profiles/chtc/config.yaml`` (or copy it to ``profiles/<your-cluster>/``):
 
-For sites without HTCondor, the local sequential commands above still work and can be wrapped in your site's job-submission idiom directly.
+- ``executor:`` — set to the plugin for your batch system (``htcondor``, ``slurm``, ``cluster-generic``, ``kubernetes``); remove it for local execution. See the `plugin catalog <https://snakemake.github.io/snakemake-plugin-catalog/>`_.
+- ``container_image:`` in ``default-resources`` — points at a specific Apptainer ``.sif`` under one user's ``/staging``. Replace with your own image, or remove if you don't run in a container.
+- ``htcondor-shared-fs-prefixes:`` and ``shared-fs-usage:`` — set to the shared-filesystem paths visible on your execute nodes.
+- ``job_wrapper:`` — path to the per-job entrypoint; adjust if you relocate the profile.
+- ``classad_*`` flags (``WantFlocking``, ``want_campus_pools``, ``want_ospool``, ``WantGlidein``) — these are CHTC-pool-specific and meaningless elsewhere; remove or replace with your pool's ClassAds.
+- ``jobs:`` — concurrency cap; tune to your fair-share / scheduler limits.
+
+**2. The Snakefile —** ``examples/FAIR_universe_Higgs_tautau/Snakefile``:
+
+- ``SENTINEL_DIR`` — currently ``/projects/Physics_Cranmer/sentinels_FAIR_higgs``. Point it at a directory on a filesystem shared between submit and execute nodes for your site.
+- ``gpu_requirements(...)`` / machine-exclude lists — contain CHTC hostnames (``gpulab2001.chtc.wisc.edu``, etc.). Remove or replace with your site's ``requirements`` expression.
+- ``classad_GPUJobLength``, ``allowed_job_duration``, ``request_*`` — review the resource asks against your queue's limits.
+
+**3. The pipeline config —** ``config.pipeline.yaml`` and the fit configs (``config_fit_nsbi.yml``, ``config_fit_histogram.yml``):
+
+- All dataset and output paths use absolute ``/projects/Physics_Cranmer/...`` locations. Repoint every ``saved_data_path``, ``output.dir``, ``SamplePath``, ``Models``/``Ratios``, and ``AsimovWeights`` entry to your storage layout.
+
+For sites without a batch system at all, the local sequential commands (the scripts, or the notebooks) still work and can be wrapped in your site's job-submission idiom directly.

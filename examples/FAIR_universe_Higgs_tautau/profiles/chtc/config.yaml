@@ -3,7 +3,8 @@ executor: htcondor
 shared-fs-usage: none
 
 # Maximum simultaneously submitted jobs
-jobs: 50
+jobs: 100
+max-jobs-per-second: 5
 
 # Polling interval (seconds) before checking job status
 latency-wait: 60
