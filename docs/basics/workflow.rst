@@ -7,8 +7,6 @@ There are three equivalent ways to run the NSBI pipeline, all driven by the same
 2. **Scripts** — run each stage as a command-line script. Same logic as the notebooks, scriptable and headless. Best for reproducible single-machine runs.
 3. **Snakemake** — orchestrate the scripts as a parallel DAG on a cluster. Best for production: it fans out the embarrassingly-parallel training jobs (per process, ensemble member, k-fold split, systematic) and submits them to your batch system. Infrastructure-agnostic — the same ``Snakefile`` runs on HTC (HTCondor), HPC (SLURM), Kubernetes, or a laptop, by swapping the executor profile.
 
-The notebooks and scripts are one-to-one: ``N_<stage>.ipynb`` mirrors ``scripts/<stage>.py``, and Snakemake simply calls the scripts. Pick whichever entry point suits your task — they produce the same artifacts.
-
 Below is an example workflow using the FAIR Universe :math:`H\to \tau\tau` dataset.
 
 All three paths are driven by a single configuration file, ``config.pipeline.yaml``, located at the root of each example directory (e.g. ``examples/FAIR_universe_Higgs_tautau/config.pipeline.yaml``). This file defines dataset paths, training hyperparameters, ensemble sizes, systematic variations, and fit settings. Inspect the example config to understand the available options.
@@ -43,7 +41,7 @@ Launch Jupyter from the example directory so the relative ``config.pipeline.yaml
    cd examples/FAIR_universe_Higgs_tautau
    jupyter lab            # or: jupyter notebook
 
-The notebooks default to small settings (single ensemble member, single fold) for interactive speed. To reproduce a full production run, train large ensembles via the scripts or Snakemake instead — the notebooks read the same config, so the only practical limit is interactive runtime.
+The notebooks read the same ``config.pipeline.yaml`` as the scripts and Snakemake, so the ensemble size and other hyperparameters are governed there. The notebooks operate on a single fold (k-fold loops are only wired into the scripts and Snakemake); set ``num_folds: 1`` in the config when running the notebook path. For large ensembles or a full k-fold run, prefer the scripts or Snakemake — the per-job parallelism is what makes those modes scale.
 
 Local (sequential) execution
 -----------------------------

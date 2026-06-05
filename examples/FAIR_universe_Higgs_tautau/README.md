@@ -13,6 +13,8 @@ tar -xvf saved_datasets.tar.gz
 
 This creates a `saved_datasets/` directory with the processed `.root` files (and optionally the trained models). **If you use this download, do not re-run notebooks 1 (data loader) and 2 (data preprocessing).** They regenerate exactly the artifacts you just downloaded and would overwrite them. Start from notebook 3 (or notebook 4 if you also pulled pre-trained models).
 
+> **Path note:** the shipped `config.pipeline.yaml` uses absolute paths under `/projects/Physics_Cranmer/saved_datasets/` (and the fit configs `config_fit_nsbi.yml` / `config_fit_histogram.yml` likewise). If you extract `saved_datasets.tar.gz` somewhere else (e.g. next to this README), repoint the `saved_data_path` / `output.dir` keys in `config.pipeline.yaml` and the `SamplePath` / `Models` / `Ratios` / `AsimovWeights` entries in the fit configs to your local extraction directory before running the notebooks or scripts.
+
 ## Running the pipeline with Snakemake on HTCondor
 
 The whole pipeline is one [Snakemake](https://snakemake.readthedocs.io/) workflow. From the repository root:
