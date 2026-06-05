@@ -1,8 +1,7 @@
 [workspace]
 channels = ["conda-forge"]
 name = "NSBI-workflow-tutorial"
-platforms = ["linux-64"]
-# platforms = ["osx-arm64"]
+platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks]
@@ -35,22 +34,24 @@ ml-dtypes = "*"
 onnx = ">=1.20.1, <2"
 onnxscript = ">=0.6.0, <0.7"
 snakemake = ">=9.6.2, <10"
+
+[target.linux-64.pypi-dependencies]
 snakemake-executor-plugin-htcondor = ">=0.2.1, <0.3"
+
+[feature.gpu]
+platforms = ["linux-64"]
 
 [feature.gpu.system-requirements]
 cuda = "12"
 
 [feature.cpu.pypi-dependencies]
-onnxruntime = ">=1.24.1, <2"
+onnxruntime = ">=1.23.2, <2"
 
-[feature.gpu.pypi-dependencies]
+[feature.gpu.target.linux-64.pypi-dependencies]
 onnxruntime-gpu = ">=1.24.1, <2"
-
-# [feature.arm.dependencies]
 
 [feature.cpu.dependencies]
 
 [environments]
 nsbi-env        = { features = ["cpu"] }
 nsbi-env-gpu    = { features = ["gpu"] }
-# nsbi-env-arm    = { features = ["arm"] }
