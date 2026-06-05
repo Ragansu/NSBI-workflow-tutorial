@@ -3,9 +3,15 @@ FAIR Universe Dataset
 
 The tabular dataset used in this demonstration is hosted on Zenodo (https://zenodo.org/records/15131565), and is created using the particle physics simulation tools Pythia 8.2 and Delphes 3.5.0. The dataset provides events for the $H\to \tau\tau$ analysis, where the signal process is sub-dominant compared to the very large $Z\to \tau\tau$ and other backgrounds - good challenge to test the sensitivty of NSBI techniques.
 
-## Download saved models and processed data 
+## Download saved models and processed data
 
-If you need access to pre-trained ensemble neural networks and preprocessed data, to avoid running each notebook in sequence but rather pick and choose any of them, download the directory from [LINK TBA]().
+If you want to skip the data loading and preprocessing stages — and optionally use pre-trained ensemble networks — download the pre-processed bundle from [https://cernbox.cern.ch/s/mltUDvzKdisEEpJ](https://cernbox.cern.ch/s/mltUDvzKdisEEpJ) and extract it:
+
+```bash
+tar -xvf saved_datasets.tar.gz
+```
+
+This creates a `saved_datasets/` directory with the processed `.root` files (and optionally the trained models). **If you use this download, do not re-run notebooks 1 (data loader) and 2 (data preprocessing).** They regenerate exactly the artifacts you just downloaded and would overwrite them. Start from notebook 3 (or notebook 4 if you also pulled pre-trained models).
 
 ## Running the pipeline with Snakemake on HTCondor
 
