@@ -45,11 +45,27 @@ Each row in ``Samples`` is a physics process read from a ROOT file:
        Tree: tree_htautau
        SamplePath: ./saved_datasets/dataset_nominal.root
        Weight: weights
-       UseAsReference: True
        UseAsBasis: True
 
 - **UseAsBasis** — this process gets its own density-ratio network and normalization factor.
-- **UseAsReference** — the denominator process in the density ratio :math:`r(x) = p / p_{\text{ref}}`. (Optional, users can choose to pass their own reference hypothesis when just using APIs from the toolkit).
+
+Which samples form the reference :math:`p_{\text{ref}}` for the density ratio :math:`r(x) = p / p_{\text{ref}}` is configured in the workflow pipeline config (``config.pipeline.yaml`` in the example) under ``neural_likelihood_ratio_estimation.reference_priors``. Each entry maps a sample name to one of:
+
+- ``null`` (auto-yield) — include the sample with weight equal to its physical event-weight yield.
+- a positive number — use as the relative prior weight directly.
+- ``{cap: M}`` — auto-solve the prior so the per-event ratio for this sample is bounded at ``M``.
+- ``0`` or ``False`` — exclude this sample from the reference (handy for toggling without deleting the line).
+
+Example (from the FAIR Universe pipeline):
+
+.. code-block:: yaml
+
+   reference_priors:
+     htautau: null         # auto-yield
+     ttbar:   null         # auto-yield
+     ztautau: 0            # excluded from reference
+
+The previous ``UseAsReference: True/False`` field on each sample is deprecated; ``reference_priors`` is now the single source of truth and supports a richer set of mixture specifications.
 
 Normalization factors
 ---------------------
