@@ -124,8 +124,6 @@ def main():
 
         logger.info("\nPerforming Fits (Tables logged to file)")
 
-        # freeze_params = ["JES", "TES"]
-        # freeze_params = []
         if len(freeze_params)>0:
             print(f"Freezing params {freeze_params} to nominal values, they will not be floated for fits.")
         

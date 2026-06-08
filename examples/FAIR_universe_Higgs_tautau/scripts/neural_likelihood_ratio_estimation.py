@@ -90,10 +90,14 @@ def main():
     basis_processes = fit_config_nsbi.get_basis_samples()
     logger.info(f"Basis processes: {basis_processes}")
 
-    # Reference-sample selection and per-sample priors are a training/workflow choice and live in config.pipeline.yaml under `reference_priors`. The dict's keys define which samples are in the reference; per-sample value semantics are documented in prepare_basis_training_dataset. A spec of 0 (or False) explicitly excludes that sample (handy for toggling without deleting the line).
+    # Reference mixture for prepare_basis_training_dataset; see its docstring for the spec. Skip this and pass your own reference DataFrame to density_ratio_trainer if you don't want the helper.
     reference_priors_raw = config_workflow.get("reference_priors", None)
     if not reference_priors_raw:
-        raise KeyError("config.pipeline.yaml: neural_likelihood_ratio_estimation.reference_priors is required. List the samples to include in the reference mixture and their per-sample priors.")
+        raise KeyError(
+            "config.pipeline.yaml: `neural_likelihood_ratio_estimation.reference_priors` is required because this script builds the reference via "
+            "datasets.prepare_basis_training_dataset. If you'd rather supply your own reference dataset, bypass that helper and pass your prepared "
+            "DataFrame + weights + labels directly to density_ratio_trainer."
+        )
 
     reference_priors = {}
     excluded_samples = []

@@ -106,7 +106,6 @@ def main():
         sys_training_params['ensemble_index'] = None
         ensemble_index_label = ''
 
-    # K-fold support — infer num_folds from the data
     fold_index = args.fold_index
     first_sample = next(iter(dataset_SR_dict["Nominal"].values()))
     has_folds = "fold_index" in first_sample.columns

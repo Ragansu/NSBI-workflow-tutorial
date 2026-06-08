@@ -112,8 +112,7 @@ def main():
     label_dict = config_train["labels"]
     
     logger.info(f"Initializing Datasets...")
-    # Load ALL existing branches so save_dataset_to_ntuple preserves them
-    # (e.g. engineered features, fold_index added by data_preprocessing)
+
     all_branches = features.copy()
     sample_path = fit_config.config["Samples"][0]["SamplePath"]
     tree_name = fit_config.config["Samples"][0]["Tree"]

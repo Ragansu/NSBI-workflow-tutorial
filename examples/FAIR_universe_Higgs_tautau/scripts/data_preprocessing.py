@@ -175,8 +175,6 @@ def main() -> None:
         datasets_helper.add_appended_branches(new_branches)
 
         # Assign k-fold indices to nominal samples (deterministic, per-sample)
-        # Systematic samples share the same event ordering, so the fold_index
-        # column is propagated via the event index during training/evaluation.
         num_folds = config.get("num_folds", 1)
         if num_folds > 1:
             logger.info(f"Assigning {num_folds}-fold indices to all samples.")
