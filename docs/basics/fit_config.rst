@@ -47,25 +47,9 @@ Each row in ``Samples`` is a physics process read from a ROOT file:
        Weight: weights
        UseAsBasis: True
 
-- **UseAsBasis** — this process gets its own density-ratio network and normalization factor.
+- **UseAsBasis** — this process gets its own density-ratio network. This tells the workflow, that the sample forms one of the basis of the parametric morphing formula used in the statistical model.
 
-Which samples form the reference :math:`p_{\text{ref}}` for the density ratio :math:`r(x) = p / p_{\text{ref}}` is configured in the workflow pipeline config (``config.pipeline.yaml`` in the example) under ``neural_likelihood_ratio_estimation.reference_priors``. Each entry maps a sample name to one of:
-
-- ``null`` (auto-yield) — include the sample with weight equal to its physical event-weight yield.
-- a positive number — use as the relative prior weight directly.
-- ``{cap: M}`` — auto-solve the prior so the per-event ratio for this sample is bounded at ``M``.
-- ``0`` or ``False`` — exclude this sample from the reference (handy for toggling without deleting the line).
-
-Example (from the FAIR Universe pipeline):
-
-.. code-block:: yaml
-
-   reference_priors:
-     htautau: null         # auto-yield
-     ttbar:   null         # auto-yield
-     ztautau: 0            # excluded from reference
-
-The previous ``UseAsReference: True/False`` field on each sample is deprecated; ``reference_priors`` is now the single source of truth and supports a richer set of mixture specifications.
+Which samples form the reference :math:`p_{\text{ref}}` for the density ratio :math:`r(x) = p / p_{\text{ref}}` is configured at the workflow level (``config.pipeline.yaml`` in the example, under ``neural_likelihood_ratio_estimation.reference_priors``) and consumed by :meth:`nsbi_common_utils.datasets.datasets.prepare_basis_training_dataset`. See that method's docstring for the full spec (auto-yield, numeric, ``{cap: M}``, exclude). The previous ``UseAsReference: True/False`` field on each sample is deprecated.
 
 Normalization factors
 ---------------------
