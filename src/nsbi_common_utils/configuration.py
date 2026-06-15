@@ -249,13 +249,15 @@ class ConfigManager:
         return filter_string
     
     def get_channel_asimov_weight_path(self, channel_name: str) -> str:
+                
+        trained_models_dict = self.config.get("TrainedModels", None)
         
-        idx = self._index_of_region(channel_name = channel_name)
+        unbinned_region = trained_models_dict[channel_name]
 
-        if idx is None:
+        asimov_weight_path = unbinned_region.get("Weights")
+
+        if unbinned_region is None:
             log.info(f"Region {channel_name} not found in the config.")
-
-        asimov_weight_path = self.config["Regions"][idx]["AsimovWeights"]
 
         return asimov_weight_path
 
