@@ -130,10 +130,14 @@ def main():
     dataset_incl_nominal = dataset_incl_dict["Nominal"].copy()
 
     logger.info("Merging nominal samples for training...")
+    # Only the labelled MC processes train the preselection network. The
+    # Data:True 'obs' sample is loaded (so it gets decorated with presel_score
+    # below) but must be excluded here, or its events would enter training with
+    # the sentinel label -999.
     dataset_incl_nominal_training = datasets_helper.merge_dataframe_dict_for_training(
-        dataset_incl_nominal, 
+        dataset_incl_nominal,
         label_dict,
-        samples_to_merge=dataset_incl_nominal.keys()
+        samples_to_merge=list(label_dict.keys())
     )
 
     preselectionTraining = nsbi_common_utils.training.preselection_network_trainer(
