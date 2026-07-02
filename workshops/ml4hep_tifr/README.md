@@ -14,19 +14,18 @@ python generate_distributions.py --n_bkg 5_000_000 --n_sig 5_000_000
 ```
 
 Adjust `--n_bkg` / `--n_sig` to taste (larger = less per-event MC noise in the
-fit). Parquets land in `./dataframes/`, diagnostic plots in `./plots/`, and the
-per-event weights are auto-scaled so the total yields stay fixed regardless of
-the requested statistics (`λ_bkg = 1e6`, `λ_sig(v=10) ≈ 1100`). The `--nodes`
-argument controls the signal basis parameter values used for Lagrange morphing
-(default `0 5 10`).
+fit). Parquets land in `./dataframes/` (`background`, `signal`, and an
+independent `data` draw), diagnostic plots in `./plots/`, and the per-event
+weights are auto-scaled so the total yields stay fixed regardless of the
+requested statistics (`λ_bkg = 1e6`, `λ_sig ≈ 1100`).
 
 Installation
 ---
 
-- Clone the GitHub repository locally using `GIT_LFS_SKIP_SMUDGE=1 git clone git@github.com:iris-hep/nsbi-lhc-toolkit.git --depth=1 && cd nsbi-lhc-toolkit`.
+- Clone the GitHub repository locally and check out this tutorial's branch using `GIT_LFS_SKIP_SMUDGE=1 git clone -b ml4hep_school_tutorial git@github.com:iris-hep/NSBI-workflow-tutorial.git --depth=1 && cd NSBI-workflow-tutorial`.
 - Run `pixi install -e nsbi-env` if you are using CPU or Mac and `pixi install -e nsbi-env-gpu` if you have access to a CUDA-supported GPU.
 - Install the kernel using `pixi run -e nsbi-env-gpu python -m ipykernel install --user --name nsbi-env-gpu --display-name "Python (pixi: nsbi-env)"` if you are running on GPU or `pixi run -e nsbi-env python -m ipykernel install --user --name nsbi-env --display-name "Python (pixi: nsbi-env)"` if you are running on CPU or Mac.
-- Go to the tutorial directory `workshops/ml4hep_tif/`, generate the data (above), and start running the notebooks. Make sure to select the kernel `Python (pixi: nsbi-env)` before you run.
+- Go to the tutorial directory `workshops/ml4hep_tifr/`, generate the data (above), and start running the notebooks. Make sure to select the kernel `Python (pixi: nsbi-env)` before you run.
 
 Running the notebooks
 ---
@@ -51,6 +50,6 @@ Files
 ---
 - `generate_distributions.py` — Gaussian-mixture event generator (see the
   module docstring for the full design rationale).
-- `utils.py` — shared helpers (colours, Lagrange morphing weights).
+- `utils.py` — shared helpers: the Gaussian-mixture definitions (`background_components`, `signal_components`, `mixture_density`) and the `split_train_inference` train/inference splitter.
 - `dataframes/` — generated parquet samples (created by the generator).
 - `plots*/`, `models*/`, `saved_*/` — outputs created while running the notebooks.
