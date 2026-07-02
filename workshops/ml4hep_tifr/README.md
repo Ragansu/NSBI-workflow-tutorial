@@ -1,4 +1,4 @@
-# ML4HEP-TIF NSBI tutorial — Gaussian-mixture example
+# ML4HEP-TIFR NSBI tutorial — Gaussian-mixture example
 
 This tutorial walks through a full **Neural Simulation-Based Inference (NSBI)**
 workflow for a signal-strength measurement: estimate per-event density ratios
