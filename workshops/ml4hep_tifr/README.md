@@ -3,27 +3,7 @@
 This tutorial walks through a full **Neural Simulation-Based Inference (NSBI)**
 workflow for a signal-strength measurement: estimate per-event density ratios
 with neural networks, build an unbinned statistical model, and fit the
-parameter of interest `μ`.
-
-It mirrors the [`nsbi_atlas_workshop`](../nsbi_atlas_workshop/) example, but the
-toy data here is deliberately harder. Instead of each feature being a single
-Gaussian, **every sample is a mixture of several correlated Gaussian
-components**, giving multi-modal marginals and curved correlations. This makes
-the joint density genuinely non-trivial to model — a good stress test for
-flexible density estimators such as Normalizing Flows (a planned follow-up),
-while the density-ratio-based workflow below handles it out of the box.
-
-Numerical stability by design
----
-Density-ratio estimation is only well behaved when the reference (denominator)
-has support everywhere the numerator does. To guarantee this, **every** sample
-(background, all signals, pseudo-data) contains a common broad component. Since
-that component alone already covers the whole region of interest with
-`p(x) > 0`, no phase-space pocket exists where one density vanishes while
-another does not — so the trained ratios stay bounded and the classifier scores
-stay away from 0 and 1. The reference hypothesis used for training is
-`background + signal_0`, which covers both the background- and signal-like
-regions.
+parameter of interest $\mu$.
 
 Generating the data
 ---
@@ -60,10 +40,10 @@ Run them in order:
 3. **`2b_BkgvsRef_training.ipynb`** — train the background-vs-reference density
    ratio `r_bkg(x) = p_bkg(x) / p_ref(x)` with the same diagnostics.
 4. **`3_parameter_fitting.ipynb`** — build the unbinned SBI workspace, evaluate
-   the trained ratios on the Asimov dataset, and fit the signal strength `μ`
-   (including a profile-likelihood scan of `t_μ`).
+   the trained ratios on the Asimov dataset, and fit the signal strength $\mu$
+   (including a profile-likelihood scan of $t_\mu$).
 
-A small per-event bias in `μ̂` is expected — it comes from the finite-statistics
+A small per-event bias in $\hat{\mu}$ is expected — it comes from the finite-statistics
 MC noise in the per-event ratios. Reduce it by generating more data, training
 larger ensembles, or increasing `N_TRAIN` in the training notebooks.
 
