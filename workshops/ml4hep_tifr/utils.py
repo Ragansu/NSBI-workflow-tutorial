@@ -160,6 +160,10 @@ def mixture_density(X, components):
         p += f * multivariate_normal(mean, cov).pdf(X)
     return p
 
+def smearing_parameters():
+    scale = np.array([1.2, 1.1, 0.99, 0.96, 1.01])
+    resolution = np.array([1.0, 0.1, 0.9, 1.3, 0.2])
+    return [scale, resolution]
 
 def reference_density(X, lam_bkg, lam_sig0):
     """Analytic density of the *training reference* (numerator of nothing, the

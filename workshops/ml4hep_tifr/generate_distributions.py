@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from utils import background_components, signal_components
+from utils import background_components, signal_components, smearing_parameters
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_bkg", type=int, default=1_000_000)
@@ -43,7 +43,8 @@ args = parser.parse_args()
 n_bkg = args.n_bkg
 n_sig = args.n_sig
 
-features = ["x1", "x2", "x3", "x4", "x5"]
+features = ["y1", "y2", "y3", "y4", "y5"]
+reco = ["x1", "x2", "x3", "x4", "x5"]
 
 # Total expected yields (define the signal strength of the measurement).
 LAM_BKG = 1_000_000.0
@@ -73,6 +74,20 @@ def sample_mixture(components, n, rng):
     rng.shuffle(x)  # avoid block-ordering by component
     return x
 
+def add_reco_smearing(df, rng):
+    """Add x1,...,x5 as independently smeared versions of y1,...,y5."""
+    scale, resolution = smearing_parameters()
+
+    y = df[features].to_numpy(dtype=float)
+
+    x = rng.normal(
+        loc=y * scale[None, :],
+        scale=resolution[None, :],
+        size=y.shape,
+    )
+
+    df[reco] = x
+    return df
 
 rng = np.random.default_rng(42)
 
@@ -98,6 +113,10 @@ data = pd.DataFrame(
 )
 data["fold"] = rng.integers(0, 2, size=n_bkg)
 data["label"] = 0
+
+background = add_reco_smearing(background, rng)
+signal = add_reco_smearing(signal, rng)
+data = add_reco_smearing(data, rng)
 
 os.makedirs("dataframes", exist_ok=True)
 background.to_parquet("dataframes/background.parquet", index=False)
