@@ -43,7 +43,7 @@ args = parser.parse_args()
 n_bkg = args.n_bkg
 n_sig = args.n_sig
 
-features = ["y1", "y2", "y3", "y4", "y5"]
+features = ["z1", "z2", "z3", "z4", "z5"]
 reco = ["x1", "x2", "x3", "x4", "x5"]
 
 # Total expected yields (define the signal strength of the measurement).
