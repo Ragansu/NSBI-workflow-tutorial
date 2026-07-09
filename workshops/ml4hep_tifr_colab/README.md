@@ -19,11 +19,12 @@ browser.
 | Notebook | |
 |---|---|
 | Exercise 1 — Summary statistics | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_1_summary_statistics.ipynb) |
-| Exercise 2.1 — Visualise the data | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_2_1_visualize_data.ipynb) |
-| Exercise 2.2a — SigvsRef training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_2_2a_SigvsRef_training.ipynb) |
-| Exercise 2.2b — BkgvsRef training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_2_2b_BkgvsRef_training.ipynb) |
-| Exercise 2.3 — Parameter fitting | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_2_3_parameter_fitting.ipynb) |
-| Exercise 3 — Normalizing flows | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/livaage/nsbi-lhc-toolkit/blob/ml4hep-tifr-colab/workshops/ml4hep_tifr_colab/Exercise_3_normalizing_flows_density_estimation_direct_likelihood.ipynb) |
+| Exercise 2.1 — Visualise the data | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_2_1_visualize_data.ipynb) |
+| Exercise 2.2a — SigvsRef training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_2_2b_BkgvsRef_training.ipynb) |
+| Exercise 2.2b — BkgvsRef training | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_2_2b_BkgvsRef_training.ipynb) |
+| Exercise 2.3 — Parameter fitting | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_2_3_parameter_fitting.ipynb) |
+| Exercise 3 — Parameterised CARL | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_3_parameterized_carl.ipynb) |
+| Exercise 4 — Normalizing flows | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/iris-hep/nsbi-lhc-toolkit/blob/ml4hep_school_tutorial/workshops/ml4hep_tifr_colab/Exercise_4_normalizing_flows_density_estimation_direct_likelihood.ipynb) |
 
 > The badge/clone URLs point at the `livaage/nsbi-lhc-toolkit` fork on the
 > `ml4hep-tifr-colab` branch so the notebooks work **before** this PR is merged.
