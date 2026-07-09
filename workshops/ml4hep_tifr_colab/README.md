@@ -30,7 +30,7 @@ browser.
 > `ml4hep-tifr-colab` branch so the notebooks work **before** this PR is merged.
 > Once merged, update `livaage` → `iris-hep` and the branch in the setup cell.
 
-## Notes for running on Colab
+# Notes for running on Colab
 
 - **Use a GPU runtime** for the training notebooks (*Runtime → Change runtime
   type → GPU*). The setup cell installs `pytorch-lightning onnx onnxruntime
@@ -44,12 +44,3 @@ browser.
   each Colab notebook is a fresh runtime, either run 2.2a and 2.2b in the same
   runtime first, or set `USE_DRIVE = True` in the setup cell of all three so the
   trained `models_*/` folders persist to your Google Drive.
-
-## Suggested order
-
-1. `Exercise_2_1_visualize_data` — inspect the mixture structure.
-2. `Exercise_2_2a_SigvsRef_training` — train `r_sig = p_sig / p_ref`.
-3. `Exercise_2_2b_BkgvsRef_training` — train `r_bkg = p_bkg / p_ref`.
-4. `Exercise_2_3_parameter_fitting` — build the unbinned workspace and fit `μ`.
-5. `Exercise_1_summary_statistics` — summary statistics and likelihood fits.
-6. `Exercise_3_normalizing_flows...` — direct density estimation with a RealNVP.
