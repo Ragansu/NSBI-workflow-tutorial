@@ -35,7 +35,7 @@ data_loader:
 # Data processing settings - these are specific to the example
 data_preprocessing:
   fit_config_path: "./config_fit_nsbi.yml"
-  num_folds: 1                # k-fold cross-validation: set to 1 to disable
+  num_folds: 10                # k-fold cross-validation: set to 1 to disable
   features:
       - PRI_lep_pt
       - PRI_lep_eta
@@ -109,8 +109,8 @@ neural_likelihood_ratio_estimation:
   force_train: false
 
   basis_processes_to_train: ["ttbar", "ztautau", "htautau"]
-  num_ensemble_members_evaluation: 50
-  num_ensemble_members_training: 50
+  num_ensemble_members_evaluation: 20
+  num_ensemble_members_training: 20
 
   ensemble_aggregation_type: "mean"
 
@@ -129,7 +129,7 @@ neural_likelihood_ratio_estimation:
     hidden_layers: 4
     neurons: 1000
     number_of_epochs: 100
-    batch_size: 512
+    batch_size: 10000
     learning_rate: 0.0001
     scalerType: "MinMax"
     

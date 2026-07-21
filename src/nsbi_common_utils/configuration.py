@@ -43,7 +43,7 @@ class ConfigManager:
         idx = self._index_of_region(channel_name = region_name)
 
         if idx is None:
-            log.info(f"Region {channel_name} not found in the config.")
+            raise ConfigError(f"Region {region_name} not found in the config.")
 
         list_dict_trained_models: list[dict[str, Any]] = self.config["Regions"][idx]["TrainedModels"]
         for count, sample_model in enumerate(list_dict_trained_models):
@@ -59,7 +59,7 @@ class ConfigManager:
         idx = self._index_of_region(channel_name = region_name)
 
         if idx is None:
-            log.info(f"Region {channel_name} not found in the config.")
+            raise ConfigError(f"Region {region_name} not found in the config.")
 
         list_dict_trained_models: list[dict[str, Any]] = self.config["Regions"][idx]["TrainedModels"]
 
@@ -110,7 +110,7 @@ class ConfigManager:
         existing_idx = self._index_of_region(channel_name)
         new_region = {
             "Name": channel_name,
-            "Filter": preselections,
+            "Filter": filter,
             "Variable": observable,
             "Binning": binning,
         }
@@ -241,7 +241,7 @@ class ConfigManager:
         idx = self._index_of_region(channel_name = channel_name)
 
         if idx is None:
-            log.info(f"Region {channel_name} not found in the config.")
+            raise ConfigError(f"Region {channel_name} not found in the config.")
 
         filter_string = self.config["Regions"][idx]["Filter"]
 
@@ -252,7 +252,7 @@ class ConfigManager:
         idx = self._index_of_region(channel_name = channel_name)
 
         if idx is None:
-            log.info(f"Region {channel_name} not found in the config.")
+            raise ConfigError(f"Region {channel_name} not found in the config.")
 
         asimov_weight_path = self.config["Regions"][idx]["AsimovWeights"]
 
