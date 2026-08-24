@@ -611,6 +611,7 @@ class sbi_parametric_model:
             'tot_up_unbinned':  tot_up_unbinned_stacked,
             'tot_dn_unbinned':  tot_dn_unbinned_stacked,
             'norm_matrix':      jnp.array(norm_matrix),
+            'coeffs_matrix':   jnp.array(coeffs_matrix),
             'observed_hist':    self.observed_hist,
             'observed_rate':    self.observed_rate,
             'weights':          self.weight_arrays_unbinned,
@@ -622,10 +623,6 @@ class sbi_parametric_model:
         """
         num_unc  = self.num_unconstrained_param
         has_syst = self.has_normplusshape
-        if self.errordef == "LIKELIHOOD":
-            scale = 1
-        else :
-            scale = 2
 
         _batched_var = jax.vmap(_calculate_combined_var, in_axes=(None, 0, 0))
         
@@ -692,7 +689,11 @@ class sbi_parametric_model:
                 * ratio_vars,
                 axis=0
             )
-            llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
+            # llr_pe = jnp.log(dnu_dx) - jnp.log(nu_unbinned)
+            
+            eps = 0.1
+
+            llr_pe = jnp.log(jnp.clip(dnu_dx, eps)) - jnp.log(jnp.clip(nu_unbinned, eps))
 
             llr_constraints = jnp.sum(param_syst ** 2)
             llr_unbinned    = -2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
