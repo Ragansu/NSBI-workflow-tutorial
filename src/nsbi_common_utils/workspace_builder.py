@@ -157,14 +157,14 @@ class WorkspaceBuilder:
                                    "lo_data": list(variation_data["Dn"])}}]
         elif type_of_fit == "unbinned":
             
-            trained_models_dict = self.config_dict.get("TrainedModels", None)
-            unbinned_region = trained_models_dict[region["Name"]]
-            
-            idx_sample = self.config.get_sample_index_unbinned_regions(region["Name"], sample_name)
-            syst_idx = self.config.get_syst_index_unbinned_regions(region["Name"], sample_name, syst_name)
+            trained_models_list = self.config_dict.get("TrainedModels", None)
 
-            variation_ratio_up         = unbinned_region["Models"][idx_sample]["Systematics"][syst_idx].get("RatiosUp", None)
-            variation_ratio_dn         = unbinned_region["Models"][idx_sample]["Systematics"][syst_idx].get("RatiosDn", None)
+            idx_region = self.config.get_index_unbinned_regions(region["Name"])
+            idx_sample = self.config.get_sample_index_unbinned_regions(region["Name"], sample_name)
+            idx_syst = self.config.get_syst_index_unbinned_regions(region["Name"], sample_name, syst_name)
+
+            variation_ratio_up         = trained_models_list[idx_region]["Models"][idx_sample]["Systematics"][idx_syst].get("RatiosUp", None)
+            variation_ratio_dn         = trained_models_list[idx_region]["Models"][idx_sample]["Systematics"][idx_syst].get("RatiosDn", None)
             modifiers = [{"name": syst_name,
                           "type": "normplusshape",
                           "data": {"hi_data": list(variation_data["Up"]),
@@ -246,7 +246,6 @@ class WorkspaceBuilder:
         channels = []
         observations = []
 
-        trained_models_dict = self.config_dict.get("TrainedModels", None)
 
         for region in self.config_dict["Regions"]:
             channel = {}
@@ -315,15 +314,17 @@ class WorkspaceBuilder:
 
 
                     if type_of_fit == "unbinned":
-                        unbinned_region = trained_models_dict[region["Name"]]
+                        trained_models_list = self.config_dict.get("TrainedModels", None)
 
-                        logging.info(f"Unbinned region {region['Name']} has trained models for samples {[m['Name'] for m in unbinned_region['Models']]}")
+                        idx_region = self.config.get_index_unbinned_regions(region["Name"])
 
-                        weights_path = unbinned_region.get("Weights")
+                        logging.info(f"Unbinned region {region['Name']} has trained models for samples {[m['Name'] for m in trained_models_list[idx_region]["Models"]]}")
+
+                        weights_path = trained_models_list[idx_region].get("Weights")
 
                         ratio_dict = {
                             model["Name"]: model.get("Nominal", {}).get("Ratios")
-                            for model in unbinned_region.get("Models", [])
+                            for model in trained_models_list[idx_region].get("Models", [])
                         }
 
                         observation.update({"ratios": ratio_dict,
