@@ -209,6 +209,7 @@ class WorkspaceBuilder:
             If a systematic type other than ``NormPlusShape`` is encountered.
         """
         sample_name = sample["Name"]
+        region_name = region["Name"]
         modifiers = []
         for systematic_dict in self.config_dict.get("Systematics", []):
 

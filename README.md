@@ -13,16 +13,36 @@ The full documtation can be found here: [https://toolkit-for-simulation-based-in
 
 ## Setup
 
-We will use `pixi` to setup the environment for the workflow. The specifications are defined in the `pixi.toml` file. If `pixi` is not installed on your machine follow the instructions in [pixi seutp guide](https://pixi.sh/latest/installation/). Then proceed to install the environment with:
+We will use `pixi` to setup the environment for the workflow. The specifications are defined in the `pixi.toml` file. If `pixi` is not installed on your machine follow the instructions in [pixi setup guide](https://pixi.sh/latest/installation/).
+
+On Linux machines with CUDA-capable GPUs, install the GPU environment with:
 ```
 pixi install -e nsbi-env-gpu
 ```
-Currently the environment can only be built on machines with GPU. 
+The `nsbi-env-gpu` environment is restricted to `linux-64` and will fail on macOS.
 
-A jupyter kernel can then be created by running:
+On macOS, install the CPU environment instead:
+```
+pixi install -e nsbi-env
+```
+
+A jupyter kernel can then be created by running the command for the environment you installed:
+```
+pixi run -e nsbi-env python -m ipykernel install --user --name nsbi-env --display-name "Python (pixi: nsbi-env)"
+```
+
+For the Linux GPU environment:
 ```
 pixi run -e nsbi-env-gpu python -m ipykernel install --user --name nsbi-env-gpu --display-name "Python (pixi: nsbi-env-gpu)"
 ```
+
+Clone the repo:
+
+```shell
+git clone git@github.com:iris-hep/NSBI-workflow-tutorial.git --depth=1
+```
+
+(The example datasets are no longer distributed via Git LFS — pre-processed bundles live on cernbox; see the per-example README for the download link.)
 
 ## Introduction
 
@@ -50,7 +70,17 @@ The semi-parametric model and workflow is related to the SBI analysis recently p
 <br/>
 <br/>
 
-We demonstrate the usage of `nsbi-common-utils` applied to a full-scale LHC-style analysis in the `examples/`. The workflow currently uses the Higgs to tau tau dataset from FAIR universe challenge. More open datasets will be added in the future. 
+We demonstrate the usage of `nsbi-common-utils` applied to a full-scale LHC-style analysis in the `examples/`. The workflow currently uses the Higgs to tau tau dataset from FAIR universe challenge. More open datasets will be added in the future.
+
+### Three ways to run an example
+
+Every example is driven by a single `config.pipeline.yaml` and can be executed through any of three equivalent entry points — pick whichever suits your task:
+
+1. **Notebooks** — step through each stage interactively (`1_data_loader.ipynb` → `7_parameter_fitting_with_systematics.ipynb`). Best for learning the method and inspecting intermediate outputs.
+2. **Scripts** — run each stage as a headless CLI script under `scripts/`. Best for reproducible single-machine runs.
+3. **Snakemake** — orchestrate the scripts as a parallel DAG on a cluster (HTCondor, SLURM, local, ...) by swapping the executor profile. Best for production: fans out the embarrassingly-parallel training jobs over `(process, fold, ensemble_index)` and submits them to your batch system.
+
+See [docs/basics/workflow.rst](docs/basics/workflow.rst) for the full reference, including CLI submission and monitoring instructions, partial-rerun flags, and notes on adapting the shipped CHTC profile to your cluster.
 
 ## Library
 

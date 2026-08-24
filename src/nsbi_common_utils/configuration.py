@@ -40,15 +40,14 @@ class ConfigManager:
                                           region_name: str,
                                           sample_name: str) -> Union[int, None]:
 
-        trained_models_dict = self.config.get("TrainedModels", None)
-        unbinned_region = trained_models_dict.get(region_name, None)
+        idx = self._index_of_region(channel_name = region_name)
 
-        if unbinned_region is None:
-            log.info(f"Region {region_name} not found in the config.")
+        if idx is None:
+            raise ConfigError(f"Region {region_name} not found in the config.")
 
-        list_dict_trained_models: list[dict[str, Any]] = unbinned_region["Models"]
+        list_dict_trained_models: list[dict[str, Any]] = self.config["Regions"][idx]["TrainedModels"]
         for count, sample_model in enumerate(list_dict_trained_models):
-            if sample_model.get("Name") == sample_name:
+            if sample_model.get("SampleName") == sample_name:
                 return count
         return None
 
@@ -57,16 +56,16 @@ class ConfigManager:
                                           sample_name: str,
                                          syst_name: str) -> Union[int, None]:
 
-        trained_models_dict = self.config.get("TrainedModels", None)
-        unbinned_region = trained_models_dict.get(region_name, None)
+        idx = self._index_of_region(channel_name = region_name)
 
-        if unbinned_region is None:
-            log.info(f"Region {region_name} not found in the config.")
+        if idx is None:
+            raise ConfigError(f"Region {region_name} not found in the config.")
 
+        list_dict_trained_models: list[dict[str, Any]] = self.config["Regions"][idx]["TrainedModels"]
 
         idx_sample = self.get_sample_index_unbinned_regions(region_name, sample_name)
 
-        list_dict_systematics: list[dict[str, Any]] = unbinned_region["Models"][idx_sample]["Systematics"]
+        list_dict_systematics: list[dict[str, Any]] = self.config["Regions"][idx]["TrainedModels"][idx_sample]["Systematics"]
         
         for count, syst_model in enumerate(list_dict_systematics):
             if syst_model.get("SystName") == syst_name:
@@ -111,7 +110,7 @@ class ConfigManager:
         existing_idx = self._index_of_region(channel_name)
         new_region = {
             "Name": channel_name,
-            "Filter": preselections,
+            "Filter": filter,
             "Variable": observable,
             "Binning": binning,
         }
@@ -242,22 +241,20 @@ class ConfigManager:
         idx = self._index_of_region(channel_name = channel_name)
 
         if idx is None:
-            log.info(f"Region {channel_name} not found in the config.")
+            raise ConfigError(f"Region {channel_name} not found in the config.")
 
         filter_string = self.config["Regions"][idx]["Filter"]
 
         return filter_string
     
     def get_channel_asimov_weight_path(self, channel_name: str) -> str:
-                
-        trained_models_dict = self.config.get("TrainedModels", None)
         
-        unbinned_region = trained_models_dict[channel_name]
+        idx = self._index_of_region(channel_name = channel_name)
 
-        asimov_weight_path = unbinned_region.get("Weights")
+        if idx is None:
+            raise ConfigError(f"Region {channel_name} not found in the config.")
 
-        if unbinned_region is None:
-            log.info(f"Region {channel_name} not found in the config.")
+        asimov_weight_path = self.config["Regions"][idx]["AsimovWeights"]
 
         return asimov_weight_path
 

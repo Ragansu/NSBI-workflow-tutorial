@@ -18,21 +18,21 @@ Samples:
       
     - Name              : htautau
       Tree              : tree_htautau
-      SamplePath        : ./saved_datasets/dataset_nominal.root
+      SamplePath        : /projects/Physics_Cranmer/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : True
       UseAsBasis        : True
 
     - Name              : ttbar
       Tree              : tree_ttbar
-      SamplePath        : ./saved_datasets/dataset_nominal.root
+      SamplePath        : /projects/Physics_Cranmer/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : True
       UseAsBasis        : True
         
     - Name : ztautau
       Tree              : tree_ztautau
-      SamplePath        : ./saved_datasets/dataset_nominal.root
+      SamplePath        : /projects/Physics_Cranmer/saved_datasets/dataset_nominal.root
       Weight            : weights
       UseAsReference    : False
       UseAsBasis        : True
@@ -61,28 +61,28 @@ Systematics:
               - ttbar
         Up                  : 
             -   SampleName        : htautau
-                Path              : ./saved_datasets/dataset_JES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_up.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : ./saved_datasets/dataset_JES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_up.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : ./saved_datasets/dataset_JES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_up.root
                 Tree              : tree_ttbar
                 Weight            : weights
         Dn                  :
             -   SampleName        : htautau
-                Path              : ./saved_datasets/dataset_JES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : ./saved_datasets/dataset_JES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : ./saved_datasets/dataset_JES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_JES_dn.root
                 Tree              : tree_ttbar
                 Weight            : weights
     -   Name                : TES
@@ -94,28 +94,28 @@ Systematics:
               - ttbar
         Up                  :
             -   SampleName        : htautau
-                Path              : ./saved_datasets/dataset_TES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_up.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : ./saved_datasets/dataset_TES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_up.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : ./saved_datasets/dataset_TES_up.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_up.root
                 Tree              : tree_ttbar
                 Weight            : weights
         Dn                  :
             -   SampleName        : htautau
-                Path              : ./saved_datasets/dataset_TES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_htautau
                 Weight            : weights
             -   SampleName        : ztautau
-                Path              : ./saved_datasets/dataset_TES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_ztautau
                 Weight            : weights
             -   SampleName        : ttbar
-                Path              : ./saved_datasets/dataset_TES_dn.root
+                Path              : /projects/Physics_Cranmer/saved_datasets/dataset_TES_dn.root
                 Tree              : tree_ttbar
                 Weight            : weights
 
@@ -138,7 +138,7 @@ Regions:
         - 4.5
         - 5.
 -   Name: SR
-    Filter: presel_score>=-1.0 & presel_score<=3.75
+    Filter: presel_score>=-1.0 & presel_score<=4.5
     Variable: presel_score
     Type: binned
     Binning:
