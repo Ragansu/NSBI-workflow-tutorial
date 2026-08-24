@@ -342,10 +342,6 @@ class sbi_parametric_model:
         data_list = []
         ratio_observed = {sample: [] for sample in self.all_samples}
         
-        # print("All channels in workspace:", self.all_channels)
-        # print("Samples in workspace:", self.all_samples)
-        # print("keys in ratio dict of first channel:", self.workspace["observations"][0]["ratios"].keys())
-        
         weights_observed = np.array([])
 
         for channel_name in self.all_channels:
@@ -610,21 +606,7 @@ class sbi_parametric_model:
             llr_unbinned    = -2.0 * jnp.sum(data['weights'] * llr_pe, axis=0)
             llr_total = llr_binned + llr_rate + llr_unbinned + llr_constraints
             
-            # jax.debug.print("nu_binned is {y}", y=nu_binned)
-            # jax.debug.print("nu_unbinned is {y}", y=nu_unbinned)
-            # jax.debug.print("observed_hist is {y}", y=data['observed_hist']) 
-            # jax.debug.print("observed_rate is {y}", y=data['observed_rate'])           
-            # jax.debug.print("llr_binned is {y}", y=llr_binned)
-            # jax.debug.print("llr_rate is {y}", y=llr_rate)
-            # jax.debug.print("llr_pe is {y}", y=llr_pe)
-            # jax.debug.print("llr_unbinned is {y}", y=llr_unbinned)
-            # jax.debug.print("llr_constraints is {y}", y=llr_constraints)
-            # jax.debug.print("llr_total is {y}", y=llr_total)
-
-            return (llr_binned
-                    + llr_rate
-                    + llr_unbinned
-                    + llr_constraints)
+            return llr_total
 
         jit_nll          = jax.jit(_nll_pure)
         jit_val_and_grad = jax.jit(jax.value_and_grad(_nll_pure, argnums=0))
