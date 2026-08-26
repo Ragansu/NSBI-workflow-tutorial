@@ -387,9 +387,6 @@ class sbi_parametric_model:
         else:
             data_observed = np.array([])
             
-        
-        
-
         return {
             "data_observed": data_observed,
             "ratio_observed": ratio_observed,
