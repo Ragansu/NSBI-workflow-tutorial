@@ -3,10 +3,10 @@ import yaml
 
 from nsbi_common_utils.configuration import ConfigError, ConfigManager
 
-
 # =====================================================================
 # Unit Tests
 # =====================================================================
+
 
 def test_init_file_missing_raises_error(tmp_path):
     """Test that initializing with a non-existent file raises ConfigError."""
@@ -19,9 +19,11 @@ def test_init_create_if_missing(tmp_path):
     """Test creating a new config file if it does not exist."""
     missing_file = tmp_path / "new_config.yml"
     template = {"Regions": [{"Name": "default_region"}]}
-    
-    cm = ConfigManager(file_path_string=missing_file, initial_template=template, create_if_missing=True)
-    
+
+    cm = ConfigManager(
+        file_path_string=missing_file, initial_template=template, create_if_missing=True
+    )
+
     assert missing_file.exists()
     assert cm.config["Regions"][0]["Name"] == "default_region"
 
@@ -61,11 +63,15 @@ def test_channel_management(yaml_file):
         cm.add_channel(channel_name="region_1", filter="pt > 300", observable="pt")
 
     # Add channel with overwrite
-    cm.add_channel(channel_name="region_1", filter="pt > 300", observable="pt", overwrite=True)
+    cm.add_channel(
+        channel_name="region_1", filter="pt > 300", observable="pt", overwrite=True
+    )
     assert cm.get_channel_filters("region_1") == "pt > 300"
 
     # Add brand new channel
-    cm.add_channel(channel_name="validation_region", filter="pt < 50", observable="m_jj")
+    cm.add_channel(
+        channel_name="validation_region", filter="pt < 50", observable="m_jj"
+    )
     assert "validation_region" in cm.list_channels()
 
     # Remove channel
@@ -95,7 +101,7 @@ def test_get_training_features_and_region_cuts(yaml_file):
 
     names, selections = cm.get_analysis_region_cuts()
     assert names == ["region_1", "region_2"]
-    assert selections == ["pt > 200 && pt <= 200"]
+    assert selections == ["pt > 200 && pt <= 200", "m_jj > 0"]
 
 
 def test_get_samples_in_syst_for_training(yaml_file):
@@ -120,13 +126,19 @@ def test_unbinned_region_indices_and_paths(yaml_file):
     assert cm.get_index_unbinned_regions("missing_region") is None
 
     assert cm.get_sample_index_unbinned_regions("region_2", "signal") == 0
-    assert cm.get_sample_index_unbinned_regions("region_2", "non_existent_sample") is None
+    assert (
+        cm.get_sample_index_unbinned_regions("region_2", "non_existent_sample") is None
+    )
 
     assert cm.get_syst_index_unbinned_regions("region_2", "signal", "sys1") == 0
-    assert cm.get_syst_index_unbinned_regions("region_2", "signal", "missing_sys") is None
+    assert (
+        cm.get_syst_index_unbinned_regions("region_2", "signal", "missing_sys") is None
+    )
 
     # Asimov weight path lookup
-    assert cm.get_channel_asimov_weight_path("region_2") == "/path/to/asimov_weights.npy"
+    assert (
+        cm.get_channel_asimov_weight_path("region_2") == "/path/to/asimov_weights.npy"
+    )
 
 
 def test_unbinned_region_missing_raises_error(yaml_file):

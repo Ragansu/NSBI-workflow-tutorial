@@ -7,6 +7,7 @@ import json
 import pytest
 
 CONFIG_DIR = pathlib.Path(__file__).parent
+from nsbi_common_utils.inference import inference
 
 
 @pytest.fixture
@@ -56,9 +57,9 @@ def mock_datasets():
     dummy_df = pd.DataFrame({"m_jj": [50.0, 150.0], "weights": [1.0, 1.0]})
 
     dataset_dict = {
-        "Nominal": {"signal": dummy_df},
-        "sys1_Up": {"signal": dummy_df},
-        "sys1_Dn": {"signal": dummy_df},
+        "Nominal": {"signal": dummy_df, "background": dummy_df},
+        "sys1_Up": {"signal": dummy_df, "background": dummy_df},
+        "sys1_Dn": {"signal": dummy_df, "background": dummy_df},
     }
 
     mock_ds_obj = MagicMock()
@@ -73,3 +74,63 @@ def yaml_file(tmp_path, mock_config_dict):
     config_file = tmp_path / "config.yml"
     config_file.write_text(yaml.safe_dump(mock_config_dict))
     return config_file
+
+
+def quadratic_nll(params):
+    """
+    Simple 3D quadratic objective function centered at (1.0, 2.0, 3.0):
+    NLL = (x - 1.0)^2 + (y - 2.0)^2 + (z - 3.0)^2
+    """
+    x, y, z = params
+    return (x - 1.0) ** 2 + (y - 2.0) ** 2 + (z - 3.0) ** 2
+
+
+def quadratic_grad(params):
+    """Analytical gradient for quadratic_nll."""
+    x, y, z = params
+    return np.array([2.0 * (x - 1.0), 2.0 * (y - 2.0), 2.0 * (z - 3.0)])
+
+
+@pytest.fixture
+def dummy_inference_setup():
+    """Provides a fully initialized inference engine instance."""
+    initial_values = [0.0, 0.0, 0.0]
+    list_parameters = ["mu", "norm", "nuis_1"]
+    num_unconstrained = 2  # mu and norm are free; nuis_1 is constrained
+
+    engine = inference(
+        model_nll=quadratic_nll,
+        initial_values=initial_values,
+        list_parameters=list_parameters,
+        num_unconstrained_params=num_unconstrained,
+        model_grad=quadratic_grad,
+    )
+    return engine
+
+
+@pytest.fixture
+def binary_dataset():
+    """Generates synthetic ratios, binary targets, and sample weights."""
+    np.random.seed(42)
+    n_samples = 300
+    truth_labels = np.random.choice([0.0, 1.0], size=n_samples, p=[0.5, 0.5])
+    ratios = np.where(
+        truth_labels == 1.0,
+        np.random.uniform(1.0, 5.0, n_samples),
+        np.random.uniform(0.1, 2.0, n_samples),
+    )
+    weights = np.random.uniform(0.8, 1.2, n_samples)
+    return ratios, truth_labels, weights
+
+
+@pytest.fixture
+def two_class_dataset():
+    """Generates overlapping numerator and denominator samples so every bin receives events."""
+    np.random.seed(42)
+    n_num, n_den = 500, 500
+    # Shared range ensuring denominator has support across the bin range
+    data_num = np.random.uniform(0.1, 5.0, size=n_num)
+    data_den = np.random.uniform(0.1, 5.0, size=n_den)
+    w_num = np.ones(n_num)
+    w_den = np.ones(n_den)
+    return data_num, data_den, w_num, w_den
