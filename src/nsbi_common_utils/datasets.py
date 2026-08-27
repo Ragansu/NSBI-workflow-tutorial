@@ -572,6 +572,8 @@ def load_dataframe_from_root(path_to_load: str,
         # If no branches are specified, load all
         if not branches_to_load:
             branches_to_load = tree.keys()
-        dataframe = tree.arrays(branches_to_load, library="pd")
+        data = tree.arrays(branches_to_load, library="pd")
+
+    dataframe = ak.to_dataframe(data)
 
     return dataframe

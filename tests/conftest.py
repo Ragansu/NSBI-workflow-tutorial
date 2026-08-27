@@ -5,6 +5,11 @@ import pandas as pd
 import yaml
 import json
 import pytest
+import os
+import tempfile
+import uproot
+import shutil
+
 
 CONFIG_DIR = pathlib.Path(__file__).parent
 from nsbi_common_utils.inference import inference
@@ -134,3 +139,172 @@ def two_class_dataset():
     w_num = np.ones(n_num)
     w_den = np.ones(n_den)
     return data_num, data_den, w_num, w_den
+
+
+@pytest.fixture
+def dummy_dataframe():
+    """Generates a reproducible sample pandas DataFrame representing high-energy physics event data."""
+    np.random.seed(42)
+    n_events = 100
+    return pd.DataFrame(
+        {
+            "m_vis": np.random.normal(90.0, 15.0, n_events),
+            "pt_1": np.random.exponential(35.0, n_events),
+            "event_weight": np.random.uniform(0.8, 1.2, n_events),
+            "fold_index": np.random.choice([0, 1, 2, 3], size=n_events),
+        }
+    )
+
+
+@pytest.fixture
+def temp_root_file(dummy_dataframe):
+    """Creates a temporary ROOT file containing a 'Nominal' TTree."""
+    with tempfile.NamedTemporaryFile(suffix=".root", delete=False) as tmp:
+        file_path = tmp.name
+
+    with uproot.recreate(file_path) as f:
+        f["Nominal"] = dummy_dataframe
+
+    yield file_path
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+
+@pytest.fixture
+def mock_config_manager_root(temp_root_file):
+    """Creates a mock of nsbi_common_utils.configuration.ConfigManager with a valid configuration structure."""
+    mock_cm = MagicMock()
+
+    mock_cm.config = {
+        "Samples": [
+            {
+                "Name": "htautau",
+                "SamplePath": temp_root_file,
+                "Tree": "Nominal",
+                "Weight": "event_weight",
+            },
+            {
+                "Name": "ztautau",
+                "SamplePath": temp_root_file,
+                "Tree": "Nominal",
+                "Weight": "event_weight",
+            },
+        ],
+        "Systematics": [
+            {
+                "Name": "TES",
+                "Type": "NormPlusShape",
+                "Up": [
+                    {
+                        "SampleName": "htautau",
+                        "Path": temp_root_file,
+                        "Tree": "Nominal",
+                        "Weight": "event_weight",
+                    }
+                ],
+                "Dn": [
+                    {
+                        "SampleName": "htautau",
+                        "Path": temp_root_file,
+                        "Tree": "Nominal",
+                        "Weight": "event_weight",
+                    }
+                ],
+            }
+        ],
+    }
+    mock_cm.get_channel_filters.side_effect = lambda channel_name: "m_vis > 70.0"
+    return mock_cm
+
+
+@pytest.fixture
+def datasets_instance(monkeypatch, mock_config_manager_root):
+    """
+    Instantiates the datasets helper with mocked ConfigManager dependencies
+    to avoid relying on external YAML files or missing modules.
+    """
+    import nsbi_common_utils
+
+    monkeypatch.setattr(
+        nsbi_common_utils.configuration,
+        "ConfigManager",
+        lambda file_path_string: mock_config_manager_root,
+    )
+
+    from nsbi_common_utils.datasets import datasets
+
+    branches = ["m_vis", "pt_1", "fold_index"]
+    instance = datasets(config_path="dummy_config.yaml", branches_to_load=branches)
+    return instance
+
+
+@pytest.fixture
+def sample_dataset():
+    """Generates a mock pandas DataFrame simulating high-energy physics event features."""
+    np.random.seed(42)
+    n_events = 200
+    return pd.DataFrame({
+        "m_vis": np.random.normal(90.0, 15.0, n_events),
+        "pt_1": np.random.exponential(35.0, n_events),
+        "eta_1": np.random.uniform(-2.5, 2.5, n_events),
+        "fold_index": np.random.choice([0, 1], size=n_events),
+    })
+
+
+@pytest.fixture
+def sample_training_inputs(sample_dataset):
+    """Generates aligned weights and binary labels for the sample dataset."""
+    n_events = len(sample_dataset)
+    labels = np.array([1 if i < n_events // 2 else 0 for i in range(n_events)])
+    weights = np.ones(n_events, dtype=np.float32)
+    return weights, labels
+
+
+@pytest.fixture
+def temp_dirs():
+    """Provides temporary directories for figures and models, cleaning up after tests."""
+    fig_dir = tempfile.mkdtemp(prefix="test_figs_")
+    model_dir = tempfile.mkdtemp(prefix="test_models_")
+    
+    yield fig_dir, model_dir
+
+    for d in [fig_dir, model_dir]:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+
+
+@pytest.fixture
+def mock_nsbi_utils(monkeypatch):
+    """
+    Mocks out nsbi_common_utils functions to prevent actual ONNX exports,
+    file loads, or PyTorch Lightning training during unit tests.
+    """
+    mock_utils = MagicMock()
+    
+    # Mock load_trained_model to return a dummy scaler and dummy model
+    mock_scaler = MagicMock()
+    mock_scaler.transform.side_effect = lambda df: df.values
+    mock_model = MagicMock()
+    
+    mock_utils.training.utils.load_trained_model.return_value = (mock_scaler, mock_model)
+    mock_utils.training.utils.save_model.return_value = None
+    
+    # Mock predict_with_model to return a predictable numpy array of ratios
+    def dummy_predict(dataset, scaler, model, calibration_model=None, use_log_loss=False):
+        return np.ones(len(dataset), dtype=np.float32) * 1.5
+
+    mock_utils.training.utils.predict_with_model.side_effect = dummy_predict
+
+    # Mock plotting functions
+    mock_utils.plotting.plot_loss = MagicMock()
+    mock_utils.plotting.plot_all_features = MagicMock()
+    mock_utils.plotting.plot_overfit_side_by_side = MagicMock()
+    mock_utils.plotting.plot_calibration_curve = MagicMock()
+    mock_utils.plotting.plot_calibration_curve_ratio = MagicMock()
+
+    # Apply monkeypatching
+    monkeypatch.setattr("nsbi_common_utils.training.utils", mock_utils.training.utils)
+    monkeypatch.setattr("nsbi_common_utils.plotting", mock_utils.plotting)
+    
+    return mock_utils
