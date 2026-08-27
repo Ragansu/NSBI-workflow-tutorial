@@ -1,0 +1,111 @@
+{
+    "measurements": [
+        {
+            "name": "Measurement_1",
+            "config": {
+                "poi": "mu",
+                "parameters": [
+                    {
+                        "name": "mu",
+                        "inits": [
+                            1.0
+                        ]
+                    },
+                    {
+                        "name": "sys1",
+                        "inits": [
+                            0.0
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "channels": [
+        {
+            "name": "control_region",
+            "type": "binned",
+            "samples": [
+                {
+                    "name": "signal",
+                    "data": [
+                        10.0,
+                        12.0
+                    ],
+                    "modifiers": [
+                        {
+                            "name": "mu",
+                            "type": "normfactor"
+                        },
+                        {
+                            "name": "sys1",
+                            "type": "normplusshape",
+                            "data": {
+                                "hi_data": [
+                                    11.0,
+                                    13.0
+                                ],
+                                "lo_data": [
+                                    9.0,
+                                    11.0
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "sbi_unbinned_region",
+            "type": "unbinned",
+            "weights": "dummy_weights.npy",
+            "samples": [
+                {
+                    "name": "signal",
+                    "data": [
+                        100.0
+                    ],
+                    "modifiers": [
+                        {
+                            "name": "mu",
+                            "type": "normfactor"
+                        },
+                        {
+                            "name": "sys1",
+                            "type": "normplusshape",
+                            "data": {
+                                "hi_ratio": "dummy_hi_ratio.npy",
+                                "lo_ratio": "dummy_lo_ratio.npy",
+                                "hi_data": [
+                                    105.0
+                                ],
+                                "lo_data": [
+                                    95.0
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "observations": [
+        {
+            "name": "control_region",
+            "data": [
+                10.0,
+                11.0
+            ]
+        },
+        {
+            "data": [
+                9.0
+            ],
+            "name": "sbi_unbinned_region",
+            "weights": "dummy_obs_weights.npy",
+            "ratios": {
+                "signal": "dummy_signal_ratio.npy"
+            }
+        }
+    ]
+}

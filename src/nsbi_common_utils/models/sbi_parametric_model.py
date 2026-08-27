@@ -47,6 +47,7 @@ class sbi_parametric_model:
 
         self.workspace                                  = workspace
         self.measurements_dict: list[Dict[str, Any]]    = workspace["measurements"]
+
         for measurement in self.measurements_dict:
             measurement_name = measurement.get("name")
             if measurement_name == measurement_to_fit:

@@ -1,0 +1,101 @@
+General:
+  Measurement:
+    Name: test_measurement
+    POI: mu
+    ParametersToFit:
+      - mu
+      - sys1
+
+NormFactors:
+  - Name: mu
+    Nominal: 1.0
+    Bounds:
+      - 0.0
+      - 5.0
+    Region:
+      - region_1
+    Samples:
+      - signal
+
+TrainingFeatures:
+  - m_jj
+  - pt
+
+TrainingFeaturesToStandardize:
+  - m_jj
+
+Systematics:
+  - Name: sys1
+    Type: NormPlusShape
+    Nominal: 0.0
+    Bounds:
+      - -3.0
+      - 3.0
+    Regions:
+      - region_1
+      - region_2
+
+    Samples:
+      - signal
+      - background
+    Up:
+      - SampleName: signal
+        Path: ./saved_datasets/dataset_sys1_up.root
+        Tree: tree_htautau
+        Weight: weights
+
+      - SampleName: background
+        Path: ./saved_datasets/dataset_sys1_up.root
+        Tree: tree_htautau
+        Weight: weights
+    Dn:
+      - SampleName: signal
+        Path: ./saved_datasets/dataset_sys1_dn.root
+        Tree: tree_htautau
+        Weight: weights
+
+Regions:
+  - Name: region_1
+    Type: binned
+    Variable: m_jj
+    Binning:
+      - 0.0
+      - 100.0
+      - 200.0
+    Filter: "pt > 200 && pt <= 200"
+  - Name: region_2
+    Type: unbinned
+    Variable: m_jj
+    Binning: null 
+    Filter: "m_jj > 0"
+
+Samples:
+  - Name: signal
+    Data: false
+    SamplePath: /path/to/signal.root
+    UseAsBasis: True
+
+  - Name: background
+    Data: false
+    SamplePath: /path/to/background.root
+    UseAsReference: True
+
+TrainedModels:
+  - RegionName: region_2
+    Weights: /path/to/asimov_weights.npy
+    Models:
+      - Name: signal
+        Nominal:
+          Ratios: /path/to/nominal_ratio.npy
+        Systematics:
+          - SystName: sys1
+            RatiosUp: /path/to/ratio_up.npy
+            RatiosDn: /path/to/ratio_dn.npy
+
+      - Name: background
+        Nominal:
+          Ratios: /path/to/nominal_ratio.npy
+        Systematics:
+          - SystName: sys1
+            RatiosUp: /path/to/ratio_up.npy
+            RatiosDn: /path/to/ratio_dn.npy
