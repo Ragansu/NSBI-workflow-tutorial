@@ -23,7 +23,7 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: pixi install -e nsbi_env
+        run: pixi install -e nsbi-env
 
       - name: Run tests
-        run: pixi run -e nsbi_env test 
+        run: pixi run -e nsbi-env test 
