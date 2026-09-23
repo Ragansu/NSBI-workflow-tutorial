@@ -288,16 +288,13 @@ class WorkspaceBuilder:
             channel.update({"name": channel_name,
                             "type": channel_type})
             type_of_fit  = channel_type
-
-            region_filters = region["Filter"]
+                
+            region_filters      = region["Filter"]
 
             # Extract variable names used in the Filter expression
             # so the dataset loader reads the columns needed for df.query()
-            filter_variables = [
-                tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
-                if tok and not tok.replace('.', '', 1).lstrip('-').isdigit()
-            ]
-
+            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
             # --------------------------------------------------------------
             # Multibinned region
             # --------------------------------------------------------------
@@ -416,44 +413,31 @@ class WorkspaceBuilder:
                         bins=region_binning
                     )
 
-                current_sample.update({
-                    "data": list(sample_data)
-                })
+                current_sample.update({"data": list(sample_data)})
+                
 
                 modifiers = []
 
-                # Modifiers can have region and sample dependence
-                nf_modifier_list = self.normfactor_modifiers(
-                    channel_name,
-                    sample_name
-                )
+                # modifiers can have region and sample dependence, which is checked
+                # check if normfactors affect sample in region, add modifiers as needed
+                nf_modifier_list = self.normfactor_modifiers(channel_name, sample_name)
 
                 modifiers += nf_modifier_list
 
-                # Systematics
-                sys_modifier_list = self.sys_modifiers(
-                    dataset_region_dict,
-                    region,
-                    sample_dict,
-                    sample_data,
-                    type_of_fit=type_of_fit
-                )
-
+                # check if systematics affect sample in region, add modifiers as needed
+                sys_modifier_list = self.sys_modifiers(dataset_region_dict, region, sample_dict, sample_data, type_of_fit = type_of_fit)
                 modifiers += sys_modifier_list
 
-                current_sample.update({
-                    "modifiers": modifiers
-                })
+                current_sample.update({"modifiers": modifiers})  
 
                 samples.append(current_sample)
-
-            channel.update({
-                "samples": samples
-            })
-
+                    
+                
+            channel.update({"samples": samples})
             channels.append(channel)
 
         return channels
+
 
     def observations(self, datasets_incl=None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build the ``"channels"`` list for the workspace.
