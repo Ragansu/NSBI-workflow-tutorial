@@ -285,8 +285,12 @@ class WorkspaceBuilder:
             channel = {}
             channel_name = region["Name"]
             channel_type = region["Type"]
-            channel.update({"name": channel_name,
-                            "type": channel_type})
+
+            channel.update({
+                "name": channel_name,
+                "type": "binned" if channel_type != "unbinned" else "unbinned",
+            })
+
             type_of_fit  = channel_type
                 
             region_filters      = region["Filter"]
@@ -453,14 +457,9 @@ class WorkspaceBuilder:
         observations = []
 
         for region in self.config_dict["Regions"]:
-            channel = {}
             channel_name = region["Name"]
             channel_type = region["Type"]
 
-            channel.update({
-                "name": channel_name,
-                "type": channel_type
-            })
 
             type_of_fit = channel_type
 
@@ -600,9 +599,6 @@ class WorkspaceBuilder:
                 "data": list(sample_data),
             }
 
-            # --------------------------------------------------------------
-            # Existing unbinned behaviour
-            # --------------------------------------------------------------
             if type_of_fit == "unbinned":
 
                 trained_models_list = self.config_dict.get(

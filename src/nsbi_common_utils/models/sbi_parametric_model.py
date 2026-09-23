@@ -55,9 +55,7 @@ class sbi_parametric_model:
                 self.measurement_param_dict             = measurement["config"]["parameters"]
                 break
         self.param_names = [p['name'] for p in self.workspace['measurements'][0]['config']['parameters']]
-
-    def build(self):
-
+        
         self.parameters_in_measurement, \
             self.initial_values_dict                    = self._get_parameters_to_fit()
         
@@ -99,6 +97,7 @@ class sbi_parametric_model:
                 self.combined_tot_up_unbinned, \
                     self.combined_tot_dn_unbinned       = self._get_systematic_data( type_of_fit="unbinned" )
         
+
 
         self._finalize_to_device()
 
