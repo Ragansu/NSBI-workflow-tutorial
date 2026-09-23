@@ -100,61 +100,96 @@ class WorkspaceBuilder:
                                 sample            : dict[str, Any],
                                 systematic_dict   : dict[str, Any],
                                 nominal_data      : np.array,
-                                type_of_fit: str) -> list[dict[str, Any]]:
+                                type_of_fit       : str) -> list[dict[str, Any]]:
         """Build a NormPlusShape modifier for one systematic on one sample.
 
-        Histograms the up/down systematic variations, divides by the nominal to obtain variation ratios, and (for unbinned channels) attaches paths to the pre-computed density-ratio arrays.
-
-        Parameters
-        ----------
-        dataset : dict of dict of DataFrame
-            Nested dict keyed by ``"<syst>_Up"``/``"<syst>_Dn"`` then
-            sample name, as returned by :meth:`datasets.filter_region_by_type`.
-        region : dict
-            Region (channel) configuration dictionary.  Must contain ``"Name"``, ``"Variable"``, and ``"Binning"`` keys.
-        sample : dict
-            Sample configuration dictionary with at least ``"Name"`` and ``"SamplePath"`` keys.
-        systematic_dict : dict
-            Single systematic entry from the YAML config (has ``"Name"``).
-        nominal_data : np.ndarray
-            Nominal histogram bin counts used to normalise the variations.
-        type_of_fit : ``"binned"`` or ``"unbinned"``
-            Determines whether density-ratio file paths are included.
-
-        Returns
-        -------
-        list of dict
-            A single-element list containing the modifier dictionary with keys ``"name"``, ``"type": "normplusshape"``, and ``"data"``.
+        Histograms the up/down systematic variations, divides by the nominal to
+        obtain variation ratios, and (for unbinned channels) attaches paths to
+        the pre-computed density-ratio arrays.
         """
-        syst_name                      = systematic_dict["Name"]
-        
-        channel_name    = region["Name"]
-        sample_name     = sample["Name"]
-        sample_path     = sample["SamplePath"]
-        region_variable = region["Variable"]
-        region_binning  = region["Binning"]
+
+        syst_name = systematic_dict["Name"]
+
+        channel_name = region["Name"]
+        sample_name = sample["Name"]
+        sample_path = sample["SamplePath"]
 
         variation_data = {}
 
         for direction in ["Up", "Dn"]:
 
-            key_syst            = syst_name + '_' + direction
-            
-            weights             = dataset[key_syst][sample_name]["weights"].to_numpy()
-            
-            feature_var         = np.clip(dataset[key_syst][sample_name][region_variable],
-                                                          np.amin(region_binning), np.amax(region_binning))
-            
-            syst_var_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
+            key_syst = syst_name + "_" + direction
+
+            weights = dataset[key_syst][sample_name]["weights"].to_numpy()
+
+            # ----------------------------------------------------------
+            # Multibinned
+            # ----------------------------------------------------------
+            if type_of_fit == "multibinned":
+
+                region_variables = region["Variables"]
+                region_binning = region["Binning"]
+
+                # Build (N_events, N_variables) array
+                feature_arr = np.column_stack([
+                    dataset[key_syst][sample_name][variable].to_numpy()
+                    for variable in region_variables
+                ])
+
+                # Binning follows the order of Variables
+                bins = [
+                    region_binning[variable]
+                    for variable in region_variables
+                ]
+
+                syst_var_data, _ = np.histogramdd(
+                    feature_arr,
+                    bins=bins,
+                    weights=weights
+                )
+
+                # Flatten using the same convention as the nominal
+                syst_var_data = syst_var_data.flatten()
+
+            # ----------------------------------------------------------
+            # Existing 1D behaviour
+            # ----------------------------------------------------------
+            else:
+
+                region_variable = region["Variable"]
+                region_binning = region["Binning"]
+
+                feature_var = np.clip(
+                    dataset[key_syst][sample_name][region_variable],
+                    np.amin(region_binning),
+                    np.amax(region_binning)
+                )
+
+                syst_var_data, _ = np.histogram(
+                    feature_var,
+                    weights=weights,
+                    bins=region_binning
+                )
 
             variation_data[direction] = syst_var_data / nominal_data
 
-        if type_of_fit == "binned":
-        
-            modifiers = [{"name": syst_name,
-                          "type": "normplusshape",
-                          "data": {"hi_data": list(variation_data["Up"]),
-                                   "lo_data": list(variation_data["Dn"])}}]
+        # --------------------------------------------------------------
+        # Binned / multibinned
+        # --------------------------------------------------------------
+        if type_of_fit in ["binned", "multibinned"]:
+
+            modifiers = [{
+                "name": syst_name,
+                "type": "normplusshape",
+                "data": {
+                    "hi_data": list(variation_data["Up"]),
+                    "lo_data": list(variation_data["Dn"])
+                }
+            }]
+
+        # --------------------------------------------------------------
+        # Unbinned
+        # --------------------------------------------------------------
         elif type_of_fit == "unbinned":
             
             trained_models_list = self.config_dict.get("TrainedModels", None)
@@ -254,23 +289,42 @@ class WorkspaceBuilder:
                             "type": channel_type})
             type_of_fit  = channel_type
 
-            region_binning      = region.get("Binning", None)
-            region_variable     = region.get("Variable", None)
-                
-            region_filters      = region["Filter"]
+            region_filters = region["Filter"]
 
             # Extract variable names used in the Filter expression
             # so the dataset loader reads the columns needed for df.query()
-            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
-                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
+            filter_variables = [
+                tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                if tok and not tok.replace('.', '', 1).lstrip('-').isdigit()
+            ]
 
-            if region_variable is None:
-                # For unbinned regions with no explicit Variable, use the first
-                # filter variable for the dummy single-bin yield histogram
-                region_variable = filter_variables[0]
-                region["Variable"] = region_variable
+            # --------------------------------------------------------------
+            # Multibinned region
+            # --------------------------------------------------------------
+            if channel_type == "multibinned":
 
-            branches_to_load = [region_variable]
+                region_variables = region["Variables"]
+                region_binning = region["Binning"]
+
+                branches_to_load = region_variables.copy()
+
+            # --------------------------------------------------------------
+            # Existing behaviour
+            # --------------------------------------------------------------
+            else:
+
+                region_binning = region.get("Binning", None)
+                region_variable = region.get("Variable", None)
+
+                if region_variable is None:
+                    # For unbinned regions with no explicit Variable, use the first
+                    # filter variable for the dummy single-bin yield histogram
+                    region_variable = filter_variables[0]
+                    region["Variable"] = region_variable
+
+                branches_to_load = [region_variable]
+
+            # Add variables used in the filter
             for v in filter_variables:
                 if v not in branches_to_load:
                     branches_to_load.append(v)
@@ -293,47 +347,115 @@ class WorkspaceBuilder:
                     continue
 
                 current_sample.update({"name": sample_name})
-                
+
                 dataset_nominal_sample = dataset_region_dict["Nominal"][sample_name].copy()
-                
-                if region_binning is None:
-                    feature_arr_tmp = dataset_nominal_sample[region_variable]
-                    region_binning = np.linspace(np.amin(feature_arr_tmp), np.amax(feature_arr_tmp), num=2) # Dummy binning for a single event yield calculation in unbinned region
-                    region["Binning"] =  region_binning
-                    
-                feature_var         = np.clip(dataset_nominal_sample[region_variable],
-                                              np.amin(region_binning), np.amax(region_binning))
-                
-                weights = dataset_region_dict["Nominal"][sample_name]["weights"].to_numpy()
-                    
-                sample_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
-                                    
-                current_sample.update({"data": list(sample_data)})
-                
+
+
+                # ----------------------------------------------------------
+                # Multibinned sample
+                # ----------------------------------------------------------
+                if channel_type == "multibinned":
+
+                    feature_arr = np.column_stack([
+                        dataset_nominal_sample[variable]
+                        for variable in region_variables
+                    ])
+
+                    bins = [
+                        region_binning[variable]
+                        for variable in region_variables
+                    ]
+
+                    weights = dataset_region_dict["Nominal"][
+                        sample_name
+                    ]["weights"].to_numpy()
+
+                    sample_data, _ = np.histogramdd(
+                        feature_arr,
+                        bins=bins,
+                        weights=weights
+                    )
+
+                    # Flatten multidimensional histogram
+                    sample_data = sample_data.flatten()
+
+                # ----------------------------------------------------------
+                # Existing 1D behaviour
+                # ----------------------------------------------------------
+                else:
+
+                    if region_binning is None:
+
+                        feature_arr_tmp = dataset_nominal_sample[
+                            region_variable
+                        ]
+
+                        region_binning = np.linspace(
+                            np.amin(feature_arr_tmp),
+                            np.amax(feature_arr_tmp),
+                            num=2
+                        )
+
+                        # Dummy binning for a single event yield calculation
+                        # in unbinned region
+                        region["Binning"] = region_binning
+
+                    feature_var = np.clip(
+                        dataset_nominal_sample[region_variable],
+                        np.amin(region_binning),
+                        np.amax(region_binning)
+                    )
+
+                    weights = dataset_region_dict["Nominal"][
+                        sample_name
+                    ]["weights"].to_numpy()
+
+                    sample_data, _ = np.histogram(
+                        feature_var,
+                        weights=weights,
+                        bins=region_binning
+                    )
+
+                current_sample.update({
+                    "data": list(sample_data)
+                })
 
                 modifiers = []
 
-                # modifiers can have region and sample dependence, which is checked
-                # check if normfactors affect sample in region, add modifiers as needed
-                nf_modifier_list = self.normfactor_modifiers(channel_name, sample_name)
+                # Modifiers can have region and sample dependence
+                nf_modifier_list = self.normfactor_modifiers(
+                    channel_name,
+                    sample_name
+                )
 
                 modifiers += nf_modifier_list
 
-                # check if systematics affect sample in region, add modifiers as needed
-                sys_modifier_list = self.sys_modifiers(dataset_region_dict, region, sample_dict, sample_data, type_of_fit = type_of_fit)
+                # Systematics
+                sys_modifier_list = self.sys_modifiers(
+                    dataset_region_dict,
+                    region,
+                    sample_dict,
+                    sample_data,
+                    type_of_fit=type_of_fit
+                )
+
                 modifiers += sys_modifier_list
 
-                current_sample.update({"modifiers": modifiers})  
+                current_sample.update({
+                    "modifiers": modifiers
+                })
 
                 samples.append(current_sample)
-                    
-                
-            channel.update({"samples": samples})
+
+            channel.update({
+                "samples": samples
+            })
+
             channels.append(channel)
 
         return channels
 
-    def observations(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def observations(self, datasets_incl=None) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Build the ``"channels"`` list for the workspace.
 
         For every region in the configuration, loads datasets from ROOT files, computes nominal histograms, attaches density-ratio file paths (for unbinned regions), and collects all applicable normfactor and systematic modifiers per sample.
@@ -343,79 +465,176 @@ class WorkspaceBuilder:
         list of dict
             Each dict represents one channel with keys ``"name"``, ``"type"`` (``"binned"``/``"unbinned"``), ``"samples"``, and optionally ``"weights"`` (path to Asimov weight file for unbinned channels).
         """
-        observations = []
 
+        observations = []
 
         for region in self.config_dict["Regions"]:
             channel = {}
             channel_name = region["Name"]
             channel_type = region["Type"]
-            channel.update({"name": channel_name,
-                            "type": channel_type})
-            type_of_fit  = channel_type
 
-            region_binning      = region.get("Binning", None)
-            region_variable     = region.get("Variable", None)
-                
-            region_filters      = region["Filter"]
+            channel.update({
+                "name": channel_name,
+                "type": channel_type
+            })
+
+            type_of_fit = channel_type
+
+            region_filters = region["Filter"]
 
             # Extract variable names used in the Filter expression
-            # so the dataset loader reads the columns needed for df.query()
-            filter_variables = [tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
-                                if tok and not tok.replace('.','',1).lstrip('-').isdigit()]
+            # so the dataset loader reads the columns needed by df.query()
+            filter_variables = [
+                tok for tok in re.split(r'[<>=!&|()\s]+', region_filters)
+                if tok and not tok.replace('.', '', 1).lstrip('-').isdigit()
+            ]
 
-            if region_variable is None:
-                # For unbinned regions with no explicit Variable, use the first
-                # filter variable for the dummy single-bin yield histogram
-                region_variable = filter_variables[0]
-                region["Variable"] = region_variable
+            # --------------------------------------------------------------
+            # Multibinned region
+            # --------------------------------------------------------------
+            if channel_type == "multibinned":
 
-            branches_to_load = [region_variable]
+                region_variables = region["Variables"]
+                region_binning = region["Binning"]
+
+                branches_to_load = region_variables.copy()
+
+            # --------------------------------------------------------------
+            # Existing behaviour
+            # --------------------------------------------------------------
+            else:
+
+                region_binning = region.get("Binning", None)
+                region_variable = region.get("Variable", None)
+
+                if region_variable is None:
+                    # For unbinned regions with no explicit Variable, use the first
+                    # filter variable for the dummy single-bin yield histogram
+                    region_variable = filter_variables[0]
+                    region["Variable"] = region_variable
+
+                branches_to_load = [region_variable]
+
+            # Variables used in the Filter must also be loaded
             for v in filter_variables:
                 if v not in branches_to_load:
                     branches_to_load.append(v)
-                
-            samples = []
-            branches_to_load_sample  = branches_to_load.copy()
 
-            datasets            = nsbi_common_utils.datasets.datasets(self.config_path,
-                                                                branches_to_load =  branches_to_load_sample)
-            datasets_incl       = datasets.load_datasets_from_config(load_systematics = True)
-            dataset_region_dict = datasets.filter_region_by_type(datasets_incl, 
-                                                                     region = channel_name)
+            branches_to_load_sample = branches_to_load.copy()
+
+            datasets = nsbi_common_utils.datasets.datasets(
+                self.config_path,
+                branches_to_load=branches_to_load_sample
+            )
+
+
+            if datasets_incl is None :
+                datasets_incl = datasets.load_datasets_from_config()
+
+            dataset_region_dict = datasets.filter_region_by_type(
+                datasets_incl,
+                region=channel_name
+            )
+
             for sample_dict in self.config_dict["Samples"]:
-                is_data         = sample_dict.get("Data", False)
-                if is_data : 
+                is_data = sample_dict.get("Data", False)
+
+                if is_data:
                     break
-            
-            sample_name     = sample_dict["Name"]
-            
-            dataset_nominal_sample = dataset_region_dict["Nominal"][sample_name].copy()
-            
-            if region_binning is None:
-                feature_arr_tmp = dataset_nominal_sample[region_variable]
-                region_binning = np.linspace(np.amin(feature_arr_tmp), np.amax(feature_arr_tmp), num=2) # Dummy binning for a single event yield calculation in unbinned region
-                region["Binning"] =  region_binning
-                
-            feature_var         = np.clip(dataset_nominal_sample[region_variable],
-                                            np.amin(region_binning), np.amax(region_binning))
-            
-            weights = dataset_region_dict["Nominal"][sample_name]["weights"].to_numpy()
-                
-            sample_data, _       = np.histogram(feature_var, weights = weights, bins = region_binning)
-            
+
+            sample_name = sample_dict["Name"]
+
+            dataset_nominal_sample = dataset_region_dict["Nominal"][
+                sample_name
+            ].copy()
+
+            # --------------------------------------------------------------
+            # Multibinned observation
+            # --------------------------------------------------------------
+            if channel_type == "multibinned":
+
+                # Variables are ordered according to the Variables list
+                feature_arr = np.column_stack([
+                    dataset_nominal_sample[variable]
+                    for variable in region_variables
+                ])
+
+                bins = [
+                    region_binning[variable]
+                    for variable in region_variables
+                ]
+
+                weights = dataset_region_dict["Nominal"][
+                    sample_name
+                ]["weights"].to_numpy()
+
+                sample_data, _ = np.histogramdd(
+                    feature_arr,
+                    bins=bins,
+                    weights=weights
+                )
+
+                # Flatten to the same format as the existing 1D histogram
+                sample_data = sample_data.flatten()
+
+            # --------------------------------------------------------------
+            # Existing 1D behaviour
+            # --------------------------------------------------------------
+            else:
+
+                if region_binning is None:
+                    feature_arr_tmp = dataset_nominal_sample[region_variable]
+
+                    region_binning = np.linspace(
+                        np.amin(feature_arr_tmp),
+                        np.amax(feature_arr_tmp),
+                        num=2
+                    )
+
+                    # Dummy binning for a single event yield calculation
+                    # in unbinned region
+                    region["Binning"] = region_binning
+
+                feature_var = np.clip(
+                    dataset_nominal_sample[region_variable],
+                    np.amin(region_binning),
+                    np.amax(region_binning)
+                )
+
+                weights = dataset_region_dict["Nominal"][
+                    sample_name
+                ]["weights"].to_numpy()
+
+                sample_data, _ = np.histogram(
+                    feature_var,
+                    weights=weights,
+                    bins=region_binning
+                )
+
             observation = {
                 "name": channel_name,
                 "data": list(sample_data),
             }
 
-
+            # --------------------------------------------------------------
+            # Existing unbinned behaviour
+            # --------------------------------------------------------------
             if type_of_fit == "unbinned":
-                trained_models_list = self.config_dict.get("TrainedModels", None)
 
-                idx_region = self.config.get_index_unbinned_regions(region["Name"])
+                trained_models_list = self.config_dict.get(
+                    "TrainedModels",
+                    None
+                )
 
-                logging.info(f"Unbinned region {region['Name']} has trained models for samples {[m['Name'] for m in trained_models_list[idx_region]["Models"]]}")
+                idx_region = self.config.get_index_unbinned_regions(
+                    region["Name"]
+                )
+
+                logging.info(
+                    f"Unbinned region {region['Name']} has trained models "
+                    f"for samples "
+                    f"{[m['Name'] for m in trained_models_list[idx_region]['Models']]}"
+                )
 
                 weights_path = trained_models_list[idx_region].get("Weights")
 
@@ -424,13 +643,14 @@ class WorkspaceBuilder:
                     for model in trained_models_list[idx_region].get("Models", [])
                 }
 
-                observation.update({"ratios": ratio_dict,
-                                    "weights": weights_path})
-            observations.append(observation)
-                
-                                
-        return observations
+                observation.update({
+                    "ratios": ratio_dict,
+                    "weights": weights_path
+                })
 
+            observations.append(observation)
+
+        return observations
     def measurements(self) -> List[Dict[str, Any]]:
         """Build the ``"measurements"`` list for the workspace.
 
